@@ -24,4 +24,4 @@ The most complex feature of `logic_weaver` is solving "Hash Hell" through Buffer
 3. **Slot Rewriting**: If two mods target `vb0`, `logic_weaver` rewrites Mod B to use `vb1` automatically.
 
 ---
-[Next: Contribution Guide](contribution.md) | [Documentation Home](../index.md)
+[Back: INI Forge](ini-forge.md) | [Next: Contribution Guide](contribution.md) | [Documentation Home](../index.md)

@@ -36,4 +36,4 @@ The `mod.json` file is the standardized manifest for mods in the YAGO ecosystem.
 - **`tags`**: Used for filtering and for the "Streamer Mode" safety checks.
 
 ---
-[Next: INI Forge](ini-forge.md) | [Documentation Home](../index.md)
+[Back: Architecture Overview](architecture.md) | [Next: INI Forge](ini-forge.md) | [Documentation Home](../index.md)

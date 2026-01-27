@@ -28,4 +28,4 @@ The `IniPatcher` trait provides a high-level API for modifying INI files program
 - **Proxy Chaining**: Automatically configures `[Import]` sections for ReShade integration.
 
 ---
-[Next: Logic Weaver](logic-weaver.md) | [Documentation Home](../index.md)
+[Back: mod.json Spec](mod-json-spec.md) | [Next: Logic Weaver](logic-weaver.md) | [Documentation Home](../index.md)
