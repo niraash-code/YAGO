@@ -1,0 +1,33 @@
+{
+  "name": "Honkai: Star Rail",
+  "short_name": "Star Rail",
+  "developer": "HoYoverse",
+  "description": "A space fantasy RPG where you journey across the stars on the Astral Express.",
+  "color": "indigo-400",
+  "accent_color": "#818cf8",
+  "cover_image": "https://picsum.photos/seed/hsr-landscape/1920/1080",
+  "icon": "https://picsum.photos/seed/hsr-icon/200/200",
+  "logo_initial": "S",
+  "regions": 4,
+  "executables": [
+    "StarRail.exe"
+  ],
+  "injection_method": "Loader",
+  "loader_repo": "SpectrumQT/SRMI-TEST",
+  "hash_db_url": "https://raw.githubusercontent.com/SilentNightSound/SR-Model-Importer/main/Tools/generator/hash.json",
+  "patch_logic": {
+    "Constants/global_persist_$fps_unlock": "1"
+  },
+  "launch_args": [
+    "-popupwindow",
+    "-screen-fullscreen",
+    "0"
+  ],
+  "fps_config": {
+    "enabled": true,
+    "target_fps": 120,
+    "search_pattern": "7F 0F 8B 05 ? ? ? ? 48 8B 5C 24 30 48 83 C4 20 5F C3",
+    "offset": 0
+  },
+  "auto_update": true
+}

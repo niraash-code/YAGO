@@ -1,0 +1,69 @@
+# Getting Started with YAGO
+
+This guide will help you install and set up YAGO for the first time.
+
+## 📥 Installation
+
+Choose the installation method that matches your operating system.
+
+### 🐧 Linux
+
+#### Arch Linux (Recommended)
+Install the pre-compiled package directly using pacman:
+```bash
+sudo pacman -U yago-*.pkg.tar.zst
+```
+*Note: This automatically installs required dependencies like `webkit2gtk`.*
+
+#### Debian / Ubuntu / Mint
+Download the `.deb` package and install it:
+```bash
+sudo apt install ./yago_*.deb
+```
+
+#### Fedora / RHEL / OpenSUSE
+Download the `.rpm` package and install it:
+```bash
+sudo dnf install ./yago-*.rpm
+```
+
+#### Universal (AppImage)
+Ideal for portability. Download the `.AppImage` file, make it executable, and run:
+```bash
+chmod +x YAGO-x86_64.AppImage
+./YAGO-x86_64.AppImage
+```
+
+#### Universal (Flatpak)
+Install the bundle globally or for your user:
+```bash
+flatpak install --user yago-*.flatpak
+```
+
+---
+
+### 🪟 Windows
+
+1.  Download the **Installer** (`yago-windows-setup.exe`) or the **Portable** zip (`yago-windows-portable.zip`).
+2.  **Installer**: Run the `.exe` and follow the on-screen prompts.
+3.  **Portable**: Extract the `.zip` anywhere and run `yago.exe`. No installation required.
+
+---
+
+## ⚙️ Initial Setup
+
+### 1. Adding Your Games
+1.  Launch YAGO.
+2.  Click the **"Add Game"** button in the sidebar.
+3.  Choose **"Scan for Games"** to automatically find supported titles, or **"Locate Manually"** to select a specific folder.
+4.  YAGO will automatically identify the game and load its metadata.
+
+### 2. Importing Mods
+1.  Select your game from the sidebar.
+2.  Switch to the **Mod Manager** view.
+3.  Drag and drop your mod folders or archives (`.zip`, `.7z`) directly onto the window.
+4.  YAGO will extract, sanitize, and import them into your library.
+
+### 3. Launching
+Click **"Launch Game"** to start playing with your enabled mods. YAGO will automatically handle mod deployment and injection.
+[Next: Mod Management](mod-management.md) | [Documentation Home](../index.md)

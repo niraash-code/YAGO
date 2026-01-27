@@ -1,0 +1,24 @@
+[package]
+license = "MIT"
+name = "fs_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+image = "0.25"
+symlink = "0.1"
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
+trash = "3.3"
+walkdir = "2"
+anyhow = "1.0"
+thiserror = "1.0"
+pelite = "0.10"
+zip = { version = "2.2.2", features = ["deflate"] }
+sevenz-rust = "0.6.1"
+tar = "0.4"
+flate2 = "1.0"
+
+[dev-dependencies]
+tempfile = "3.13"
+

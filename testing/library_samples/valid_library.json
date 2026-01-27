@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "games": {
+    "genshin": {
+      "id": "genshin",
+      "name": "Genshin Impact",
+      "install_path": "/home/nira/Temp/genshinimpact",
+      "exe_path": "/home/nira/Temp/genshinimpact/GenshinImpact.exe",
+      "exe_name": "GenshinImpact.exe",
+      "version": "5.3.0",
+      "size": "95.2 GB",
+      "enabled": true,
+      "added_at": "2026-01-18T10:00:00Z",
+      "launch_args": []
+    }
+  },
+  "mods": {},
+  "profiles": {},
+  "last_sync": "2026-01-18T10:00:00Z"
+}

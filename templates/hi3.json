@@ -1,0 +1,26 @@
+{
+  "name": "Honkai Impact 3rd",
+  "short_name": "HI3",
+  "developer": "HoYoverse",
+  "description": "An action RPG featuring fast-paced combat and deep story-driven narrative.",
+  "color": "pink-400",
+  "accent_color": "#f472b6",
+  "cover_image": "https://picsum.photos/seed/hi3-landscape/1920/1080",
+  "icon": "https://picsum.photos/seed/hi3-icon/200/200",
+  "logo_initial": "H",
+  "regions": 4,
+  "executables": [
+    "BH3.exe"
+  ],
+  "injection_method": "Loader",
+  "loader_repo": "leotorrez/HIMI-Package",
+  "patch_logic": {},
+  "launch_args": [],
+  "fps_config": {
+    "enabled": false,
+    "target_fps": 60,
+    "search_pattern": "",
+    "offset": 0
+  },
+  "auto_update": true
+}

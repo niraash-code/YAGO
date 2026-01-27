@@ -1,0 +1,111 @@
+# YAGO - Yet Another Game Organizer
+# Comprehensive .gitignore for Tauri + React + Rust project
+
+# ============================================
+# Rust / Cargo
+# ============================================
+target/
+# Cargo.lock is NOT ignored for applications (best practice)
+
+# ============================================
+# Node.js / npm
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# ============================================
+# Frontend Build Artifacts
+# ============================================
+src-ui/dist/
+src-ui/build/
+src-ui/.vite/
+*.tsbuildinfo
+
+# ============================================
+# Tauri Build Artifacts
+# ============================================
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/icon.ico
+src-tauri/icons/icon.png
+
+# ============================================
+# Release Build Artifacts
+# ============================================
+release/build/
+release/latest/
+release/older/
+
+# ============================================
+# YAGO Mock & Testing Infrastructure
+# ============================================
+testing/workspace/
+testing/fake_game/*.exe
+testing/fake_game/*.txt
+testing/mock_mods/*/pfx/
+testing/mock_mods/*/Mods/
+yago_test_log.txt
+*.log
+frontend.log
+
+# ============================================
+# IDE / Editor Files
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================
+# Environment Variables
+# ============================================
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# Windows Cross-Compilation & Binaries
+# ============================================
+*.exe
+*.msi
+*.msm
+*.msp
+*.pdb
+*.zip
+*.tar.gz
+*.7z
+
+# ============================================
+# Build Tools refinements
+# ============================================
+build_tools/hk4e_global/pfx/
+build_tools/test_assets/bin/
+build_tools/wine-test-env/yago-wine-prefix/
+build_tools/appimagetool-*.AppImage
+
+# ============================================
+# References (Internal notes)
+# ============================================
+reference/
+NEXT_COMMIT.md
+
+# ============================================
+# AI Coding Agents
+# ============================================
+GEMINI.md
+.geminiignore
+
+
+# ============================================
+# Development only runners and loaders
+# ============================================
+compatibility/
+loaders/

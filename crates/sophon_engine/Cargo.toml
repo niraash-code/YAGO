@@ -1,0 +1,23 @@
+[package]
+license = "MIT"
+name = "sophon_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio = { version = "1", features = ["full"] }
+prost = "0.13"
+md-5 = "0.10"
+futures-util = "0.3"
+thiserror = "1.0"
+anyhow = "1.0"
+
+[build-dependencies]
+prost-build = "0.13"
+
+[dev-dependencies]
+tempfile = "3.10"
+

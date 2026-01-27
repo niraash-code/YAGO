@@ -1,0 +1,59 @@
+version: 1
+AppDir:
+  path: ./AppDir
+  app_info:
+    id: com.yago.dev
+    name: YAGO
+    icon: yago
+    version: "0.1.0"
+    exec: usr/bin/yago
+    exec_args: $@
+  runtime:
+    env:
+      WEBKIT_DISABLE_DMABUF_RENDERER: '1'
+  apt:
+    arch: amd64
+    allow_unauthenticated: true
+    sources:
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x871920D1991BC93C'
+    include:
+      - libgtk-3-0
+      - libwebkit2gtk-4.1-0
+      - libglib2.0-0
+      - libgdk-pixbuf2.0-0
+      - libcairo-gobject2
+      - libpango-1.0-0
+      - libatk1.0-0
+      - libcairo2
+      - libgdk-pixbuf2.0-0
+      - libgtk-3-0
+      - libglib2.0-0
+      - librsvg2-common
+      - librsvg2-2
+  files:
+    exclude:
+      - usr/share/man
+      - usr/share/doc
+      - usr/share/icons/gnome
+      - usr/share/icons/hicolor/128x128
+      - usr/share/icons/hicolor/256x256
+      - usr/share/icons/hicolor/512x512
+      - usr/share/icons/hicolor/64x64
+  test:
+    fedora-30:
+      image: appimagecrafters/tests-env:fedora-30
+      command: ./AppRun
+    debian-stable:
+      image: appimagecrafters/tests-env:debian-stable
+      command: ./AppRun
+    archlinux-latest:
+      image: appimagecrafters/tests-env:archlinux-latest
+      command: ./AppRun
+    centos-7:
+      image: appimagecrafters/tests-env:centos-7
+      command: ./AppRun
+
+script:
+  # AppDir is assumed to be already populated to avoid destructive operations
+  - echo "AppDir prep skipped in yaml script to avoid deletion"

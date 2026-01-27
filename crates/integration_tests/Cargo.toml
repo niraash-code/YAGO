@@ -1,0 +1,24 @@
+[package]
+license = "MIT"
+name = "integration_tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"
+tempfile = "3.10"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+zip = { version = "2.2.2", features = ["deflate"] }
+md-5 = "0.10"
+
+# Backend Pillars
+fs_engine = { path = "../fs_engine" }
+ini_forge = { path = "../ini_forge" }
+logic_weaver = { path = "../logic_weaver" }
+librarian = { path = "../librarian" }
+proc_marshal = { path = "../proc_marshal" }
+loader_ctl = { path = "../loader_ctl" }
+sophon_engine = { path = "../sophon_engine" }

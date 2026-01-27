@@ -1,0 +1,16 @@
+[package]
+license = "MIT"
+name = "ini_forge"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nom = "7.1"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+anyhow = "1.0"
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3.10"
+

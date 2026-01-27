@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "games": {
+    "genshin": {
+      "id": "genshin",
+      "name": "Genshin (Linux Tuning)",
+      "install_path": "/home/nira/Code/YAGO/testing/fake_game",
+      "exe_path": "/home/nira/Code/YAGO/testing/fake_game/GenshinImpact.exe",
+      "exe_name": "GenshinImpact.exe",
+      "version": "TEST",
+      "size": "0 GB",
+      "enabled": true,
+      "added_at": "2026-01-18T10:00:00Z",
+      "launch_args": [],
+      "use_gamescope": true,
+      "use_mangohud": true,
+      "resolution": [1280, 720]
+    }
+  },
+  "mods": {},
+  "profiles": {},
+  "last_sync": "2026-01-18T10:00:00Z"
+}

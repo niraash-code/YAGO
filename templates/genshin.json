@@ -1,0 +1,36 @@
+{
+  "name": "Genshin Impact",
+  "short_name": "Genshin",
+  "developer": "HoYoverse",
+  "description": "Step into Teyvat, a vast world teeming with life and flowing with elemental energy. Your journey across the seven nations begins here.",
+  "color": "teal-400",
+  "accent_color": "#2dd4bf",
+  "cover_image": "https://picsum.photos/seed/genshin-landscape/1920/1080",
+  "icon": "https://picsum.photos/seed/genshin-icon/200/200",
+  "logo_initial": "G",
+  "regions": 4,
+  "executables": [
+    "GenshinImpact.exe",
+    "YuanShen.exe"
+  ],
+  "injection_method": "Loader",
+  "loader_repo": "SilentNightSound/GIMI-Package",
+  "hash_db_url": "https://raw.githubusercontent.com/SilentNightSound/GI-Model-Importer/main/Tools/generator/hash.json",
+  "patch_logic": {
+    "Constants/global_persist_$orfix": "1"
+  },
+  "launch_args": [
+    "-popupwindow",
+    "-screen-fullscreen",
+    "0",
+    "-platform_type",
+    "LOUD_THIRD_PARTY_PC"
+  ],
+  "fps_config": {
+    "enabled": true,
+    "target_fps": 120,
+    "search_pattern": "7F 0F 8B 05 ? ? ? ? 48 8B 5C 24 30 48 83 C4 20 5F C3",
+    "offset": 0
+  },
+  "auto_update": true
+}

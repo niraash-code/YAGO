@@ -1,0 +1,17 @@
+[package]
+license = "MIT"
+name = "loader_ctl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tokio = { version = "1", features = ["full"] }
+fs_engine = { path = "../fs_engine" }
+ini_forge = { path = "../ini_forge" }
+
+[dev-dependencies]
+tempfile = "3.10"
+

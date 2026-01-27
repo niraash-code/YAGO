@@ -1,0 +1,24 @@
+[package]
+license = "MIT"
+name = "librarian"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1", features = ["fs", "io-util", "macros"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.12", features = ["json"] }
+fs_engine = { path = "../fs_engine" }
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3.13"
+zip = { version = "2.2.2", features = ["deflate"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+

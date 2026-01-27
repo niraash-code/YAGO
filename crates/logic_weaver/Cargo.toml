@@ -1,0 +1,19 @@
+[package]
+license = "MIT"
+name = "logic_weaver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+regex = "1"
+byteorder = "1.4"
+thiserror = "1.0"
+anyhow = "1.0"
+ini_forge = { path = "../ini_forge" }
+fs_engine = { path = "../fs_engine" }
+walkdir = "2.5"
+
+[dev-dependencies]
+tempfile = "3.10"
+
