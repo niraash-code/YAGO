@@ -324,17 +324,27 @@ export const useAppStore = create<AppState>()(
         const game = get().games.find(g => g.id === get().selectedGameId);
         if (!game || !game.installPath || !game.exeName) return;
 
-        set({ isLaunching: true, launchStatus: "Starting..." });
+        set({ isLaunching: true, launchStatus: "Verifying resources..." });
 
         try {
+          // 1. Ensure Loaders / ReShade
+          await api.ensureGameResources(game.id);
+
+          // 2. Deploy Mods (if injection enabled)
+          if (game.injectionMethod !== InjectionMethod.None) {
+            set({ launchStatus: "Deploying mods..." });
+            const separator = game.installPath.includes("\\") ? "\\" : "/";
+            const fullPath = `${game.installPath}${separator}${game.exeName}`;
+            await api.deployMods(fullPath);
+          }
+
+          set({ launchStatus: "Starting process..." });
           await api.launchGame(game.id);
         } catch (e) {
           console.error("Launch failed:", e);
           set({ isLaunching: false, launchStatus: "" });
           throw e;
         } finally {
-          // Keep status for a moment or clear?
-          // isRunning event will usually fire.
           set({ isLaunching: false });
         }
       },

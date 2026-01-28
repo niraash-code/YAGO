@@ -3,6 +3,7 @@ use serde_json::json;
 use sophon_engine::{Downloader, Provider, SophonManifest, Verifier};
 use std::path::PathBuf;
 use tauri::{Emitter, State};
+use uuid::Uuid;
 
 #[tauri::command]
 pub async fn fetch_manifest(url: String) -> Result<SophonManifest, String> {
@@ -273,6 +274,61 @@ pub async fn download_loader(
             .join(format!("{}.json", game_id));
         let _ = quartermaster::loader::download_hash_db(&hash_url, &hash_dest).await;
     }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn ensure_game_resources(
+    window: tauri::Window,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let common_path = state.app_data_dir.join("loaders").join("common");
+    let game_loader_path = state.app_data_dir.join("loaders").join(&game_id);
+
+    // 1. Check Common Libs
+    let common_exists = common_path.exists()
+        && common_path.join("d3d11.dll").exists()
+        && common_path.join("3DMigoto Loader.exe").exists();
+
+    if !common_exists {
+        println!("EnsureResources: Common libs missing. Installing...");
+        install_common_libs(window.clone(), state.clone()).await?;
+    }
+
+    // 2. Check ReShade if requested
+    let reshade_needed = {
+        let dbs = state.game_dbs.lock().await;
+        let db = dbs.get(&game_id);
+        let config = db.and_then(|d| d.games.get(&game_id));
+        if let Some(c) = config {
+            let p_uuid = Uuid::parse_str(&c.active_profile_id).unwrap_or_default();
+            db.and_then(|d| d.profiles.get(&p_uuid))
+                .map(|p| p.use_reshade)
+                .unwrap_or(false)
+        } else {
+            false
+        }
+    };
+
+    if reshade_needed && !common_path.join("ReShade.dll").exists() {
+        println!("EnsureResources: ReShade missing. Downloading...");
+        let reshade_url = state.app_config.lock().await.reshade_url.clone();
+        let window_clone = window.clone();
+        let game_id_clone = game_id.clone();
+        quartermaster::reshade::download_reshade_dll(&reshade_url, &common_path, move |curr, tot| {
+            let progress = if tot > 0 { curr as f64 / tot as f64 } else { 0.0 };
+            let _ = window_clone.emit("loader-progress", json!({ "game_id": game_id_clone, "status": "Downloading ReShade...", "progress": progress }));
+        }).await.map_err(|e| e.to_string())?;
+    }
+
+    // 3. Check Game Specific Loader
+    let loader_exists = game_loader_path.exists() && game_loader_path.join("d3dx.ini").exists();
+    if !loader_exists {
+        println!("EnsureResources: Game loader missing. Downloading...");
+        download_loader(window, state, game_id).await?;
+    }
+
     Ok(())
 }
 

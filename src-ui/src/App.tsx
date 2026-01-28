@@ -242,7 +242,7 @@ const App: React.FC = () => {
         </AnimatePresence>
 
         {stats && currentView === "overview" && (
-          <div className="absolute right-10 top-1/2 -translate-y-1/2 z-20">
+          <div className="absolute right-12 bottom-20 z-20">
             <SystemStatusCard
               stats={stats}
               game={selectedGame}

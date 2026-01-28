@@ -138,58 +138,56 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative z-[51]"
+            className="w-full max-w-2xl bg-slate-950/80 backdrop-blur-3xl border border-white/5 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative z-[51]"
           >
             {/* Header */}
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-800/30">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
-                  <Settings size={20} />
+            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/5">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
+                  <Settings size={22} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white tracking-tight">
-                    App Settings
+                  <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] mb-1">
+                    System Hub
                   </h2>
-                  <p className="text-xs text-slate-400 font-medium">
-                    Configure YAGO behavior and environment
-                  </p>
+                  <p className="text-2xl font-black text-white tracking-tighter uppercase italic">App Settings</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
+                className="p-2 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-all active:scale-90"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex px-6 border-b border-white/5 gap-6 bg-slate-900">
+            <div className="flex px-6 border-b border-white/5 gap-2 bg-black/20 p-2">
               {["general", "paths", "runners", "config"].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
                   className={cn(
-                    "py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all",
+                    "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
                     activeTab === tab
-                      ? "border-indigo-500 text-white"
-                      : "border-transparent text-slate-500 hover:text-slate-300"
+                      ? "bg-white/10 text-white shadow-sm ring-1 ring-white/10"
+                      : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
                   )}
                 >
-                  {tab === "config" ? "Repositories" : tab}
+                  {tab === "config" ? "REPOS" : tab}
                 </button>
               ))}
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-slate-950/20">
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar bg-transparent">
               {activeTab === "general" && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="space-y-4">

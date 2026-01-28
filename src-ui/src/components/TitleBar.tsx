@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Minus, Square, X, Maximize2 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { cn } from "../lib/utils";
+import { Tooltip } from "./ui/Tooltip";
 
 const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -94,30 +95,35 @@ const TitleBar: React.FC = () => {
 
       {/* Window Controls */}
       <div className="flex items-center h-full">
-        <button
-          onClick={minimize}
-          className="h-full px-4 hover:bg-white/5 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-white/10 flex items-center justify-center"
-          title="Minimize"
-        >
-          <Minus size={16} />
-        </button>
-        <button
-          onClick={toggleMaximize}
-          className="h-full px-4 hover:bg-white/5 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-white/10 flex items-center justify-center"
-          title={isMaximized ? "Restore" : "Maximize"}
-        >
-          {isMaximized ? <Square size={14} /> : <Maximize2 size={14} />}
-        </button>
-        <button
-          onClick={close}
-          className="h-full px-4 hover:bg-red-500 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-red-500 flex items-center justify-center group"
-          title="Close"
-        >
-          <X
-            size={18}
-            className="group-hover:rotate-90 transition-transform duration-300"
-          />
-        </button>
+        <Tooltip content="Minimize" position="bottom" className="h-full">
+          <button
+            onClick={minimize}
+            className="h-full px-4 hover:bg-white/5 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-white/10 flex items-center justify-center"
+          >
+            <Minus size={16} />
+          </button>
+        </Tooltip>
+        
+        <Tooltip content={isMaximized ? "Restore" : "Maximize"} position="bottom" className="h-full">
+          <button
+            onClick={toggleMaximize}
+            className="h-full px-4 hover:bg-white/5 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-white/10 flex items-center justify-center"
+          >
+            {isMaximized ? <Square size={14} /> : <Maximize2 size={14} />}
+          </button>
+        </Tooltip>
+
+        <Tooltip content="Close" position="bottom" className="h-full">
+          <button
+            onClick={close}
+            className="h-full px-4 hover:bg-red-500 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-red-500 flex items-center justify-center group"
+          >
+            <X
+              size={18}
+              className="group-hover:rotate-90 transition-transform duration-300"
+            />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

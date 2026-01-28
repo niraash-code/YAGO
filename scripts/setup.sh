@@ -184,7 +184,7 @@ if command -v wine &> /dev/null; then
     read -p "   Do you want to setup the Wine test environment? [y/N] " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        ./release/scripts/setup-wine-env.sh
+        ./build_tools/setup-wine-env.sh
     else
         echo "   Skipping Wine setup."
     fi

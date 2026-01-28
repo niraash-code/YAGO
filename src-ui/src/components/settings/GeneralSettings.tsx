@@ -40,9 +40,9 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   cancelEditing,
 }) => {
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+    <div className="space-y-12">
+      <div>
+        <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em] mb-8">
           Identity
         </h3>
 

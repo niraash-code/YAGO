@@ -304,9 +304,10 @@ export const api = {
     invoke("update_game_config", { gameId, update }),
   listRunners: (): Promise<string[]> => invoke("list_runners"),
   installCommonLibs: (): Promise<void> => invoke("install_common_libs"),
-  downloadLoader: (gameId: string): Promise<void> =>
-    invoke("download_loader", { gameId }),
-  downloadProton: (): Promise<void> => invoke("download_proton"),
+  downloadLoader: (gameId: string) => invoke("download_loader", { gameId }),
+  ensureGameResources: (gameId: string) =>
+    invoke("ensure_game_resources", { gameId }),
+  downloadProton: () => invoke("download_proton"),
   getAppConfig: (): Promise<AppConfig> => invoke("get_app_config"),
   updateAppConfig: (config: AppConfig): Promise<void> =>
     invoke("update_app_config", { config }),

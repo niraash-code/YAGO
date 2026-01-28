@@ -54,9 +54,9 @@ export const InstallationSettings: React.FC<InstallationSettingsProps> = ({
   toggleFeature,
 }) => {
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+    <div className="space-y-12">
+      <div>
+        <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em] mb-8">
           File System
         </h3>
 
@@ -269,30 +269,32 @@ export const InstallationSettings: React.FC<InstallationSettingsProps> = ({
           </EditableSetting>
         )}
 
-        <div className="bg-white/5 rounded-xl p-4 border border-white/5 flex items-center justify-between">
+        <div className="py-6 flex items-center justify-between group transition-all border-b border-white/5">
           <div>
-            <div className="text-sm font-medium text-white">Auto-Update</div>
-            <div className="text-xs text-slate-400">
+            <div className="text-base font-bold text-white uppercase tracking-tight">Auto-Update</div>
+            <div className="text-sm text-slate-500 mt-1 font-medium">
               Keep game updated automatically
             </div>
           </div>
           <button
             onClick={() => toggleFeature("autoupdate")}
             className={cn(
-              "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-              game.autoUpdate ? "bg-indigo-600" : "bg-slate-700"
+              "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+              game.autoUpdate ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
             )}
           >
             <div
               className={cn(
-                "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                 game.autoUpdate ? "right-1" : "left-1"
               )}
             />
           </button>
         </div>
 
-        <LoaderManager gameId={game.id} />
+        <div className="py-8">
+          <LoaderManager gameId={game.id} />
+        </div>
       </div>
     </div>
   );

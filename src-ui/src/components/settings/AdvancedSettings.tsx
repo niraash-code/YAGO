@@ -62,19 +62,19 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
   handleDeleteGame,
 }) => {
   return (
-    <div className="space-y-6">
-      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-sm flex gap-3">
-        <AlertTriangle className="shrink-0" size={20} />
-        <p>
-          Advanced settings can cause game instability. Proceed with caution.
+    <div className="space-y-12">
+      <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-200/70 text-sm font-medium flex gap-5 backdrop-blur-sm">
+        <AlertTriangle className="shrink-0 text-amber-500" size={20} />
+        <p className="leading-relaxed">
+          Advanced configurations can cause runtime instability or game crashes. Proceed with caution and verify changes.
         </p>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider text-indigo-400">
+      <div className="space-y-8">
+        <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em] mb-4">
           Active Loadout
         </h3>
-        <div className="bg-white/5 rounded-xl border border-white/5 divide-y divide-white/5">
+        <div className="divide-y divide-white/5 border-t border-white/5">
           <EditableSetting
             label="Loadout Name"
             description="Rename the current configuration profile."
@@ -114,31 +114,31 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider text-indigo-400">
+      <div className="space-y-8">
+        <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em]">
           Game Performance
         </h3>
-        <div className="bg-white/5 rounded-xl border border-white/5 divide-y divide-white/5">
-          <div className="p-4 flex flex-col gap-4">
+        <div className="divide-y divide-white/5 border-t border-white/5">
+          <div className="py-6 flex flex-col gap-6 group">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-white">
+                <div className="text-base font-bold text-white uppercase tracking-tight">
                   FPS Unlocker
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-sm text-slate-500 mt-1 font-medium">
                   Bypass the default 60 FPS limit
                 </div>
               </div>
               <button
                 onClick={() => toggleFeature("fps")}
                 className={cn(
-                  "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                  game.fpsConfig?.enabled ? "bg-indigo-600" : "bg-slate-700"
+                  "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                  game.fpsConfig?.enabled ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
                 )}
               >
                 <div
                   className={cn(
-                    "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                    "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                     game.fpsConfig?.enabled ? "right-1" : "left-1"
                   )}
                 />
@@ -223,15 +223,17 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
             </AnimatePresence>
           </div>
 
-          <div className="p-4 flex flex-col gap-4">
+          <div className="py-6 flex flex-col gap-4 group">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Zap size={18} className="text-amber-400" />
+              <div className="flex items-center gap-5">
+                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-lg shadow-amber-500/5">
+                  <Zap size={20} />
+                </div>
                 <div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-base font-bold text-white uppercase tracking-tight">
                     Injection Method
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-sm text-slate-500 mt-1 font-medium">
                     How mod loader is attached to game
                   </div>
                 </div>
@@ -241,7 +243,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 onChange={e =>
                   setInjectionMethod(e.target.value as InjectionMethod)
                 }
-                className="bg-slate-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="bg-slate-900 border border-white/10 rounded-xl px-5 py-2.5 text-xs font-black text-white focus:outline-none focus:border-indigo-500 uppercase tracking-widest"
               >
                 <option value={InjectionMethod.None}>None (Disabled)</option>
                 <option value={InjectionMethod.Proxy}>
@@ -254,13 +256,18 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
             </div>
           </div>
 
-          <div className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-white">
-                Enable ReShade
+          <div className="py-6 flex items-center justify-between group">
+            <div className="flex items-center gap-5">
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
+                <Monitor size={20} />
               </div>
-              <div className="text-xs text-slate-400">
-                Inject post-processing filters (requires Mod Loader)
+              <div>
+                <div className="text-base font-bold text-white uppercase tracking-tight">
+                  Enable ReShade
+                </div>
+                <div className="text-sm text-slate-500 mt-1 font-medium">
+                  Inject post-processing filters
+                </div>
               </div>
             </div>
             <button
@@ -270,13 +277,13 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 })
               }
               className={cn(
-                "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                activeProfile.useReshade ? "bg-indigo-600" : "bg-slate-700"
+                "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                activeProfile.useReshade ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
               )}
             >
               <div
                 className={cn(
-                  "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                  "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                   activeProfile.useReshade ? "right-1" : "left-1"
                 )}
               />
@@ -284,15 +291,17 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
           </div>
 
           {isLinux && (
-            <div className="p-4 flex flex-col gap-4">
+            <div className="py-6 flex flex-col gap-4 group">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Monitor size={18} className="text-blue-400" />
+                <div className="flex items-center gap-5">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
+                    <Monitor size={20} />
+                  </div>
                   <div>
-                    <div className="text-sm font-medium text-white">
+                    <div className="text-base font-bold text-white uppercase tracking-tight">
                       Compatibility Runner
                     </div>
-                    <div className="text-xs text-slate-400">
+                    <div className="text-sm text-slate-500 mt-1 font-medium">
                       Select Proton/Wine version
                     </div>
                   </div>
@@ -305,7 +314,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                         e.target.value === "default" ? null : e.target.value,
                     })
                   }
-                  className="bg-slate-950 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 min-w-[150px]"
+                  className="bg-slate-900 border border-white/10 rounded-xl px-5 py-2.5 text-xs font-black text-white focus:outline-none focus:border-indigo-500 uppercase tracking-widest min-w-[180px]"
                 >
                   <option value="default">System Default</option>
                   {availableRunners.map(r => (
@@ -321,81 +330,79 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
       </div>
 
       {isLinux && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider text-indigo-400">
+        <div className="space-y-8">
+          <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em]">
             Linux Environment
           </h3>
-          <div className="bg-white/5 rounded-xl border border-white/5 divide-y divide-white/5">
-            <div className="p-4 flex items-center justify-between">
+          <div className="divide-y divide-white/5 border-t border-white/5">
+            <div className="py-6 flex items-center justify-between group">
               <div>
-                <div className="text-sm font-medium text-white">
+                <div className="text-base font-bold text-white uppercase tracking-tight">
                   Integrity Shield
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-sm text-slate-500 mt-1 font-medium">
                   Prevent game from deleting mod files (LD_PRELOAD)
                 </div>
               </div>
               <button
                 onClick={() => toggleFeature("shield")}
                 className={cn(
-                  "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                  game.enableLinuxShield ? "bg-indigo-600" : "bg-slate-700"
+                  "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                  game.enableLinuxShield ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
                 )}
               >
                 <div
                   className={cn(
-                    "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                    "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                     game.enableLinuxShield ? "right-1" : "left-1"
                   )}
                 />
               </button>
             </div>
 
-            <div className="p-4 flex items-center justify-between">
+            <div className="py-6 flex items-center justify-between group">
               <div>
-                <div className="text-sm font-medium text-white">Gamemode</div>
-                <div className="text-xs text-slate-400">
+                <div className="text-base font-bold text-white uppercase tracking-tight">Gamemode</div>
+                <div className="text-sm text-slate-500 mt-1 font-medium">
                   Enable Feral GameMode optimizations
                 </div>
               </div>
               <button
                 onClick={() => toggleFeature("gamemode")}
                 className={cn(
-                  "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                  activeProfile.useGamemode ? "bg-indigo-600" : "bg-slate-700"
+                  "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                  activeProfile.useGamemode ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
                 )}
               >
                 <div
                   className={cn(
-                    "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                    "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                     activeProfile.useGamemode ? "right-1" : "left-1"
                   )}
                 />
               </button>
             </div>
 
-            <div className="p-4 flex flex-col gap-4">
+            <div className="py-6 flex flex-col gap-4 group">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-base font-bold text-white uppercase tracking-tight">
                     Gamescope
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-sm text-slate-500 mt-1 font-medium">
                     Use Gamescope micro-compositor
                   </div>
                 </div>
                 <button
                   onClick={() => toggleFeature("gamescope")}
                   className={cn(
-                    "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                    activeProfile.useGamescope
-                      ? "bg-indigo-600"
-                      : "bg-slate-700"
+                    "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                    activeProfile.useGamescope ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
                   )}
                 >
                   <div
                     className={cn(
-                      "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                      "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                       activeProfile.useGamescope ? "right-1" : "left-1"
                     )}
                   />
@@ -411,10 +418,10 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                     className="overflow-hidden"
                   >
                     <div className="pt-2">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 block">
                         Target Resolution
                       </label>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <div className="relative flex-1">
                           <input
                             type="number"
@@ -425,13 +432,13 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                                 activeProfile.resolution?.[1] || 1080
                               )
                             }
-                            className="w-full bg-slate-950 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                            className="w-full bg-slate-900 border border-white/10 rounded-2xl pl-5 pr-10 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors shadow-inner"
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600 uppercase tracking-widest">
                             W
                           </span>
                         </div>
-                        <span className="text-slate-500">x</span>
+                        <span className="text-slate-700 font-black text-xl">×</span>
                         <div className="relative flex-1">
                           <input
                             type="number"
@@ -442,9 +449,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                                 parseInt(e.target.value)
                               )
                             }
-                            className="w-full bg-slate-950 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                            className="w-full bg-slate-900 border border-white/10 rounded-2xl pl-5 pr-10 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors shadow-inner"
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600 uppercase tracking-widest">
                             H
                           </span>
                         </div>
@@ -455,23 +462,23 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
               </AnimatePresence>
             </div>
 
-            <div className="p-4 flex items-center justify-between">
+            <div className="py-6 flex items-center justify-between group">
               <div>
-                <div className="text-sm font-medium text-white">MangoHud</div>
-                <div className="text-xs text-slate-400">
+                <div className="text-base font-bold text-white uppercase tracking-tight">MangoHud</div>
+                <div className="text-sm text-slate-500 mt-1 font-medium">
                   Enable performance overlay
                 </div>
               </div>
               <button
                 onClick={() => toggleFeature("mangohud")}
                 className={cn(
-                  "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-                  activeProfile.useMangohud ? "bg-indigo-600" : "bg-slate-700"
+                  "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                  activeProfile.useMangohud ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
                 )}
               >
                 <div
                   className={cn(
-                    "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                    "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
                     activeProfile.useMangohud ? "right-1" : "left-1"
                   )}
                 />
@@ -481,23 +488,23 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
         </div>
       )}
 
-      <div className="space-y-4 pt-4 border-t border-white/5">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+      <div className="space-y-6 pt-6 border-t border-white/5">
+        <h3 className="text-[10px] font-black text-red-500/80 uppercase tracking-[0.25em]">
           Danger Zone
         </h3>
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
           <button
             onClick={handleDeleteProfile}
-            className="w-full p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 group"
+            className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-400/80 hover:text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
           >
-            <Trash2 size={18} />
-            Delete Current Loadout
+            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+            Delete Loadout
           </button>
           <button
             onClick={handleDeleteGame}
-            className="w-full p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 group"
+            className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-400/80 hover:text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
           >
-            <Trash2 size={18} />
+            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
             Uninstall Game
           </button>
         </div>
