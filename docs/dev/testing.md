@@ -28,7 +28,7 @@ Located in `crates/integration_tests/src/flows/`, these tests validate complex c
 
 ## 🤖 3. Simulation System
 
-The simulation system (in `integration_tests/src/simulation/`) runs automated "User Stories" against a mock filesystem. It simulates actions like:
+The simulation system (in `integration_tests/src/simulation/`) runs automated "User Stories" against mock assets located in the root **`fixtures/`** directory. It simulates:
 - First-time setup.
 - Power user mod reordering.
 - Chaos Monkey (randomly deleting files/processes to test recovery).

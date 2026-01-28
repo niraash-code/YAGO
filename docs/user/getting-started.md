@@ -52,11 +52,13 @@ flatpak install --user yago-*.flatpak
 
 ## ⚙️ Initial Setup
 
-### 1. Adding Your Games
 1.  Launch YAGO.
 2.  Click the **"Add Game"** button in the sidebar.
 3.  Choose **"Scan for Games"** to automatically find supported titles, or **"Locate Manually"** to select a specific folder.
 4.  YAGO will automatically identify the game and load its metadata.
+
+### 2. Dependency Setup
+If prompted, YAGO will automatically download required dependencies (Mod Loaders, Proton, etc.). You can manually trigger this in the **Global Settings** menu.
 
 ### 2. Importing Mods
 1.  Select your game from the sidebar.

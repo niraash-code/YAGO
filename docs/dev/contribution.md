@@ -4,8 +4,8 @@ Thank you for your interest in contributing to YAGO! This guide outlines the wor
 
 ## 🛠️ Setting Up Your Environment
 
-1. **Clone the Repo**: `git clone https://github.com/your-org/yago.git`
-2. **Install Dependencies**: Run `./setup_yago.sh` to install Rust, Node.js, and core dependencies.
+1. **Clone the Repo**: `git clone https://github.com/niraash-code/YAGO.git`
+2. **Install Dependencies**: Run `./scripts/setup.sh` to install Rust, Node.js, and core dependencies.
 3. **Run Dev Mode**: `make dev` starts the frontend and backend with hot-reloading.
 
 ## 📂 Project Structure Note
@@ -19,7 +19,7 @@ Before making changes, please read **`STRUCTURE.md`** in the root directory. It 
     *   Run `cargo fmt --all` to format your code.
     *   Add unit tests in the relevant crate's `tests/` directory.
 - **Frontend**:
-    *   Run `make lint` (or `npm run lint` in `src-ui`) for type checking.
+    *   Run `make lint` for TypeScript validation.
     *   Run `npm run format` in `src-ui` to apply Prettier rules.
 - **Full Verification**:
     *   Execute `make test` to run the entire workspace test suite.
