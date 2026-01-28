@@ -8,7 +8,7 @@
   "cover_image": "https://picsum.photos/seed/genshin-landscape/1920/1080",
   "icon": "https://picsum.photos/seed/genshin-icon/200/200",
   "logo_initial": "G",
-  "regions": 4,
+  "regions": 6,
   "executables": [
     "GenshinImpact.exe",
     "YuanShen.exe"

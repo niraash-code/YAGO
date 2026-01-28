@@ -81,8 +81,7 @@ The project employs a three-tier testing strategy:
 
 ## 🛠 Project Root & Metadata
 
-*   **`assets/`**: Centralized config and character hash databases.
-*   **`templates/`**: JSON definitions for supported games.
+*   **`assets/`**: Centralized config, character hash databases, and game templates.
 *   **`build_tools/`**: Cross-platform release scripts (Flatpak, AppImage, DEB, RPM, Windows).
 *   **`Makefile`**: The canonical way to interact with the project.
     *   `make dev`: Start dev environment.

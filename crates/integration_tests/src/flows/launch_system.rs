@@ -12,9 +12,9 @@ async fn test_game_launch_with_real_fake_process() {
     std::fs::create_dir(&game_dir).unwrap();
 
     let project_root = std::env::current_dir().unwrap();
-    let fake_exe_src = project_root.join("../../testing/fake_game/GenshinImpact.exe");
+    let fake_exe_src = project_root.join("../../fixtures/fake_game/GenshinImpact.exe");
     if !fake_exe_src.exists() {
-        panic!("Fake executable not found at {:?}. Run rustc testing/fake_game/main.rs -o testing/fake_game/GenshinImpact.exe first.", fake_exe_src);
+        panic!("Fake executable not found at {:?}. Run rustc fixtures/fake_game/main.rs -o fixtures/fake_game/GenshinImpact.exe first.", fake_exe_src);
     }
 
     let exe_path = game_dir.join("GenshinImpact.exe");
@@ -81,7 +81,7 @@ async fn test_game_kill_flow() {
     std::fs::create_dir(&game_dir).unwrap();
 
     let project_root = std::env::current_dir().unwrap();
-    let fake_exe_src = project_root.join("../../testing/fake_game/GenshinImpact.exe");
+    let fake_exe_src = project_root.join("../../fixtures/fake_game/GenshinImpact.exe");
     let exe_path = game_dir.join("GenshinImpact.exe");
     std::fs::copy(&fake_exe_src, &exe_path).unwrap();
 

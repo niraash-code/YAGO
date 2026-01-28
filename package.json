@@ -7,14 +7,12 @@
     "node": ">=24.13.0"
   },
   "scripts": {
+    "sync-env": "node scripts/sync-env.js",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "build": "tauri build"
+    "tauri:dev": "npm run sync-env && tauri dev",
+    "build": "npm run sync-env && tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0"
-  },
-  "dependencies": {
-    "@tauri-apps/plugin-dialog": "^2.6.0"
   }
 }

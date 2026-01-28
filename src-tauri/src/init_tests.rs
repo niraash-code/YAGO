@@ -18,14 +18,14 @@ mod tests {
         // 1. Extract Hashes
         let hashes_path = assets_root.join("hashes.json");
         if !hashes_path.exists() {
-            let bytes = include_bytes!("../../assets/hashes.json");
+            let bytes = include_bytes!("../../resources/hashes.json");
             fs::write(&hashes_path, bytes).unwrap();
         }
 
         // 2. Extract AppConfig
         let config_path = app_data_dir.join("app_config.json");
         if !config_path.exists() {
-            let bytes = include_bytes!("../../assets/app_config.json");
+            let bytes = include_bytes!("../../resources/app_config.json");
             fs::write(&config_path, bytes).unwrap();
         }
 
@@ -36,12 +36,12 @@ mod tests {
             let bundled: [(&str, &[u8]); 5] = [
                 (
                     "genshin.json",
-                    include_bytes!("../../templates/genshin.json"),
+                    include_bytes!("../../resources/templates/genshin.json"),
                 ),
-                ("hi3.json", include_bytes!("../../templates/hi3.json")),
-                ("hsr.json", include_bytes!("../../templates/hsr.json")),
-                ("wuwa.json", include_bytes!("../../templates/wuwa.json")),
-                ("zzz.json", include_bytes!("../../templates/zzz.json")),
+                ("hi3.json", include_bytes!("../../resources/templates/hi3.json")),
+                ("hsr.json", include_bytes!("../../resources/templates/hsr.json")),
+                ("wuwa.json", include_bytes!("../../resources/templates/wuwa.json")),
+                ("zzz.json", include_bytes!("../../resources/templates/zzz.json")),
             ];
 
             for (name, bytes) in bundled {

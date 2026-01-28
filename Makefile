@@ -27,16 +27,16 @@ help:
 	@echo "  make release-windows"
 
 setup: sync-env
-	./setup_yago.sh
+	./scripts/setup.sh
 
 sync-env:
-	python3 build_tools/sync_env.py
+	npm run sync-env
 
 dev: sync-env
-	cargo tauri dev
+	npm run tauri:dev
 
 build: sync-env
-	cargo tauri build
+	npm run build
 
 check:
 	cargo check

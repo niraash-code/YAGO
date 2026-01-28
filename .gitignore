@@ -43,11 +43,7 @@ release/older/
 # ============================================
 # YAGO Mock & Testing Infrastructure
 # ============================================
-testing/workspace/
-testing/fake_game/*.exe
-testing/fake_game/*.txt
-testing/mock_mods/*/pfx/
-testing/mock_mods/*/Mods/
+fixtures/
 yago_test_log.txt
 *.log
 frontend.log

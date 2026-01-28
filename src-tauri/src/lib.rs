@@ -9,6 +9,10 @@ use librarian::{
     GameTemplate, GlobalSettings, Librarian, LibraryDatabase, SettingsManager, TemplateRegistry,
 };
 
+use include_dir::{include_dir, Dir};
+
+static ASSETS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../resources");
+
 mod commands;
 mod config;
 mod safety;
@@ -152,13 +156,6 @@ pub fn run() {
                 .path()
                 .app_data_dir()
                 .expect("failed to get app data dir");
-            let project_root = std::env::current_dir().expect("failed to get current dir");
-
-            // Resource Dir resolution
-            let resource_dir = app_handle
-                .path()
-                .resource_dir()
-                .unwrap_or_else(|_| project_root.clone());
 
             // Initialize Settings
             let settings_manager = Arc::new(SettingsManager::new(app_data_dir.clone()));
@@ -169,6 +166,7 @@ pub fn run() {
             // Initialize Librarian
             let games_root = app_data_dir.join("games");
             let assets_root = app_data_dir.join("assets");
+            let templates_root = app_data_dir.join("templates");
 
             if !games_root.exists() {
                 std::fs::create_dir_all(&games_root).expect("failed to create games directory");
@@ -176,60 +174,41 @@ pub fn run() {
             if !assets_root.exists() {
                 std::fs::create_dir_all(&assets_root).expect("failed to create assets directory");
             }
-
-            // EXTRACT BUNDLED DATA (Only if missing)
-            let hashes_path = assets_root.join("hashes.json");
-            if !hashes_path.exists() {
-                let bytes = include_bytes!("../../assets/hashes.json");
-                let _ = std::fs::write(&hashes_path, bytes);
+            if !templates_root.exists() {
+                std::fs::create_dir_all(&templates_root).expect("failed to create templates directory");
             }
 
+            // EXTRACT BUNDLED ASSETS
+            // 1. App Config (to root)
             let config_path = app_data_dir.join("app_config.json");
             if !config_path.exists() {
-                let bytes = include_bytes!("../../assets/app_config.json");
-                let _ = std::fs::write(&config_path, bytes);
+                if let Some(file) = ASSETS_DIR.get_file("app_config.json") {
+                    let _ = std::fs::write(&config_path, file.contents());
+                }
+            }
+
+            // 2. Hashes (to assets/)
+            let hashes_path = assets_root.join("hashes.json");
+            if !hashes_path.exists() {
+                if let Some(file) = ASSETS_DIR.get_file("hashes.json") {
+                    let _ = std::fs::write(&hashes_path, file.contents());
+                }
+            }
+
+            // 3. Templates (to templates/ - Always sync from bundled)
+            if let Some(dir) = ASSETS_DIR.get_dir("templates") {
+                for file in dir.files() {
+                    if file.path().extension().and_then(|s| s.to_str()) == Some("json") {
+                        let dest = templates_root.join(file.path().file_name().unwrap());
+                        let _ = std::fs::write(&dest, file.contents());
+                    }
+                }
             }
 
             // Load Config
             let app_config = Arc::new(Mutex::new(AppConfig::load(config_path)));
 
             let librarian = Arc::new(Librarian::new(games_root, assets_root));
-
-            // Initialize Templates
-            let templates_root = app_data_dir.join("templates");
-            if !templates_root.exists() {
-                std::fs::create_dir_all(&templates_root)
-                    .expect("failed to create templates directory");
-            }
-
-            // Sync all bundled templates from resources to data dir
-            // Try different possible resource locations
-            let resource_templates_paths = [
-                resource_dir.join("templates"),
-                project_root.join("templates"),
-                project_root
-                    .parent()
-                    .unwrap_or(&project_root)
-                    .join("templates"),
-            ];
-
-            for path in &resource_templates_paths {
-                if path.exists() {
-                    println!("Syncing templates from {:?} to data directory...", path);
-                    if let Ok(entries) = std::fs::read_dir(path) {
-                        for entry in entries.filter_map(|e| e.ok()) {
-                            let p = entry.path();
-                            if p.extension().and_then(|s| s.to_str()) == Some("json") {
-                                let dest = templates_root.join(entry.file_name());
-                                // Always overwrite templates to ensure they are up to date
-                                let _ = std::fs::copy(&p, &dest);
-                            }
-                        }
-                    }
-                    // Stop after finding first valid resource path
-                    break;
-                }
-            }
 
             let registry = TemplateRegistry::new(templates_root);
             let templates: HashMap<String, GameTemplate> = tauri::async_runtime::block_on(async {

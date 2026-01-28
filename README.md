@@ -55,7 +55,7 @@ The core logic is distributed across 8 specialized Rust crates, ensuring maximum
 YAGO identifies games by executable name. Each game has an isolated home in `app_data/games/` containing its database and mods. This ensures zero "orphaned mods" and simple manual cleanup.
 
 ### Template-Driven Metadata
-The frontend is 100% agnostic. All game-specific colors, descriptions, and icons are loaded dynamically from `templates/` blueprints.
+The frontend is 100% agnostic. All game-specific colors, descriptions, and icons are loaded dynamically from `assets/templates/` blueprints.
 
 ### Native Archive Support
 Support for direct import of `.zip` and `.7z` mod archives with automatic extraction and filename sanitization.
