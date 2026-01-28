@@ -5,8 +5,8 @@
   "description": "An urban fantasy ARPG set in the post-apocalyptic metropolis of New Eridu.",
   "color": "yellow-400",
   "accent_color": "#facc15",
-  "cover_image": "https://picsum.photos/seed/zzz-landscape/1920/1080",
-  "icon": "https://picsum.photos/seed/zzz-icon/200/200",
+  "cover_image": "zzz_background.webp",
+  "icon": "zzz_logo.webp",
   "logo_initial": "Z",
   "regions": 4,
   "executables": [
@@ -27,5 +27,6 @@
     "search_pattern": "7F 0F 8B 05 ? ? ? ? 48 8B 5C 24 30 48 83 C4 20 5F C3",
     "offset": 0
   },
-  "auto_update": true
+  "auto_update": true,
+  "community_folder": "nap_global"
 }

@@ -149,9 +149,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {/* Game Icon */}
                         <div
                           className={cn(
-                            "relative w-11 h-11 rounded-xl overflow-hidden bg-slate-900 border transition-all duration-500 shrink-0",
+                            "relative w-20 h-10 rounded-lg overflow-hidden bg-slate-950/40 border transition-all duration-500 shrink-0 flex items-center justify-center p-1",
                             isSelected
-                              ? "border-white/20 shadow-[0_0_20px_rgba(99,102,241,0.2)]"
+                              ? "border-white/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]"
                               : "border-white/5 group-hover:border-white/10"
                           )}
                         >
@@ -160,16 +160,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                               src={game.icon}
                               alt={game.name}
                               className={cn(
-                                "w-full h-full object-cover transition-all duration-500",
+                                "w-full h-full object-contain transition-all duration-500",
                                 isSelected
-                                  ? "opacity-100 scale-110 blur-0"
-                                  : "opacity-40 grayscale group-hover:opacity-80 group-hover:grayscale-0 group-hover:scale-105"
+                                  ? "opacity-100 scale-105"
+                                  : "opacity-40 grayscale group-hover:opacity-80 group-hover:grayscale-0 group-hover:scale-110"
                               )}
                             />
                           ) : (
                             <div
-                              className="w-full h-full flex items-center justify-center font-bold text-base text-white opacity-60"
-                              style={{ backgroundColor: game.accentColor }}
+                              className="w-full h-full flex items-center justify-center font-black text-sm text-white/40 italic"
+                              style={{ color: game.accentColor }}
                             >
                               {game.logoInitial}
                             </div>

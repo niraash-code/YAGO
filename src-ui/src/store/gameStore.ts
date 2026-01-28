@@ -644,6 +644,11 @@ export const useAppStore = create<AppState>()(
                 ? get().selectedGameId || allLoadedGames[0].id
                 : "",
           });
+
+          // Perform background sync for assets to update old placeholders
+          for (const game of allLoadedGames) {
+            api.syncGameAssets(game.id).catch(console.error);
+          }
         } catch (e) {
           console.error("Failed to initialize library", e);
         }

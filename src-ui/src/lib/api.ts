@@ -239,8 +239,11 @@ export interface ModSnippet {
 }
 
 export const api = {
-  getLibrary: (): Promise<Record<string, LibraryDatabase>> =>
-    invoke("get_library"),
+  resolveAsset: (url: string) => invoke<string>("resolve_asset", { url }),
+  syncGameAssets: (gameId: string) => invoke<void>("sync_game_assets", { gameId }),
+  getCommunityBackgrounds: (gameId: string) =>
+    invoke<string[]>("get_community_backgrounds", { gameId }),
+  getLibrary: () => invoke<Record<string, LibraryDatabase>>("get_library"),
   getSkinInventory: (gameId: string): Promise<Record<string, CharacterGroup>> =>
     invoke("get_skin_inventory", { gameId }),
   identifyGame: (path: string): Promise<IdentifiedGame> =>

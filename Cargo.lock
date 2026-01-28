@@ -2416,6 +2416,7 @@ dependencies = [
  "sophon_engine",
  "tempfile",
  "tokio",
+ "urlencoding",
  "uuid",
  "zip",
 ]
@@ -2675,6 +2676,7 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
+ "urlencoding",
  "uuid",
  "walkdir",
  "winreg 0.52.0",
@@ -7515,6 +7517,7 @@ dependencies = [
  "logic_weaver",
  "proc_marshal",
  "quartermaster",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sophon_engine",

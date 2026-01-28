@@ -5,8 +5,8 @@
   "description": "Step into Teyvat, a vast world teeming with life and flowing with elemental energy. Your journey across the seven nations begins here.",
   "color": "teal-400",
   "accent_color": "#2dd4bf",
-  "cover_image": "https://picsum.photos/seed/genshin-landscape/1920/1080",
-  "icon": "https://picsum.photos/seed/genshin-icon/200/200",
+  "cover_image": "genshin_background.webp",
+  "icon": "genshin_logo.webp",
   "logo_initial": "G",
   "regions": 6,
   "executables": [
@@ -32,5 +32,6 @@
     "search_pattern": "7F 0F 8B 05 ? ? ? ? 48 8B 5C 24 30 48 83 C4 20 5F C3",
     "offset": 0
   },
-  "auto_update": true
+  "auto_update": true,
+  "community_folder": "hk4e_global"
 }

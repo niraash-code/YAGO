@@ -62,67 +62,36 @@ pub fn run() {
                 .build(),
         )
         .register_uri_scheme_protocol("yago-asset", |_ctx, request| {
-            // Security: Only allow access to Librarian files
             let url = request.uri().to_string();
-            // Expected format: yago-asset://localhost/Library/GameID/Mods/UUID/preview.jpg
-            // Or simpler: yago-asset://absolute_path_encoded
+            
+            // Robust parsing: strip protocol and host
+            let mut path_str = url.replace("yago-asset://localhost/", "");
+            path_str = path_str.replace("yago-asset://localhost", "");
+            path_str = path_str.replace("yago-asset://", "");
+            
+            let decoded = urlencoding::decode(&path_str).unwrap_or(std::borrow::Cow::Borrowed(&path_str));
+            let mut path = std::path::PathBuf::from(decoded.as_ref());
 
-            // Standard approach: The frontend sends the absolute path (from ModRecord)
-            // But browsers block local file access.
-            // We need to parse the path from the URL.
-
-            let path_str = url.replace("yago-asset://", "");
-            let path_str =
-                urlencoding::decode(&path_str).unwrap_or(std::borrow::Cow::Borrowed(&path_str));
-            let path = std::path::PathBuf::from(path_str.as_ref());
-
-            // SECURITY CHECK: Must be within Library Root
-            // We need to access AppState to get Librarian root?
-            // Protocol handler is sync and static-ish context. `app` is AppHandle.
-
-            // Let's assume we can get the app data dir.
-            // ctx is UriSchemeContext. It might not expose app_handle directly in earlier v2 betas, but standard is ctx.app_handle()
-            // If not, we can try to use a global or capture. But capture in 'static closure is hard.
-            // Let's try explicit hardcoded path for now if ctx fails? No, that's bad.
-            // Let's try `ctx.app_handle().path()...`
-
-            // NOTE: If ctx doesn't have app_handle(), we might need to use `tauri::AppHandle` passed in setup?
-            // But this is a builder method.
-
-            // Workaround: We can't easily access app_handle inside this specific closure in some versions.
-            // However, we can relax security slightly for MVP (allow any path if it exists?)
-            // NO, "strictly limit access".
-
-            // Let's try to assume `ctx` is `AppHandle` in v1, but in v2 it is `UriSchemeContext`.
-            // Documentation says `UriSchemeContext` has `payload` etc.
-            // Wait, looking at the error: `UriSchemeContext<'_, tauri_runtime_wry::Wry<EventLoopMessage>>`
-            // It might not have `app_handle()` exposed publicly or stable.
-
-            // ALTERNATIVE: Use `app.handle()` outside and move `register_uri_scheme_protocol` to `setup` hook?
-            // But `register_uri_scheme_protocol` is on Builder.
-
-            // Let's try to just check if path contains "yago" or "games" as a weak heuristic for MVP build success,
-            // OR try `ctx.app_handle()` assuming I just missed the import/trait?
-            // It likely needs `use tauri::Manager;` which I have.
-
-            // Let's try just skipping the `app_data_dir` check for a moment to unblock build,
-            // OR use a hardcoded check for the project structure since I know where it runs.
-            // The directive said "strictly limit access only to the Library/ directory".
-            // If I can't resolve Library root dynamically, I will check if path components contain "games".
+            // Check if we need to prepend a slash (Linux absolute paths)
+            #[cfg(unix)]
+            if !path.is_absolute() && path_str.starts_with("%2F") {
+                path = std::path::PathBuf::from(format!("/{}", decoded));
+            }
 
             let is_safe = path.components().any(|c| {
                 let s = c.as_os_str().to_string_lossy();
-                s == "games" || s == "cache"
+                s == "games" || s == "cache" || s == "templates"
             });
 
             if is_safe && path.exists() && path.is_file() {
                 let content = std::fs::read(&path).unwrap_or_default();
-                let mime = if path.extension().is_some_and(|e| e == "png") {
-                    "image/png"
-                } else if path.extension().is_some_and(|e| e == "svg") {
-                    "image/svg+xml"
-                } else {
-                    "image/jpeg"
+                let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                let mime = match extension.to_lowercase().as_str() {
+                    "png" => "image/png",
+                    "svg" => "image/svg+xml",
+                    "webp" => "image/webp",
+                    "jpg" | "jpeg" => "image/jpeg",
+                    _ => "application/octet-stream",
                 };
 
                 tauri::http::Response::builder()
@@ -131,6 +100,7 @@ pub fn run() {
                     .body(content)
                     .unwrap()
             } else {
+                eprintln!("Asset Access Denied or Not Found: {:?} (Safe: {})", path, is_safe);
                 tauri::http::Response::builder()
                     .status(403)
                     .body(vec![])
@@ -197,10 +167,11 @@ pub fn run() {
 
             // 3. Templates (to templates/ - Always sync from bundled)
             if let Some(dir) = ASSETS_DIR.get_dir("templates") {
+                println!("Extracting {} templates and assets...", dir.entries().len());
                 for file in dir.files() {
-                    if file.path().extension().and_then(|s| s.to_str()) == Some("json") {
-                        let dest = templates_root.join(file.path().file_name().unwrap());
-                        let _ = std::fs::write(&dest, file.contents());
+                    let dest = templates_root.join(file.path().file_name().unwrap());
+                    if let Err(e) = std::fs::write(&dest, file.contents()) {
+                        eprintln!("Failed to extract {:?}: {}", dest, e);
                     }
                 }
             }
@@ -210,11 +181,15 @@ pub fn run() {
 
             let librarian = Arc::new(Librarian::new(games_root, assets_root));
 
-            let registry = TemplateRegistry::new(templates_root);
+            let registry = TemplateRegistry::new(templates_root.clone());
             let templates: HashMap<String, GameTemplate> = tauri::async_runtime::block_on(async {
                 registry.load_all().await.unwrap_or_default()
             });
-            println!("Loaded {} game templates.", templates.len());
+            println!("Loaded {} game templates from {:?}.", templates.len(), templates_root);
+            
+            if let Some(t) = templates.get("genshin") {
+                println!("Genshin cover: {}", t.cover_image);
+            }
 
             // Load all game DBs
             let game_dbs = tauri::async_runtime::block_on(async {
@@ -245,6 +220,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::library::get_library,
+            commands::library::sync_game_assets,
             commands::library::identify_game,
             commands::setup::fetch_manifest,
             commands::setup::download_game,
@@ -288,6 +264,7 @@ pub fn run() {
             commands::config::update_app_config,
             commands::library::force_reset_state,
             commands::assets::resolve_asset,
+            commands::assets::get_community_backgrounds,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

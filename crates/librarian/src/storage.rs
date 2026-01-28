@@ -28,23 +28,20 @@ impl TemplateRegistry {
             return Ok(templates);
         }
 
-        let mut entries = fs::read_dir(&self.templates_root).await?;
-        while let Some(entry) = entries.next_entry().await? {
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Ok(content) = fs::read_to_string(&path).await {
-                    if let Ok(template) = serde_json::from_str::<GameTemplate>(&content) {
-                        if !template.executables.is_empty() {
-                            for exe in &template.executables {
-                                templates.insert(exe.to_lowercase(), template.clone());
-                            }
-                        } else if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                            templates.insert(stem.to_lowercase(), template.clone());
-                        }
-                    }
+        let template_vec = crate::template::load_templates(&self.templates_root)?;
+        
+        for template in template_vec {
+            // Index by executables
+            if !template.executables.is_empty() {
+                for exe in &template.executables {
+                    templates.insert(exe.to_lowercase(), template.clone());
                 }
             }
+            
+            // Also index by normalized template ID (usually the filename stem)
+            templates.insert(template.id.to_lowercase(), template);
         }
+        
         Ok(templates)
     }
 }

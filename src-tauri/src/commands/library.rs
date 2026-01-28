@@ -258,6 +258,38 @@ pub async fn identify_game(
 }
 
 #[tauri::command]
+pub async fn sync_game_assets(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let mut dbs = state.game_dbs.lock().await;
+    let templates = state.game_templates.lock().await;
+
+    if let (Some(db), Some(template)) = (dbs.get_mut(&game_id), templates.get(&game_id)) {
+        if let Some(config) = db.games.get_mut(&game_id) {
+            println!("Syncing assets for {}: using local templates", game_id);
+            config.cover_image = template.cover_image.clone();
+            config.icon = template.icon.clone();
+            config.accent_color = template.accent_color.clone();
+            config.color = template.color.clone();
+            config.logo_initial = template.logo_initial.clone();
+
+            state
+                .librarian
+                .save_game_db(&game_id, db)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let _ = app.emit("library-updated", dbs.clone());
+            return Ok(());
+        }
+    }
+
+    Err("Game or Template not found".to_string())
+}
+
+#[tauri::command]
 pub async fn add_game(
     app: tauri::AppHandle,
     state: State<'_, AppState>,

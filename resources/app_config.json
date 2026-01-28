@@ -1,16 +1,18 @@
 {
-      "common_loader_repo": "SilentNightSound/GI-Model-Importer",
-          "proton_repo": "GloriousEggroll/proton-ge-custom",
-          "yago_update_url": "https://api.github.com/repos/your-org/yago/releases/latest",
-              "reshade_url": "https://reshade.me/downloads/ReShade_Setup.exe",
-              "default_cover_image": "https://picsum.photos/seed/yago/1920/1080",
-              "default_icon_image": "https://picsum.photos/seed/yago-icon/200/200",
-              "preset_covers": [
-                  "https://picsum.photos/seed/genshin-landscape/1920/1080",
-                  "https://picsum.photos/seed/honkai-landscape/1920/1080",
-                  "https://picsum.photos/seed/starrail-landscape/1920/1080",
-                  "https://picsum.photos/seed/zenless-landscape/1920/1080",
-                  "https://picsum.photos/seed/wuwa-landscape/1920/1080",
-                  "https://picsum.photos/seed/fantasy-landscape/1920/1080"
-              ]
-          }
+  "common_loader_repo": "SilentNightSound/GI-Model-Importer",
+  "proton_repo": "GloriousEggroll/proton-ge-custom",
+  "yago_update_url": "https://api.github.com/repos/your-org/yago/releases/latest",
+  "reshade_url": "https://reshade.me/downloads/ReShade_Setup.exe",
+  "default_cover_image": "https://picsum.photos/seed/yago/1920/1080",
+  "default_icon_image": "https://picsum.photos/seed/yago-icon/200/200",
+  "community_backgrounds_repo": "UIGF-org/HoYoPlay-Launcher-Background",
+  "community_backgrounds_base_url": "https://raw.githubusercontent.com/UIGF-org/HoYoPlay-Launcher-Background/main/output",
+  "preset_covers": [
+    "https://picsum.photos/seed/genshin-landscape/1920/1080",
+    "https://picsum.photos/seed/honkai-landscape/1920/1080",
+    "https://picsum.photos/seed/starrail-landscape/1920/1080",
+    "https://picsum.photos/seed/zenless-landscape/1920/1080",
+    "https://picsum.photos/seed/wuwa-landscape/1920/1080",
+    "https://picsum.photos/seed/fantasy-landscape/1920/1080"
+  ]
+}

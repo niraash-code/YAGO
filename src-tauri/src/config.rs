@@ -7,6 +7,8 @@ pub struct AppConfig {
     pub proton_repo: String,
     pub default_cover_image: String,
     pub default_icon_image: String,
+    pub community_backgrounds_repo: String,
+    pub community_backgrounds_base_url: String,
     pub preset_covers: Vec<String>,
     pub yago_update_url: String,
 }
@@ -35,6 +37,8 @@ impl Default for AppConfig {
             default_icon_image:
                 "https://raw.githubusercontent.com/YAGO-Project/Assets/main/default_icon.png"
                     .to_string(),
+            community_backgrounds_repo: "UIGF-org/HoYoPlay-Launcher-Background".to_string(),
+            community_backgrounds_base_url: "https://raw.githubusercontent.com/UIGF-org/HoYoPlay-Launcher-Background/main/output".to_string(),
             preset_covers: vec![],
             yago_update_url: "https://api.yago.app/updates/latest.json".to_string(),
         }

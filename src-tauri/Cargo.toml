@@ -30,6 +30,7 @@ anyhow = "1.0"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 enigo = "0.3"
+reqwest = { version = "0.12", features = ["json"] }
 
 # Backend Pillars
 fs_engine = { path = "../crates/fs_engine" }

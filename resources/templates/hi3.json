@@ -5,8 +5,8 @@
   "description": "An action RPG featuring fast-paced combat and deep story-driven narrative.",
   "color": "pink-400",
   "accent_color": "#f472b6",
-  "cover_image": "https://picsum.photos/seed/hi3-landscape/1920/1080",
-  "icon": "https://picsum.photos/seed/hi3-icon/200/200",
+  "cover_image": "hi3_background.jpg",
+  "icon": "hi3_logo.webp",
   "logo_initial": "H",
   "regions": 4,
   "executables": [
@@ -22,5 +22,6 @@
     "search_pattern": "",
     "offset": 0
   },
-  "auto_update": true
+  "auto_update": true,
+  "community_folder": "bh3_global"
 }

@@ -52,6 +52,8 @@ pub struct GameTemplate {
     pub fps_config: Option<FpsConfig>,
     #[serde(default)]
     pub auto_update: Option<bool>,
+    #[serde(default)]
+    pub community_folder: Option<String>,
 }
 
 pub fn load_templates(dir: &Path) -> Result<Vec<GameTemplate>> {
@@ -73,6 +75,27 @@ pub fn load_templates(dir: &Path) -> Result<Vec<GameTemplate>> {
                     template.id = stem.to_string();
                 }
             }
+
+            // Resolve local assets to full yago-asset:// paths
+            let resolve_local = |url: &str| -> String {
+                if url.is_empty() || url.starts_with("http") || url.starts_with("yago-asset://") {
+                    url.to_string()
+                } else {
+                    // Assume local file relative to templates directory
+                    // Strip any redundant prefixes if they exist
+                    let file_name = url.strip_prefix("local://").unwrap_or(url);
+                    let file_name = file_name.strip_prefix("templates/").unwrap_or(file_name);
+                    
+                    let full_path = dir.join(file_name);
+                    let path_lossy = full_path.to_string_lossy();
+                    let encoded = urlencoding::encode(&path_lossy);
+                    format!("yago-asset://localhost/{}", encoded)
+                }
+            };
+
+            template.cover_image = resolve_local(&template.cover_image);
+            template.icon = resolve_local(&template.icon);
+
             templates.push(template);
         }
     }
