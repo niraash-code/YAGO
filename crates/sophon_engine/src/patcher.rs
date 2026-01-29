@@ -10,25 +10,25 @@ type hpatch_StreamPos_t = u64;
 
 #[repr(C)]
 struct hpatch_TStreamInput {
-    streamImport: *mut c_void,
-    streamSize: hpatch_StreamPos_t,
+    stream_import: *mut c_void,
+    stream_size: hpatch_StreamPos_t,
     read: extern "C" fn(*const hpatch_TStreamInput, hpatch_StreamPos_t, *mut c_uchar, *mut c_uchar) -> hpatch_BOOL,
-    _private_reserved: *mut c_void,
+    private_reserved: *mut c_void,
 }
 
 #[repr(C)]
 struct hpatch_TStreamOutput {
-    streamImport: *mut c_void,
-    streamSize: hpatch_StreamPos_t,
+    stream_import: *mut c_void,
+    stream_size: hpatch_StreamPos_t,
     read_writed: Option<extern "C" fn(*const hpatch_TStreamOutput, hpatch_StreamPos_t, *mut c_uchar, *mut c_uchar) -> hpatch_BOOL>,
     write: extern "C" fn(*const hpatch_TStreamOutput, hpatch_StreamPos_t, *const c_uchar, *const c_uchar) -> hpatch_BOOL,
 }
 
 extern "C" {
     fn patch_stream(
-        out_newData: *const hpatch_TStreamOutput,
-        oldData: *const hpatch_TStreamInput,
-        serializedDiff: *const hpatch_TStreamInput,
+        out_new_data: *const hpatch_TStreamOutput,
+        old_data: *const hpatch_TStreamInput,
+        serialized_diff: *const hpatch_TStreamInput,
     ) -> hpatch_BOOL;
 }
 
@@ -43,12 +43,7 @@ impl Patcher {
     where
         R: Read + Seek,
         D: Read + Seek,
-        W: Write + Seek, // Write needs Seek? hpatchz output is random access?
-        // Checking patch_stream: "sequential write" is commented in header.
-        // But patch_stream documentation says: "const hpatch_TStreamOutput* out_newData, //sequential write"
-        // Wait, if it's sequential write, do I need Seek?
-        // "streamSize" is max writable range.
-        // Let's assume sequential write for now.
+        W: Write + Seek, 
     {
         // Get sizes
         let old_size = old_data.seek(SeekFrom::End(0))?;
@@ -57,30 +52,23 @@ impl Patcher {
         let diff_size = diff_data.seek(SeekFrom::End(0))?;
         diff_data.seek(SeekFrom::Start(0))?;
 
-        // We don't know new_size easily without parsing diff first.
-        // But hpatchz might handle it?
-        // `out_newData->streamSize` is used for bounds check.
-        // If we stream to a file, we might set it to u64::MAX or the expected size from manifest.
-        // For generic Write, we might not know.
-        // But patch_stream usually expects to write fully.
-        
-        let mut old_stream = hpatch_TStreamInput {
-            streamImport: old_data as *mut _ as *mut c_void,
-            streamSize: old_size,
+        let old_stream = hpatch_TStreamInput {
+            stream_import: old_data as *mut _ as *mut c_void,
+            stream_size: old_size,
             read: input_read::<R>,
-            _private_reserved: ptr::null_mut(),
+            private_reserved: ptr::null_mut(),
         };
 
-        let mut diff_stream = hpatch_TStreamInput {
-            streamImport: diff_data as *mut _ as *mut c_void,
-            streamSize: diff_size,
+        let diff_stream = hpatch_TStreamInput {
+            stream_import: diff_data as *mut _ as *mut c_void,
+            stream_size: diff_size,
             read: input_read::<D>,
-            _private_reserved: ptr::null_mut(),
+            private_reserved: ptr::null_mut(),
         };
 
-        let mut new_stream = hpatch_TStreamOutput {
-            streamImport: new_data as *mut _ as *mut c_void,
-            streamSize: u64::MAX, // Allow unlimited write? Or should check manifest?
+        let new_stream = hpatch_TStreamOutput {
+            stream_import: new_data as *mut _ as *mut c_void,
+            stream_size: u64::MAX,
             read_writed: None,
             write: output_write::<W>,
         };
@@ -104,7 +92,7 @@ extern "C" fn input_read<T: Read + Seek>(
     out_data_end: *mut c_uchar,
 ) -> hpatch_BOOL {
     unsafe {
-        let reader = &mut *((*stream).streamImport as *mut T);
+        let reader = &mut *((*stream).stream_import as *mut T);
         let len = out_data_end as usize - out_data as usize;
         let buf = std::slice::from_raw_parts_mut(out_data, len);
 
@@ -120,28 +108,14 @@ extern "C" fn input_read<T: Read + Seek>(
 
 extern "C" fn output_write<T: Write>(
     stream: *const hpatch_TStreamOutput,
-    write_to_pos: hpatch_StreamPos_t,
+    _write_to_pos: hpatch_StreamPos_t,
     data: *const c_uchar,
     data_end: *const c_uchar,
 ) -> hpatch_BOOL {
     unsafe {
-        let writer = &mut *((*stream).streamImport as *mut T);
+        let writer = &mut *((*stream).stream_import as *mut T);
         let len = data_end as usize - data as usize;
         let buf = std::slice::from_raw_parts(data, len);
-
-        // If T supports Seek, we should seek. But Write trait doesn't imply Seek.
-        // However, hpatch_stream doc says "sequential write" for out_newData.
-        // If it strictly writes sequentially, we might ignore write_to_pos?
-        // But if it jumps, we need Seek.
-        // "patch_stream" usually writes sequentially.
-        // But wait, "writeToPos" is passed. If it's sequential, it should match current pos.
-        // If it's random access, we need Seek.
-        
-        // Let's assume we need Seek if write_to_pos is not ignored.
-        // To be safe, let's require Seek for W too if possible, OR check if hpatchz guarantees sequential.
-        // The header says "sequential write".
-        // But if I can't seek, I rely on it being exactly sequential.
-        // Let's rely on Write for now.
         
         if writer.write_all(buf).is_err() {
             return 0;
