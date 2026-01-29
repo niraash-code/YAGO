@@ -48,14 +48,14 @@ pub async fn update_settings(
         .await
         .map_err(|e| e.to_string())?;
 
-    *current_settings = settings.clone();
-
     // If storage path changed, update Librarian
     let base = if settings.yago_storage_path.as_os_str().is_empty() {
         state.app_data_dir.clone()
     } else {
         settings.yago_storage_path.clone()
     };
+
+    let path_changed = base != current_settings.yago_storage_path;
 
     let lib_config = librarian::storage::LibrarianConfig {
         base_path: base,
@@ -90,19 +90,23 @@ pub async fn update_settings(
     librarian.update_roots(lib_config);
     librarian.ensure_core_dirs().map_err(|e| e.to_string())?;
 
-    // Re-extract templates to the new path
-    if let Some(dir) = crate::ASSETS_DIR.get_dir("templates") {
-        println!(
-            "Re-extracting {} templates to new storage path...",
-            dir.entries().len()
-        );
-        for file in dir.files() {
-            let dest = librarian.templates_root.join(file.path().file_name().unwrap());
-            if let Err(e) = std::fs::write(&dest, file.contents()) {
-                eprintln!("Failed to extract {:?}: {}", dest, e);
+    // Re-extract templates to the new path ONLY IF IT CHANGED
+    if path_changed {
+        if let Some(dir) = crate::ASSETS_DIR.get_dir("templates") {
+            println!(
+                "Path changed! Re-extracting {} templates to new storage path...",
+                dir.entries().len()
+            );
+            for file in dir.files() {
+                let dest = librarian.templates_root.join(file.path().file_name().unwrap());
+                if let Err(e) = std::fs::write(&dest, file.contents()) {
+                    eprintln!("Failed to extract {:?}: {}", dest, e);
+                }
             }
         }
     }
+
+    *current_settings = settings.clone();
 
     let _ = app.emit("settings-updated", settings);
     Ok(())

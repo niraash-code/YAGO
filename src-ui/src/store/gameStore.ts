@@ -225,12 +225,16 @@ export const useAppStore = create<AppState>()(
       },
 
       refreshSetupStatus: async () => {
-        const isSetupDone = await api.checkSetup();
-        const status = await api.getSetupStatus();
-        set({
-          setupStatus: status,
-          isSetupRequired: !isSetupDone,
-        });
+        try {
+          const isSetupDone = await api.checkSetup();
+          const status = await api.getSetupStatus();
+          set({
+            setupStatus: status,
+            isSetupRequired: !isSetupDone,
+          });
+        } catch (e) {
+          console.error("Failed to refresh setup status:", e);
+        }
       },
 
       forceResetAppState: async () => {
@@ -631,7 +635,7 @@ export const useAppStore = create<AppState>()(
             }
             
             const currentSelected = get().selectedGameId;
-            set({ 
+            set({
               games: allLoadedGames,
               selectedGameId: currentSelected || (allLoadedGames.length > 0 ? allLoadedGames[0].id : "")
             });
@@ -649,19 +653,19 @@ export const useAppStore = create<AppState>()(
 
       initialize: async () => {
         try {
-          await api.syncTemplates();
+          // Attempt initialization but don't hang the app if one part fails
+          try { await api.syncTemplates(); } catch(e) { console.warn("Sync templates failed", e); }
+          
           const isSetupDone = await api.checkSetup();
-          const settings = await api.getSettings();
-          const dbs: Record<string, LibraryDatabase> = await api.getLibrary();
-          const appConfig = await api.getAppConfig();
-
-          // Fetch runners
+          let settings: any = null;
+          let dbs: Record<string, LibraryDatabase> = {};
+          let appConfig: any = null;
           let runners: string[] = [];
-          try {
-            runners = await api.listRunners();
-          } catch (e) {
-            console.error("Failed to fetch runners during init", e);
-          }
+
+          try { settings = await api.getSettings(); } catch(e) { console.error("Get settings failed", e); }
+          try { dbs = await api.getLibrary(); } catch(e) { console.error("Get library failed", e); }
+          try { appConfig = await api.getAppConfig(); } catch(e) { console.error("Get app config failed", e); }
+          try { runners = await api.listRunners(); } catch(e) { console.error("List runners failed", e); }
 
           const allLoadedGames: Game[] = [];
 
@@ -716,9 +720,9 @@ export const useAppStore = create<AppState>()(
           set({
             games: allLoadedGames,
             globalSettings: settings,
-            streamSafe: settings.stream_safe,
-            nsfwBehavior: settings.nsfw_behavior,
-            closeOnLaunch: settings.close_on_launch || false,
+            streamSafe: settings?.stream_safe ?? true,
+            nsfwBehavior: settings?.nsfw_behavior ?? "blur",
+            closeOnLaunch: settings?.close_on_launch || false,
             isInitialized: true,
             isSetupRequired: !isSetupDone,
             availableRunners: runners,
@@ -732,12 +736,13 @@ export const useAppStore = create<AppState>()(
                 : "",
           });
 
-          // Perform background sync for assets to update old placeholders
+          // Perform background sync for assets
           for (const game of allLoadedGames) {
             api.syncGameAssets(game.id).catch(console.error);
           }
         } catch (e) {
-          console.error("Failed to initialize library", e);
+          console.error("Critical store initialization failure", e);
+          set({ isInitialized: true }); // Fallback to let app try to render something
         }
       },
       updateGame: updatedGame =>
@@ -768,7 +773,7 @@ export const useAppStore = create<AppState>()(
           // Backend expects the full path to the executable
           // Ensure we handle separators correctly or just join them
           const separator = newGame.installPath?.includes("\\") ? "\\" : "/";
-          const fullPath =
+          const fullPath = 
             newGame.installPath && newGame.exeName
               ? `${newGame.installPath}${separator}${newGame.exeName}`
               : newGame.installPath || "";

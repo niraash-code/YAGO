@@ -109,10 +109,18 @@ const App: React.FC = () => {
 
   if (!isInitialized)
     return (
-      <div className="flex h-screen w-full bg-slate-950 items-center justify-center text-white">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400 font-medium">Synchronizing Library...</p>
+      <div className="flex h-screen w-full bg-slate-950 items-center justify-center text-white overflow-hidden border border-white/10 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+        <TitleBar />
+        <div className="text-center relative z-10">
+          <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-6 shadow-[0_0_20px_rgba(99,102,241,0.3)]" />
+          <h2 className="text-xl font-black uppercase tracking-[0.3em] mb-2 italic">Synchronizing</h2>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Verifying Library & Templates</p>
+        </div>
+        
+        {/* Background Decor */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
       </div>
     );

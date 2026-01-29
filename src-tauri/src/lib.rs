@@ -80,9 +80,14 @@ pub fn run() {
                 path = std::path::PathBuf::from(format!("/{}", decoded));
             }
 
+            // Cleanup potential double slashes
+            if let Ok(p) = path.strip_prefix("//") {
+                path = std::path::PathBuf::from(format!("/{}", p.display()));
+            }
+
             let is_safe = path.components().any(|c| {
                 let s = c.as_os_str().to_string_lossy();
-                s == "games" || s == "cache" || s == "templates"
+                s == "games" || s == "cache" || s == "templates" || s == "loaders"
             });
 
             if is_safe && path.exists() && path.is_file() {
