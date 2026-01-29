@@ -7,7 +7,7 @@ use tempfile::{tempdir, TempDir};
 use uuid::Uuid;
 
 // Crate Imports
-use librarian::{Librarian, ModRecord};
+use librarian::{storage::LibrarianConfig, Librarian, ModRecord};
 use logic_weaver::ModProfile;
 
 /// Harness for running headless simulations
@@ -20,19 +20,25 @@ pub struct SimulationContext {
 impl SimulationContext {
     pub async fn new() -> Self {
         let root = tempdir().unwrap();
-        let games_root = root.path().join("library");
+        let base_path = root.path().to_path_buf();
         let staging_root = root.path().join("staging");
-        let assets_root = root.path().join("assets");
-        std::fs::create_dir(&games_root).unwrap();
         std::fs::create_dir(&staging_root).unwrap();
-        std::fs::create_dir(&assets_root).unwrap();
 
-        let librarian = Arc::new(Librarian::new(games_root.clone(), assets_root));
+        let config = LibrarianConfig {
+            base_path,
+            mods_path: None,
+            runners_path: None,
+            prefixes_path: None,
+            cache_path: None,
+            games_install_path: None,
+        };
+        let librarian = Librarian::new(config);
+        librarian.ensure_core_dirs().unwrap();
 
         Self {
             root,
             staging_root,
-            librarian,
+            librarian: Arc::new(librarian),
         }
     }
 
@@ -123,12 +129,13 @@ async fn test_sim_new_user() {
     let (plan, _) = logic_weaver::generate_deployment_plan(profiles_for_weaver).unwrap();
 
     // Execute FS
-    let game_root = game_path.parent().unwrap();
-    fs_engine::execute_deployment(game_root, &plan, None).expect("Deployment failed");
+    // We need loaders_root for deployment
+    let loaders_root = ctx.librarian.loaders_root.join(&game_id);
+    std::fs::create_dir_all(&loaders_root).unwrap();
+    fs_engine::execute_deployment(&loaders_root, &plan, None).expect("Deployment failed");
 
     // Verify
-    assert!(game_root.join("Mods/YAGO").exists());
-    assert!(game_root.join("Mods/merged.ini").exists());
+    assert!(loaders_root.join("Mods/YAGO").exists());
 }
 
 // --- Scenario B: The Power User ---

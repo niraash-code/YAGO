@@ -1,7 +1,9 @@
 use chrono::Utc;
 use fs_engine::Safety;
 use ini_forge::{IniCompiler, IniDocument, IniItem, Section};
-use librarian::{Librarian, ModCompatibility, ModConfig, ModMetadata, ModRecord};
+use librarian::{
+    storage::LibrarianConfig, Librarian, ModCompatibility, ModConfig, ModMetadata, ModRecord,
+};
 use logic_weaver::{Merger, Namespacer, Validator};
 use std::collections::HashMap;
 use std::fs::File;
@@ -12,14 +14,13 @@ use uuid::Uuid;
 #[tokio::test]
 async fn test_full_mod_import_flow() {
     let root = tempdir().unwrap();
+    let base_path = root.path().to_path_buf();
     let staging_dir = root.path().join("staging");
-    let games_root = root.path().join("games");
 
     let game_id = "GenshinImpact.exe".to_string();
     let mod_id = Uuid::new_v4();
 
     std::fs::create_dir(&staging_dir).unwrap();
-    std::fs::create_dir(&games_root).unwrap();
 
     let mod_ini = staging_dir.join("mod.ini");
     let mut f = File::create(&mod_ini).unwrap();
@@ -31,10 +32,19 @@ async fn test_full_mod_import_flow() {
 
     File::create(staging_dir.join("texture.dds")).unwrap();
 
-    let assets_root = root.path().join("assets");
-    std::fs::create_dir(&assets_root).unwrap();
-    let librarian = Librarian::new(games_root.clone(), assets_root);
-    let game_mods_dir = librarian.get_mods_dir(&game_id);
+    let config = LibrarianConfig {
+        base_path,
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
+
+    let game_paths = librarian.game_paths(&game_id);
+    let game_mods_dir = game_paths.mods;
     std::fs::create_dir_all(&game_mods_dir).unwrap();
 
     let target_path = game_mods_dir.join(mod_id.to_string());

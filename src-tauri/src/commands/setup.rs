@@ -28,7 +28,9 @@ pub async fn check_setup(state: State<'_, AppState>) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn get_setup_status(state: State<'_, AppState>) -> Result<super::library::SetupStatus, String> {
+pub async fn get_setup_status(
+    state: State<'_, AppState>,
+) -> Result<super::library::SetupStatus, String> {
     let settings = state.global_settings.lock().await;
     let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
         state.app_data_dir.clone()
@@ -38,13 +40,17 @@ pub async fn get_setup_status(state: State<'_, AppState>) -> Result<super::libra
     drop(settings);
 
     let runners_dir = base_storage.join("runners");
-    let has_runners = runners_dir.exists() && std::fs::read_dir(runners_dir).map(|e| e.count() > 0).unwrap_or(false);
+    let has_runners = runners_dir.exists()
+        && std::fs::read_dir(runners_dir)
+            .map(|e| e.count() > 0)
+            .unwrap_or(false);
 
     let common_loaders = base_storage.join("loaders").join("common");
-    let has_common_loaders = common_loaders.exists()
-        && common_loaders.join("d3d11.dll").exists();
+    let has_common_loaders = common_loaders.exists() && common_loaders.join("d3d11.dll").exists();
 
-    let detected_steam = crate::commands::library::detect_steam_proton_path_internal().await.unwrap_or(None);
+    let detected_steam = crate::commands::library::detect_steam_proton_path_internal()
+        .await
+        .unwrap_or(None);
 
     Ok(super::library::SetupStatus {
         has_runners,
@@ -123,7 +129,7 @@ pub async fn download_loader(
             std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
             // Mock download
             println!("Downloading loader for {} from {}", game_id, repo);
-            
+
             // XXMI: Handle potential INI renaming (main.ini -> d3dx.ini)
             let main_ini = path.join("main.ini");
             let d3dx_ini = path.join("d3dx.ini");
@@ -172,8 +178,7 @@ pub async fn ensure_game_resources(
     let common_path = base_storage.join("loaders").join("common");
 
     // 1. Check Common Libs
-    let common_exists = common_path.exists()
-        && common_path.join("d3d11.dll").exists();
+    let common_exists = common_path.exists() && common_path.join("d3d11.dll").exists();
 
     if !common_exists {
         println!("EnsureResources: Common libs missing. Installing...");
@@ -203,6 +208,10 @@ pub async fn download_proton(
         let config = state.app_config.lock().await;
         config.proton_repo.clone()
     };
-    println!("Downloading Proton from {} to {:?}", repo, base_storage.join("runners"));
+    println!(
+        "Downloading Proton from {} to {:?}",
+        repo,
+        base_storage.join("runners")
+    );
     Ok(())
 }

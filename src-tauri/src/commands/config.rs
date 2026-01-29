@@ -59,11 +59,31 @@ pub async fn update_settings(
 
     let lib_config = librarian::storage::LibrarianConfig {
         base_path: base,
-        games_install_path: if settings.default_games_path.as_os_str().is_empty() { None } else { Some(settings.default_games_path.clone()) },
-        mods_path: if settings.mods_path.as_os_str().is_empty() { None } else { Some(settings.mods_path.clone()) },
-        runners_path: if settings.runners_path.as_os_str().is_empty() { None } else { Some(settings.runners_path.clone()) },
-        prefixes_path: if settings.prefixes_path.as_os_str().is_empty() { None } else { Some(settings.prefixes_path.clone()) },
-        cache_path: if settings.cache_path.as_os_str().is_empty() { None } else { Some(settings.cache_path.clone()) },
+        games_install_path: if settings.default_games_path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(settings.default_games_path.clone())
+        },
+        mods_path: if settings.mods_path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(settings.mods_path.clone())
+        },
+        runners_path: if settings.runners_path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(settings.runners_path.clone())
+        },
+        prefixes_path: if settings.prefixes_path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(settings.prefixes_path.clone())
+        },
+        cache_path: if settings.cache_path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(settings.cache_path.clone())
+        },
     };
 
     let mut librarian = state.librarian.lock().await;

@@ -1,3 +1,4 @@
+use librarian::storage::LibrarianConfig;
 use librarian::*;
 use std::collections::HashMap;
 use std::fs;
@@ -6,13 +7,19 @@ use tempfile::tempdir;
 #[tokio::test]
 async fn test_corrupted_json_handling() {
     let dir = tempdir().unwrap();
-    let games_root = dir.path().join("games");
-    let assets_root = dir.path().join("assets");
-    fs::create_dir_all(&games_root).unwrap();
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
 
-    let librarian = Librarian::new(games_root.clone(), assets_root);
     let game_id = "test.exe";
-    let game_dir = games_root.join(game_id);
+    let game_dir = librarian.games_root.join(game_id);
     fs::create_dir(&game_dir).unwrap();
 
     // Write invalid JSON
@@ -26,7 +33,16 @@ async fn test_corrupted_json_handling() {
 #[tokio::test]
 async fn test_template_match_by_multiple_exes() {
     let dir = tempdir().unwrap();
-    let librarian = Librarian::new(dir.path().join("games"), dir.path().join("assets"));
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
 
     let mut templates = HashMap::new();
     let t = GameTemplate {

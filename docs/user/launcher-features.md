@@ -25,5 +25,14 @@ YAGO supports multiple methods for 3DMigoto and ReShade injection:
 2.  **ReShade Only**: Installs ReShade as a local proxy without the mod loader.
 3.  **Loader (Memory Injection)**: Uses a dedicated loader executable for injection, often preferred for specific compatibility scenarios on Windows.
 
+## 💾 Customizable Storage (Decentralized)
+
+YAGO features a unique decentralized storage model designed for power users and library sharing:
+
+- **Granular Path Overrides**: You can independently set the paths for **Mods**, **Runners** (Proton/Wine), and **WINE Prefixes**.
+- **SSD Optimization**: Move your heavy mod directories to a fast NVMe SSD while keeping the lightweight application metadata on your system drive.
+- **Cross-Tool Sharing**: Point YAGO to your existing `compatibilitytools.d` folder to share Proton versions with Steam, or use existing Lutris prefixes to avoid redundant disk usage.
+- **Portability**: Your game databases (`game.json`) are stored within your Games Root. If you reinstall YAGO, simply point it to your Games Root again, and your entire configuration is instantly restored.
+
 ---
 [Next: Safety & Streamer Mode](safety.md) | [Documentation Home](../index.md)

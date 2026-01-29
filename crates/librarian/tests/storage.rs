@@ -1,3 +1,4 @@
+use librarian::storage::LibrarianConfig;
 use librarian::*;
 use tempfile::tempdir;
 use uuid::Uuid;
@@ -5,11 +6,23 @@ use uuid::Uuid;
 #[tokio::test]
 async fn test_librarian_flow() {
     let dir = tempdir().unwrap();
-    let librarian = Librarian::new(dir.path().join("games"), dir.path().join("assets"));
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
+
     let db = librarian.load_game_db("test").await.unwrap();
     assert!(db.games.is_empty());
     librarian.save_game_db("test", &db).await.unwrap();
-    assert!(librarian.get_db_path("test").exists());
+
+    let paths = librarian.game_paths("test");
+    assert!(paths.db.exists());
 }
 
 #[tokio::test]
@@ -26,7 +39,17 @@ async fn test_settings_persistence() {
 #[tokio::test]
 async fn test_profile_creation() {
     let dir = tempdir().unwrap();
-    let librarian = Librarian::new(dir.path().join("games"), dir.path().join("assets"));
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
+
     let p = librarian
         .create_profile("test", "New".into())
         .await
@@ -38,7 +61,17 @@ async fn test_profile_creation() {
 #[tokio::test]
 async fn test_load_order_persistence() {
     let dir = tempdir().unwrap();
-    let librarian = Librarian::new(dir.path().join("games"), dir.path().join("assets"));
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
+
     let mut db = LibraryDatabase::default();
     let id = Uuid::new_v4();
     db.profiles.insert(
@@ -57,7 +90,16 @@ async fn test_load_order_persistence() {
 #[tokio::test]
 async fn test_duplicate_profile() {
     let dir = tempdir().unwrap();
-    let librarian = Librarian::new(dir.path().join("games"), dir.path().join("assets"));
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
 
     // Create base profile
     let original = librarian

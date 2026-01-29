@@ -132,7 +132,9 @@ export const SetupWizard: React.FC = () => {
           return null;
         }
       });
-      const resolved = (await Promise.all(gamePromises)).filter(g => g !== null);
+      const resolved = (await Promise.all(gamePromises)).filter(
+        g => g !== null
+      );
       setFoundGames(resolved);
     } catch (e) {
       console.error("Discovery failed:", e);
@@ -445,7 +447,10 @@ export const SetupWizard: React.FC = () => {
                 <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                   {isScanning ? (
                     <div className="h-40 flex items-center justify-center">
-                      <Loader2 size={48} className="text-indigo-500 animate-spin" />
+                      <Loader2
+                        size={48}
+                        className="text-indigo-500 animate-spin"
+                      />
                     </div>
                   ) : discoveredGames.length > 0 ? (
                     discoveredGames.map(game => (
@@ -474,7 +479,9 @@ export const SetupWizard: React.FC = () => {
                     ))
                   ) : (
                     <div className="text-center py-10 opacity-50 italic">
-                      <p className="text-sm text-slate-400">No supported games found in this directory.</p>
+                      <p className="text-sm text-slate-400">
+                        No supported games found in this directory.
+                      </p>
                     </div>
                   )}
                 </div>

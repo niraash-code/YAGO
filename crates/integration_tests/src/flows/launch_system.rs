@@ -17,7 +17,7 @@ async fn test_game_launch_with_real_fake_process() {
         panic!("Fake executable not found at {:?}. Run rustc fixtures/fake_game/main.rs -o fixtures/fake_game/GenshinImpact.exe first.", fake_exe_src);
     }
 
-    let exe_path = game_dir.join("GenshinImpact.exe");
+    let exe_path = game_dir.join("RealFakeGame.exe");
     std::fs::copy(&fake_exe_src, &exe_path).unwrap();
 
     let prefix_path = dir.path().join("dummy_prefix");
@@ -27,7 +27,7 @@ async fn test_game_launch_with_real_fake_process() {
     std::fs::create_dir(&loader_dir).unwrap();
     File::create(loader_dir.join("d3d11.dll")).unwrap();
 
-    LoaderContext::install_proxy(&game_dir, &loader_dir, "GenshinImpact.exe")
+    LoaderContext::install_proxy(&game_dir, &loader_dir, "RealFakeGame.exe")
         .await
         .unwrap();
 
@@ -62,7 +62,7 @@ async fn test_game_launch_with_real_fake_process() {
         .expect("Spawning fake process failed");
 
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-    proc_marshal::Monitor::kill_by_name("GenshinImpact.exe");
+    proc_marshal::Monitor::kill_by_name("RealFakeGame.exe");
 
     let log_path = game_dir.join("yago_test_log.txt");
     assert!(
@@ -83,7 +83,7 @@ async fn test_game_kill_flow() {
 
     let project_root = std::env::current_dir().unwrap();
     let fake_exe_src = project_root.join("../../fixtures/fake_game/GenshinImpact.exe");
-    let exe_path = game_dir.join("GenshinImpact.exe");
+    let exe_path = game_dir.join("KillableGame.exe");
     std::fs::copy(&fake_exe_src, &exe_path).unwrap();
 
     let prefix_path = dir.path().join("dummy_prefix_kill");
@@ -117,7 +117,7 @@ async fn test_game_kill_flow() {
     launcher.launch(options).await.expect("Failed to launch");
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    let killed = proc_marshal::Monitor::kill_by_name("GenshinImpact.exe");
+    let killed = proc_marshal::Monitor::kill_by_name("KillableGame.exe");
     assert!(killed);
 }
 

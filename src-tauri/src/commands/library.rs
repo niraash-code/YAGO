@@ -357,7 +357,7 @@ pub async fn identify_game(
     let mut version = "Unknown".to_string();
     if exe_path.exists() {
         let path_clone = exe_path.clone();
-        if let Ok(Ok(v)) = 
+        if let Ok(Ok(v)) =
             tauri::async_runtime::spawn_blocking(move || ExeInspector::get_version(&path_clone))
                 .await
         {
@@ -471,7 +471,7 @@ pub async fn sync_game_assets(
                 .map_err(|e: librarian::LibrarianError| e.to_string())?;
 
             let _ = app.emit("library-updated", dbs.clone());
-            return Ok(())
+            return Ok(());
         }
     }
 
@@ -487,7 +487,7 @@ pub async fn add_game(
     let path_buf = PathBuf::from(&path);
     let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
         state.game_templates.lock().await;
-    
+
     let game_id = {
         let librarian = state.librarian.lock().await;
         Discovery::add_game_by_path(&librarian, path_buf, &templates_guard)
@@ -498,7 +498,7 @@ pub async fn add_game(
     #[cfg(target_os = "linux")]
     {
         let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-        
+
         let settings = state.global_settings.lock().await;
         let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
             app_data_dir.clone()
@@ -526,7 +526,7 @@ pub async fn add_game(
             }
         }
     }
-    
+
     let db_res = {
         let librarian = state.librarian.lock().await;
         librarian.load_game_db(&game_id).await
@@ -552,7 +552,7 @@ pub async fn remove_game(
     if let Some(db) = dbs.remove(&game_id) {
         let librarian = state.librarian.lock().await;
         let game_paths = librarian.game_paths(&game_id);
-        
+
         if game_paths.root.exists() {
             std::fs::remove_dir_all(game_paths.root).map_err(|e| e.to_string())?;
         }
@@ -567,7 +567,7 @@ pub async fn remove_game(
             }
         }
         let _ = app.emit("library-updated", dbs.clone());
-        return Ok(())
+        return Ok(());
     }
     Err("Game not found".to_string())
 }
@@ -594,13 +594,17 @@ pub async fn recursive_scan_path(
     let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
         state.game_templates.lock().await;
     let templates_vec: Vec<_> = templates_guard.values().cloned().collect();
-    
+
     let path_buf = PathBuf::from(path);
     if !path_buf.exists() {
         return Err("Path does not exist".to_string());
     }
 
-    Ok(librarian::scanner::recursive_scan(&path_buf, &templates_vec, 4))
+    Ok(librarian::scanner::recursive_scan(
+        &path_buf,
+        &templates_vec,
+        4,
+    ))
 }
 
 #[tauri::command]

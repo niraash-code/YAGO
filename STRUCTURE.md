@@ -53,13 +53,13 @@ Independent crates, each with their own `tests/` directory.
 | Crate | Responsibility |
 | :--- | :--- |
 | **`fs_engine`** | VFS, Archive extraction, Atomic file operations. |
-| **`librarian`** | Database management, Game discovery, Metadata parsing. |
+| **`librarian`** | The Inventory: Manages decentralized game DBs, **granular path overrides**, and the `TemplateRegistry`. |
 | **`proc_marshal`** | Process execution, FPS Unlocking, Sandbox snapshots. |
-| **`logic_weaver`** | Deployment planning, INI merging, DXBC patching. |
-| **`ini_forge`** | Custom logic-aware INI parser/compiler. |
-| **`loader_ctl`** | Mod loader installation and proxy chaining. |
-| **`quartermaster`** | Network fetching and asset caching. |
-| **`sophon_engine`** | Maintenance Brain: Block-level orchestrator and delta patcher. |
+
+#### 📂 Librarian Storage Architecture
+*   **`LibrarianConfig`**: Orchestrates base storage and individual path overrides for Mods, Runners, and Prefixes.
+*   **`GamePaths`**: Provides standardized path resolution for per-game resources (e.g., `/{GamesRoot}/Genshin/game.json`).
+*   **`scanner`**: Performs deep recursive identification of supported titles within a provided root.
 
 #### 📦 Sophon Engine Sub-modules
 *   **`orchestrator`**: MPMC worker pool managing parallel block downloads and deduplication.

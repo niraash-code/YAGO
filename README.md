@@ -58,8 +58,14 @@ YAGO features a native implementation of the Sophon protocol, allowing it to mai
 - **Selective Installation**: Install only the languages and audio packs you need to save bandwidth and disk space.
 - **Hybrid Integrity**: Tiered scanning (Fast/Metadata vs. Deep/MD5) ensures library health without the performance penalty of a full hash pass.
 
-### Decentralized Storage
-YAGO identifies games by executable name. Each game has an isolated home in `app_data/games/` containing its database and mods. This ensures zero "orphaned mods" and simple manual cleanup.
+### Decentralized Storage & Sharing
+YAGO gives you total control over your data footprint:
+- **Granular Overrides**: Store your 100GB+ Mod library on an external SSD while keeping the app configuration in `app_data`.
+- **Resource Sharing**: Point YAGO to existing Proton runners or WINE prefixes used by other launchers (Steam, Lutris) to save space.
+- **Portability**: If you wipe YAGO or move systems, your mods and prefixes remain intact and can be instantly re-linked.
+
+### Recursive Auto-Discovery
+Point YAGO to your primary Games folder (e.g., `~/Games`), and it will perform a deep recursive scan (up to 4 levels) to automatically identify and import all supported titles into your library.
 
 ---
 

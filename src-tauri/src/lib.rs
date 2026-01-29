@@ -143,16 +143,38 @@ pub fn run() {
 
             let lib_config = librarian::storage::LibrarianConfig {
                 base_path: base_storage,
-                games_install_path: if settings.default_games_path.as_os_str().is_empty() { None } else { Some(settings.default_games_path.clone()) },
-                mods_path: if settings.mods_path.as_os_str().is_empty() { None } else { Some(settings.mods_path.clone()) },
-                runners_path: if settings.runners_path.as_os_str().is_empty() { None } else { Some(settings.runners_path.clone()) },
-                prefixes_path: if settings.prefixes_path.as_os_str().is_empty() { None } else { Some(settings.prefixes_path.clone()) },
-                cache_path: if settings.cache_path.as_os_str().is_empty() { None } else { Some(settings.cache_path.clone()) },
+                games_install_path: if settings.default_games_path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(settings.default_games_path.clone())
+                },
+                mods_path: if settings.mods_path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(settings.mods_path.clone())
+                },
+                runners_path: if settings.runners_path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(settings.runners_path.clone())
+                },
+                prefixes_path: if settings.prefixes_path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(settings.prefixes_path.clone())
+                },
+                cache_path: if settings.cache_path.as_os_str().is_empty() {
+                    None
+                } else {
+                    Some(settings.cache_path.clone())
+                },
             };
 
             // Initialize Librarian
             let librarian = Librarian::new(lib_config);
-            librarian.ensure_core_dirs().expect("failed to ensure core directories");
+            librarian
+                .ensure_core_dirs()
+                .expect("failed to ensure core directories");
 
             // EXTRACT BUNDLED ASSETS
             // 1. App Config (to root)
@@ -175,7 +197,9 @@ pub fn run() {
             if let Some(dir) = ASSETS_DIR.get_dir("templates") {
                 println!("Extracting {} templates and assets...", dir.entries().len());
                 for file in dir.files() {
-                    let dest = librarian.templates_root.join(file.path().file_name().unwrap());
+                    let dest = librarian
+                        .templates_root
+                        .join(file.path().file_name().unwrap());
                     if let Err(e) = std::fs::write(&dest, file.contents()) {
                         eprintln!("Failed to extract {:?}: {}", dest, e);
                     }

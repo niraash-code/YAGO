@@ -1,4 +1,4 @@
-use librarian::Librarian;
+use librarian::{storage::LibrarianConfig, Librarian};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -15,19 +15,25 @@ pub struct SimulationContext {
 impl SimulationContext {
     pub async fn new() -> Self {
         let root = tempdir().unwrap();
-        let games_root = root.path().join("library");
+        let base_path = root.path().to_path_buf();
         let staging_root = root.path().join("staging");
-        let assets_root = root.path().join("assets");
-        std::fs::create_dir(&games_root).unwrap();
         std::fs::create_dir(&staging_root).unwrap();
-        std::fs::create_dir(&assets_root).unwrap();
 
-        let librarian = Arc::new(Librarian::new(games_root.clone(), assets_root));
+        let config = LibrarianConfig {
+            base_path,
+            mods_path: None,
+            runners_path: None,
+            prefixes_path: None,
+            cache_path: None,
+            games_install_path: None,
+        };
+        let librarian = Librarian::new(config);
+        librarian.ensure_core_dirs().unwrap();
 
         Self {
             root,
             staging_root,
-            librarian,
+            librarian: Arc::new(librarian),
         }
     }
 

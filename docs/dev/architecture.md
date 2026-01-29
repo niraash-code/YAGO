@@ -44,12 +44,15 @@ Integrity checks are tiered to balance speed and safety:
 
 ## 🧩 Decentralized Storage System
 
-YAGO avoids a single monolithic database to prevent data corruption and orphaned mod entries. 
+YAGO avoids a single monolithic database to prevent data corruption and orphaned mod entries. The system is designed for portability and resource sharing.
 
-- **Games Root**: Located in the application's `app_data` directory.
-- **Game Directory**: Identified by executable name (e.g., `GenshinImpact.exe/`).
-- **Game Databases**: Each directory contains an isolated database with settings and mod indices.
-- **Mod Isolation**: Mods are stored in a dedicated directory within each game's home.
+- **Storage Roots**: Configured via `LibrarianConfig`. Supports a single `base_path` with granular overrides for:
+    - **Mods**: Can be stored on external SSDs.
+    - **Runners**: Can be shared with Steam or Lutris.
+    - **Prefixes**: Isolated per-game environments.
+- **Game Paths**: Resolved via the `GamePaths` helper. Each game is identified by its executable name (e.g., `GenshinImpact.exe/`).
+- **Game Databases**: Each directory contains an isolated `game.json` with settings and mod indices.
+- **Resilience**: If the main application data is wiped, games and mods stored in override paths remain intact and can be re-linked via the **Auto-Discovery** system.
 
 ## 📋 Template-Driven Identification
 

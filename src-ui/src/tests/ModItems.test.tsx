@@ -4,24 +4,24 @@ import { ModItem, CompactModItem } from "../components/mod-manager/ModItems";
 import React from "react";
 
 describe("Mod Items Components", () => {
-const mockMod = {
-  id: "1",
-  name: "Test Mod",
-  author: "Author",
-  version: "1.0.0",
-  description: "Description",
-  tags: ["Tag1"],
-  imageUrl: "",
-  enabled: true,
-  size: "1MB",
-  updated: "2023-01-01",
-  compatibility: {
-    game: "Test Game",
-    character: "Test Character",
-    hashes: [],
-    fingerprint: "test-fp",
-  },
-};
+  const mockMod = {
+    id: "1",
+    name: "Test Mod",
+    author: "Author",
+    version: "1.0.0",
+    description: "Description",
+    tags: ["Tag1"],
+    imageUrl: "",
+    enabled: true,
+    size: "1MB",
+    updated: "2023-01-01",
+    compatibility: {
+      game: "Test Game",
+      character: "Test Character",
+      hashes: [],
+      fingerprint: "test-fp",
+    },
+  };
 
   it("ModItem renders and handles toggle", () => {
     const onToggle = vi.fn();

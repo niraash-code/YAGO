@@ -45,11 +45,15 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
   useEffect(() => {
     if (isOpen) {
       setStep("path");
-      
+
       // Default path from settings
       if (globalSettings?.default_games_path) {
-        const separator = globalSettings.default_games_path.includes("\\") ? "\\" : "/";
-        setInstallPath(`${globalSettings.default_games_path}${separator}${gameName}`);
+        const separator = globalSettings.default_games_path.includes("\\")
+          ? "\\"
+          : "/";
+        setInstallPath(
+          `${globalSettings.default_games_path}${separator}${gameName}`
+        );
       } else {
         setInstallPath("");
       }

@@ -88,7 +88,9 @@ impl Librarian {
             .games_install_path
             .unwrap_or_else(|| base.join("Library"));
         self.runners_root = config.runners_path.unwrap_or_else(|| base.join("runners"));
-        self.prefixes_root = config.prefixes_path.unwrap_or_else(|| base.join("prefixes"));
+        self.prefixes_root = config
+            .prefixes_path
+            .unwrap_or_else(|| base.join("prefixes"));
         self.cache_root = config.cache_path.unwrap_or_else(|| base.join("cache"));
         self.mods_root = config.mods_path.unwrap_or_else(|| base.join("mods"));
     }

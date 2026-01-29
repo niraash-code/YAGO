@@ -4,6 +4,7 @@ use librarian::models::{
     ModMetadata, ModRecord, Profile, SandboxConfig,
 };
 use librarian::queries::Queries;
+use librarian::storage::LibrarianConfig;
 use librarian::*;
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -151,7 +152,17 @@ async fn test_character_identification() {
         r#"{"characters":{"123":"Hero"}}"#,
     )
     .unwrap();
-    let librarian = Librarian::new(dir.path().join("games"), assets);
+
+    let config = LibrarianConfig {
+        base_path: dir.path().to_path_buf(),
+        mods_path: None,
+        runners_path: None,
+        prefixes_path: None,
+        cache_path: None,
+        games_install_path: None,
+    };
+    let librarian = Librarian::new(config);
+    librarian.ensure_core_dirs().unwrap();
 
     let archive = dir.path().join("mod.zip");
     let mut zip = zip::ZipWriter::new(File::create(&archive).unwrap());

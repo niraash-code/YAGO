@@ -25,7 +25,11 @@ pub fn scan(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
 }
 
 /// Scans a specific directory recursively for supported games.
-pub fn recursive_scan(root: &Path, templates: &[GameTemplate], max_depth: usize) -> Vec<DiscoveredGame> {
+pub fn recursive_scan(
+    root: &Path,
+    templates: &[GameTemplate],
+    max_depth: usize,
+) -> Vec<DiscoveredGame> {
     scan_roots(templates, vec![root.to_path_buf()], max_depth)
 }
 

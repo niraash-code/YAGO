@@ -61,21 +61,21 @@ describe("gameStore", () => {
       has_common_loaders: true,
       detected_steam_path: null,
     });
-  const mockSettings: GlobalSettings = {
-    language: "en-US",
-    steam_compat_tools_path: "/test/steam",
-    wine_prefix_path: "/test/wine",
-    yago_storage_path: "/test/yago",
-    default_games_path: "",
-    mods_path: "",
-    runners_path: "",
-    prefixes_path: "",
-    cache_path: "",
-    default_runner_id: null,
-    stream_safe: true,
-    nsfw_behavior: "blur",
-    close_on_launch: false,
-  };
+    const mockSettings: GlobalSettings = {
+      language: "en-US",
+      steam_compat_tools_path: "/test/steam",
+      wine_prefix_path: "/test/wine",
+      yago_storage_path: "/test/yago",
+      default_games_path: "",
+      mods_path: "",
+      runners_path: "",
+      prefixes_path: "",
+      cache_path: "",
+      default_runner_id: null,
+      stream_safe: true,
+      nsfw_behavior: "blur",
+      close_on_launch: false,
+    };
 
     const mockLibrary = {
       "genshinimpact.exe": {

@@ -52,21 +52,29 @@ flatpak install --user yago-*.flatpak
 
 ## ⚙️ Initial Setup
 
-1.  Launch YAGO.
-2.  Click the **"Add Game"** button in the sidebar.
-3.  Choose **"Auto Scan"** to automatically find supported titles, or **"Locate Manually"** to select a specific folder.
-4.  **New: Cloud Hub**: You can now browse the **Cloud** tab to find games not yet installed on your system.
+### 1. Storage & Library Configuration
+On the first launch, YAGO will guide you through the **Setup Wizard**:
+1.  **Storage Location**: Choose where YAGO will store your core assets. 
+    - *Tip: Use "Advanced Path Overrides" to store your Mod library on a high-speed external drive.*
+2.  **Games Root**: Specify the directory where your games are installed (e.g., `~/Games`).
+3.  **Library Discovery**: YAGO will automatically scan your Games Root (up to 4 levels deep) and identify supported titles. Click "Add" to instantly build your library.
 
-### 2. Selective Installation
+### 2. Dependency Setup
+If prompted, YAGO will automatically download required dependencies (Mod Loaders, Proton, etc.). You can manually trigger this in the **Global Settings** menu.
+
+### 3. Add Game (Manual)
+If a game wasn't found during auto-discovery:
+1.  Click the **"Add Game"** button in the sidebar.
+2.  Choose **"Auto Scan"** to search system-wide, or **"Locate Manually"** to select a specific folder.
+3.  **Cloud Hub**: Browse the **Cloud** tab to find and install games not yet present on your system.
+
+### 4. Selective Installation
 If you choose a game from the **Cloud Hub**, YAGO will launch the **Install Wizard**:
-1.  **Select Path**: Choose an installation directory.
+1.  **Select Path**: Choose an installation directory (defaults to your Games Root).
 2.  **Selective Content**: Choose which language and audio packs to install. Unchecking optional packs can save up to 40% of disk space.
 3.  **Real-time Tracking**: Monitor download speed, percentage, and ETA with a stable backend-calculated progress indicator.
 
-### 3. Dependency Setup
-If prompted, YAGO will automatically download required dependencies (Mod Loaders, Proton, etc.). You can manually trigger this in the **Global Settings** menu.
-
-### 2. Importing Mods
+### 5. Importing Mods
 1.  Select your game from the sidebar.
 2.  Switch to the **Mod Manager** view.
 3.  Drag and drop your mod folders or archives (`.zip`, `.7z`) directly onto the window.
