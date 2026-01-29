@@ -72,7 +72,7 @@ impl ChunkOrchestrator {
         }
     }
 
-    fn deduplicate_work(&self) -> (Vec<ChunkWork>, u64) {
+    pub fn deduplicate_work(&self) -> (Vec<ChunkWork>, u64) {
         let mut work_map: HashMap<String, ChunkWork> = HashMap::new();
 
         for file in &self.manifest.files {
