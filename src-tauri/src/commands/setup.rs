@@ -248,6 +248,13 @@ pub async fn download_loader(
             )
             .await
             .map_err(|e| e.to_string())?;
+
+            // XXMI: Handle potential INI renaming (main.ini -> d3dx.ini)
+            let main_ini = path.join("main.ini");
+            let d3dx_ini = path.join("d3dx.ini");
+            if main_ini.exists() && !d3dx_ini.exists() {
+                let _ = std::fs::rename(main_ini, d3dx_ini);
+            }
         }
     } else if !path.exists() {
         std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
@@ -256,9 +263,9 @@ pub async fn download_loader(
     if common_path.exists() {
         for file in [
             "d3d11.dll",
-            "3DMigoto Loader.exe",
+            "3dmloader.dll",
             "d3dcompiler_47.dll",
-            "d3dcompiler_46.dll",
+            "nvapi64.dll",
         ] {
             let src = common_path.join(file);
             if src.exists() {
@@ -289,7 +296,7 @@ pub async fn ensure_game_resources(
     // 1. Check Common Libs
     let common_exists = common_path.exists()
         && common_path.join("d3d11.dll").exists()
-        && common_path.join("3DMigoto Loader.exe").exists();
+        && common_path.join("3dmloader.dll").exists();
 
     if !common_exists {
         println!("EnsureResources: Common libs missing. Installing...");

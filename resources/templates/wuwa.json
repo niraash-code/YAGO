@@ -13,7 +13,10 @@
     "Wuthering Waves.exe",
     "Client-Win64-Shipping.exe"
   ],
-  "injection_method": "Proxy",
+  "injection_method_windows": "Proxy",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy"],
   "loader_repo": "SpectrumQT/WWMI-Package",
   "hash_db_url": "https://raw.githubusercontent.com/SpectrumQT/WWMI-Package/main/Tools/hashes.json",
   "patch_logic": {},

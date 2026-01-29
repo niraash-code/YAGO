@@ -202,7 +202,7 @@ impl LoaderContext {
         }
 
         // Copy Compiler DLLs
-        let compilers = ["d3dcompiler_47.dll", "d3dcompiler_46.dll"];
+        let compilers = ["d3dcompiler_47.dll", "nvapi64.dll", "3dmloader.dll"];
         for comp in compilers {
             let compiler_path = loader_source.join(comp);
             if compiler_path.exists() {
@@ -224,6 +224,7 @@ impl LoaderContext {
             "winmm.dll",
             "d3dcompiler_47.dll",
             "d3dcompiler_46.dll",
+            "nvapi64.dll",
             "ReShade.dll",
             "d3dx.ini",
             "ReShade.ini",
@@ -251,10 +252,11 @@ impl LoaderContext {
         for dir in dirs {
             let path = game_dir.join(dir);
             if path.exists() {
-                #[cfg(unix)]
-                let _ = std::fs::remove_file(&path);
-                #[cfg(windows)]
-                let _ = std::fs::remove_dir_all(&path);
+                if path.is_dir() {
+                    let _ = std::fs::remove_dir_all(&path);
+                } else {
+                    let _ = std::fs::remove_file(&path);
+                }
             }
         }
 

@@ -13,6 +13,7 @@ import {
 import { Game } from "../types";
 
 import { useAppStore } from "../store/gameStore";
+import { useUiStore } from "../store/uiStore";
 import { api } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -35,6 +36,7 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
   const [communityImages, setCommunityImages] = useState<string[]>([]);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
   const { updateGameConfig, appConfig } = useAppStore();
+  const { showAlert } = useUiStore();
 
   const PRESET_COVERS = appConfig?.presetCovers || [];
 
@@ -64,7 +66,7 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
         setPreviewImage(null);
         setCustomUrl("");
       } catch (e) {
-        alert("Failed to save cover art: " + e);
+        showAlert("Failed to save cover art: " + e, "Error");
       }
     }
   };
@@ -76,7 +78,7 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
       await updateGameConfig(game.id, { coverImage: defaultUrl });
       onClose();
     } catch (e) {
-      alert("Failed to reset cover art: " + e);
+      showAlert("Failed to reset cover art: " + e, "Error");
     }
   };
 
@@ -103,9 +105,9 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
                 className="absolute inset-0 opacity-50 blur-xl scale-110"
                 key={previewImage || game.coverImage}
               >
-                <img 
-                  src={previewImage || game.coverImage} 
-                  className="w-full h-full object-cover" 
+                <img
+                  src={previewImage || game.coverImage}
+                  className="w-full h-full object-cover"
                 />
               </div>
 
@@ -188,7 +190,10 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
                   {activeTab === "official" ? (
                     isLoadingCommunity ? (
                       <div className="h-full flex items-center justify-center">
-                        <RefreshCw size={32} className="text-indigo-500 animate-spin" />
+                        <RefreshCw
+                          size={32}
+                          className="text-indigo-500 animate-spin"
+                        />
                       </div>
                     ) : communityImages.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4 pb-4">
@@ -221,7 +226,9 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
                     ) : (
                       <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4">
                         <Grid size={48} className="opacity-20" />
-                        <p className="text-sm font-bold uppercase tracking-widest">No Wallpapers Found</p>
+                        <p className="text-sm font-bold uppercase tracking-widest">
+                          No Wallpapers Found
+                        </p>
                       </div>
                     )
                   ) : activeTab === "upload" ? (
@@ -249,7 +256,10 @@ const CoverManagerModal: React.FC<CoverManagerModalProps> = ({
                       </div>
 
                       <div className="border-2 border-dashed border-white/5 rounded-2xl p-12 flex flex-col items-center justify-center text-slate-500 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all cursor-pointer group">
-                        <Upload size={40} className="mb-4 opacity-20 group-hover:opacity-100 group-hover:text-indigo-400 transition-all" />
+                        <Upload
+                          size={40}
+                          className="mb-4 opacity-20 group-hover:opacity-100 group-hover:text-indigo-400 transition-all"
+                        />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">
                           Select Local File
                         </span>

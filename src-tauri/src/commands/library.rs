@@ -25,6 +25,9 @@ pub struct IdentifiedGame {
     pub logo_initial: String,
     pub install_path: String,
     pub exe_name: String,
+    pub supported_injection_methods: Vec<InjectionMethod>,
+    pub injection_method: InjectionMethod,
+    pub modloader_enabled: bool,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -62,9 +65,10 @@ pub struct GameConfigUpdate {
     pub accent_color: Option<String>,
     pub logo_initial: Option<String>,
     pub injection_method: Option<InjectionMethod>,
+    pub modloader_enabled: Option<bool>,
     pub auto_update: Option<bool>,
     pub active_profile_id: Option<String>,
-    pub active_runner_id: Option<String>,
+    pub active_runner_id: Option<Option<String>>,
     pub prefix_path: Option<Option<String>>,
     pub enable_linux_shield: Option<bool>,
 }
@@ -228,6 +232,33 @@ pub async fn identify_game(
             logo_initial: t_cloned.logo_initial,
             install_path: install_path.to_string_lossy().to_string(),
             exe_name,
+            supported_injection_methods: t_cloned
+                .supported_injection_methods
+                .unwrap_or_default()
+                .into_iter()
+                .map(|m| match m {
+                    librarian::InjectionMethod::None => InjectionMethod::None,
+                    librarian::InjectionMethod::Proxy => InjectionMethod::Proxy,
+                    librarian::InjectionMethod::Loader => InjectionMethod::Loader,
+                    librarian::InjectionMethod::RemoteThread => InjectionMethod::RemoteThread,
+                    librarian::InjectionMethod::ManualMap => InjectionMethod::ManualMap,
+                })
+                .collect(),
+            injection_method: {
+                let method = if cfg!(target_os = "windows") {
+                    t_cloned.injection_method_windows
+                } else {
+                    t_cloned.injection_method_linux
+                };
+                match method.unwrap_or(librarian::InjectionMethod::None) {
+                    librarian::InjectionMethod::None => InjectionMethod::None,
+                    librarian::InjectionMethod::Proxy => InjectionMethod::Proxy,
+                    librarian::InjectionMethod::Loader => InjectionMethod::Loader,
+                    librarian::InjectionMethod::RemoteThread => InjectionMethod::RemoteThread,
+                    librarian::InjectionMethod::ManualMap => InjectionMethod::ManualMap,
+                }
+            },
+            modloader_enabled: t_cloned.modloader_enabled.unwrap_or(true),
         })
     } else {
         drop(templates_guard);
@@ -253,6 +284,9 @@ pub async fn identify_game(
             logo_initial: name.chars().next().unwrap_or('?').to_string(),
             install_path: install_path.to_string_lossy().to_string(),
             exe_name,
+            supported_injection_methods: vec![InjectionMethod::Proxy],
+            injection_method: InjectionMethod::Proxy,
+            modloader_enabled: true,
         })
     }
 }

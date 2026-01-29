@@ -238,7 +238,9 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] mb-1">
                   Game Configuration
                 </h2>
-                <p className="text-2xl font-black text-white tracking-tighter uppercase italic">{game.name}</p>
+                <p className="text-2xl font-black text-white tracking-tighter uppercase italic">
+                  {game.name}
+                </p>
               </div>
               <button
                 onClick={onClose}

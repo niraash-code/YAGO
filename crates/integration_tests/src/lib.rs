@@ -1,7 +1,8 @@
 #[cfg(test)]
+mod asset_protocol;
 
 #[cfg(test)]
-mod asset_protocol;
+mod sim_gallery;
 
 #[cfg(test)]
 mod simulation;

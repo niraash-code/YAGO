@@ -10,9 +10,13 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 
 // Disable default browser context menu globally
-document.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
-}, false);
+document.addEventListener(
+  "contextmenu",
+  e => {
+    e.preventDefault();
+  },
+  false
+);
 
 root.render(
   <React.StrictMode>

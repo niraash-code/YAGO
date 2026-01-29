@@ -25,6 +25,7 @@ fn test_command_generation_vanilla() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let cmd = launcher.build_command(&options).unwrap();
@@ -66,6 +67,7 @@ fn test_command_generation_wine_prefix() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let cmd = launcher.build_command(&options).unwrap();
@@ -76,7 +78,7 @@ fn test_command_generation_wine_prefix() {
     assert!(envs
         .iter()
         .any(|(k, v)| k == &std::ffi::OsStr::new("WINEPREFIX")
-            && v == &Some(std::ffi::OsStr::new("/tmp/prefix"))));
+            && v == &Some(std::ffi::OsStr::new("/tmp/prefix/pfx"))));
 }
 
 #[test]
@@ -103,6 +105,7 @@ fn test_command_generation_native_args() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let cmd = launcher.build_command(&options).unwrap();
@@ -140,6 +143,7 @@ fn test_command_generation_proton_advanced() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let cmd = launcher.build_command(&options).unwrap();
@@ -206,6 +210,7 @@ async fn test_launcher_env_vars() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let result = launcher.launch(options).await;
@@ -236,6 +241,7 @@ async fn test_strategy_selection() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     #[cfg(target_os = "linux")]
@@ -259,4 +265,41 @@ async fn test_strategy_selection() {
         let result = launcher.launch(options_remote).await;
         assert!(result.is_err());
     }
+}
+
+#[test]
+fn test_command_generation_loader_method() {
+    let launcher = Launcher;
+    let options = LaunchOptions {
+        exe_path: PathBuf::from("game.exe"),
+        args: vec![],
+        current_dir: None,
+        runner: RunnerConfig {
+            runner_type: RunnerType::Native,
+            path: PathBuf::new(),
+        },
+        prefix_path: PathBuf::new(),
+        use_gamescope: false,
+        use_gamemode: false,
+        use_mangohud: false,
+        injection_method: InjectionMethod::Loader,
+        loader_path: Some(PathBuf::from("/tmp/loader")),
+        injected_dlls: vec![],
+        resolution: (0, 0),
+        fps_target: None,
+        sandbox_config: None,
+        sandbox_data_dir: None,
+        enable_linux_shield: true,
+        shield_path: None,
+        helper_path: None,
+    };
+
+    // This should succeed.
+    // On Windows, it would prepare the hook (runtime) but build_command is pure logic.
+    // On Linux, it builds a standard command (Proxy logic is upstream).
+    let cmd = launcher.build_command(&options).unwrap();
+    let std_cmd = cmd.as_std();
+    
+    // Just verify it produced a command for the game exe
+    assert_eq!(std_cmd.get_program(), "game.exe");
 }

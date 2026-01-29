@@ -45,7 +45,13 @@ pub struct GameTemplate {
 
     // Configuration Presets
     #[serde(default)]
-    pub injection_method: Option<InjectionMethod>,
+    pub injection_method_linux: Option<InjectionMethod>,
+    #[serde(default)]
+    pub injection_method_windows: Option<InjectionMethod>,
+    #[serde(default)]
+    pub modloader_enabled: Option<bool>,
+    #[serde(default)]
+    pub supported_injection_methods: Option<Vec<InjectionMethod>>,
     #[serde(default)]
     pub launch_args: Option<Vec<String>>,
     #[serde(default)]
@@ -85,7 +91,7 @@ pub fn load_templates(dir: &Path) -> Result<Vec<GameTemplate>> {
                     // Strip any redundant prefixes if they exist
                     let file_name = url.strip_prefix("local://").unwrap_or(url);
                     let file_name = file_name.strip_prefix("templates/").unwrap_or(file_name);
-                    
+
                     let full_path = dir.join(file_name);
                     let path_lossy = full_path.to_string_lossy();
                     let encoded = urlencoding::encode(&path_lossy);

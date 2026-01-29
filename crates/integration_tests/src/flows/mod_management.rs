@@ -111,6 +111,8 @@ async fn test_full_mod_import_flow() {
             hash_db_url: None,
             patch_logic: None,
             enable_linux_shield: true,
+            supported_injection_methods: vec![],
+            modloader_enabled: true,
         },
     );
 

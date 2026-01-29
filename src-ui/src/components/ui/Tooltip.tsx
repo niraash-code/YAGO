@@ -57,7 +57,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
       // Check right edge
       if (tooltipRect.right > window.innerWidth - margin) {
-        nudgeX = (window.innerWidth - margin) - tooltipRect.right;
+        nudgeX = window.innerWidth - margin - tooltipRect.right;
       }
       // Check left edge
       if (tooltipRect.left < margin) {
@@ -65,7 +65,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
       // Check bottom edge
       if (tooltipRect.bottom > window.innerHeight - margin) {
-        nudgeY = (window.innerHeight - margin) - tooltipRect.bottom;
+        nudgeY = window.innerHeight - margin - tooltipRect.bottom;
       }
       // Check top edge
       if (tooltipRect.top < margin) {
@@ -151,7 +151,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
               <span className="text-[10px] font-black uppercase tracking-widest text-white/90 whitespace-nowrap">
                 {content}
               </span>
-              
+
               {/* Subtle indigo glow */}
               <div className="absolute inset-0 bg-indigo-500/10 blur-sm -z-10 rounded-lg" />
             </motion.div>

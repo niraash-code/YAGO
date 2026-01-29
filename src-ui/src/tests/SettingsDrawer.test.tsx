@@ -117,7 +117,7 @@ describe("SettingsDrawer", () => {
     });
 
     // 3. Click save
-    const saveButton = screen.getByText("Save");
+    const saveButton = screen.getByText("Save Changes");
     await act(async () => {
       fireEvent.click(saveButton);
     });
@@ -173,7 +173,7 @@ describe("SettingsDrawer", () => {
       fireEvent.change(input, { target: { value: "New Dev" } });
     });
     await act(async () => {
-      fireEvent.click(screen.getByText("Save"));
+      fireEvent.click(screen.getByText("Save Changes"));
     });
     expect(mockUpdateGameConfig).toHaveBeenCalledWith(
       "game-123",
@@ -202,7 +202,7 @@ describe("SettingsDrawer", () => {
       fireEvent.change(input, { target: { value: "-global -new" } });
     });
     await act(async () => {
-      fireEvent.click(screen.getByText("Save"));
+      fireEvent.click(screen.getByText("Save Changes"));
     });
     expect(mockUpdateGameConfig).toHaveBeenCalledWith(
       "game-123",
@@ -241,7 +241,7 @@ describe("SettingsDrawer", () => {
       fireEvent.change(input, { target: { value: "/new/prefix" } });
     });
     await act(async () => {
-      fireEvent.click(screen.getByText("Save"));
+      fireEvent.click(screen.getByText("Save Changes"));
     });
 
     expect(mockUpdateGameConfig).toHaveBeenCalledWith(
@@ -273,7 +273,7 @@ describe("SettingsDrawer", () => {
       fireEvent.change(input, { target: { value: "/new/saves" } });
     });
     await act(async () => {
-      fireEvent.click(screen.getByText("Save"));
+      fireEvent.click(screen.getByText("Save Changes"));
     });
     expect(mockUpdateProfile).toHaveBeenCalledWith(
       "game-123",

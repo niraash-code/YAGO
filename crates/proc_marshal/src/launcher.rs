@@ -43,6 +43,7 @@ pub struct LaunchOptions {
     pub sandbox_data_dir: Option<PathBuf>,
     pub enable_linux_shield: bool,
     pub shield_path: Option<PathBuf>,
+    pub helper_path: Option<PathBuf>,
 }
 
 use crate::SandboxManager;
@@ -53,11 +54,19 @@ impl Launcher {
     pub async fn launch(&self, options: LaunchOptions) -> Result<()> {
         // Strategy Execution: Pre-Launch
         if options.injection_method == InjectionMethod::RemoteThread {
+            #[cfg(target_os = "windows")]
+            {} // OK
             #[cfg(not(target_os = "windows"))]
-            return Err(MarshalError::Io(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                "Remote Injection is Windows-only",
-            )));
+            {
+                // Linux RemoteThread via helper?
+                // If helper is missing, fail.
+                if options.helper_path.is_none() {
+                     return Err(MarshalError::Io(std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        "Remote Injection on Linux requires win_helper.exe",
+                    )));
+                }
+            }
         }
 
         // 1. Ensure Prefix is Primed (Linux only)
@@ -69,6 +78,43 @@ impl Launcher {
                 self.prepare_prefix(&options).await?;
             }
         }
+
+        // Windows Hook Setup (Loader Method)
+        #[cfg(windows)]
+        let _loader_hook = if options.injection_method == InjectionMethod::Loader {
+            if let Some(loader_path) = &options.loader_path {
+                let dll_path = loader_path.join("3dmloader.dll");
+                if dll_path.exists() {
+                    println!("Marshal: Initializing 3dmloader hook from {:?}", dll_path);
+                    match crate::windows::LoaderHook::load(&dll_path) {
+                        Ok(hook) => {
+                            let exe_name = options
+                                .exe_path
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy();
+                            if let Err(e) = hook.set_hook(&exe_name) {
+                                eprintln!("Marshal: Failed to set hook: {}", e);
+                                None
+                            } else {
+                                Some(hook)
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Marshal: Failed to load 3dmloader.dll: {}", e);
+                            None
+                        }
+                    }
+                } else {
+                    eprintln!("Marshal: 3dmloader.dll not found at {:?}", dll_path);
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
         // 2. Active Sandbox: Restore
         if let (Some(game_dir), Some(profile_data_dir), Some(sandbox_config)) = (
@@ -85,6 +131,48 @@ impl Launcher {
                 &options.prefix_path,
             ) {
                 eprintln!("Sandbox Restore Error: {}", e);
+            }
+        }
+
+        // Linux Hook (Loader Method via Helper)
+        #[cfg(unix)]
+        if options.injection_method == InjectionMethod::Loader {
+            if let (Some(helper), Some(loader_path)) = (&options.helper_path, &options.loader_path) {
+                if helper.exists() {
+                    let dll_path = loader_path.join("3dmloader.dll");
+                    let exe_name = options
+                        .exe_path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy();
+
+                    println!("Marshal: Spawning win_helper for Hook mode...");
+
+                    let dll_win_path = format!("Z:{}", dll_path.to_string_lossy().replace('/', "\\"));
+
+                    let mut h_cmd = self.build_runner_command(&options.runner, &options.prefix_path);
+                    h_cmd.arg(helper)
+                        .arg("hook")
+                        .arg(exe_name.to_string())
+                        .arg(dll_win_path);
+
+                    // Set working directory to loader path so dependencies like d3dcompiler are found
+                    h_cmd.current_dir(loader_path);
+
+                    h_cmd.stdout(std::process::Stdio::inherit());
+                    h_cmd.stderr(std::process::Stdio::inherit());
+
+                    match h_cmd.spawn() {
+                        Ok(_) => {
+                            println!("Marshal: Helper spawned successfully. Waiting for hook initialization...");
+                            // Increase delay to 5 seconds for slow Proton prefixes
+                            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        }
+                        Err(e) => eprintln!("Marshal: Failed to spawn helper: {}", e),
+                    }
+                } else {
+                    eprintln!("Marshal: win_helper.exe not found at {:?}", helper);
+                }
             }
         }
 
@@ -116,63 +204,14 @@ impl Launcher {
             crate::windows::resume_process(pid)?;
         }
 
-        // LOADER STRATEGY: Delayed Injection
-        if options.injection_method == InjectionMethod::Loader {
-            println!("Marshal: Loader strategy active. Spawning loader...");
-
-            if let Some(loader_path) = &options.loader_path {
-                let loader_exe = loader_path.join("3DMigoto Loader.exe");
-                if loader_exe.exists() {
-                    println!("Marshal: Spawning 3DM Loader: {:?}", loader_exe);
-                    // Spawn Loader as detached process (or wait?)
-                    // 3DM Loader usually exits after injecting.
-                    // We shouldn't block main thread long.
-                    let mut loader_cmd = if matches!(options.runner.runner_type, RunnerType::Native)
-                    {
-                        #[cfg(windows)]
-                        {
-                            let mut c = Command::new(&loader_exe);
-                            c.current_dir(loader_path);
-                            // Run as Admin if needed? User must run YAGO as admin.
-                            c
-                        }
-                        #[cfg(unix)]
-                        {
-                            // Should not happen for Loader method on Native Linux usually,
-                            // but if mapped...
-                            Command::new(&loader_exe)
-                        }
-                    } else {
-                        // WINE/PROTON
-                        let mut c = Command::new(&options.runner.path);
-                        if matches!(options.runner.runner_type, RunnerType::Proton) {
-                            c.arg("run");
-                            c.env("STEAM_COMPAT_DATA_PATH", &options.prefix_path);
-                            if let Some(parent) = options.runner.path.parent() {
-                                c.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", parent);
-                            }
-                        } else {
-                            c.env("WINEPREFIX", &options.prefix_path);
-                        }
-                        c.arg(&loader_exe);
-                        c.current_dir(loader_path); // Critical for loader to find d3dx.ini
-                        c
-                    };
-
-                    match loader_cmd.spawn() {
-                        Ok(mut loader_child) => {
-                            // Wait for loader to finish injection (it exits quickly)
-                            let _ = loader_child.wait().await;
-                            println!("Marshal: Loader injection sequence completed.");
-                        }
-                        Err(e) => eprintln!("Marshal: Failed to spawn loader: {}", e),
-                    }
-                } else {
-                    eprintln!(
-                        "Marshal Error: 3DMigoto Loader.exe not found at {:?}",
-                        loader_exe
-                    );
-                }
+        // Windows Hook: Wait for Injection
+        #[cfg(windows)]
+        if let Some(hook) = &_loader_hook {
+            println!("Marshal: Waiting for injection via hook...");
+            if let Err(e) = hook.wait_for_injection() {
+                eprintln!("Marshal: WaitForInjection failed: {}", e);
+            } else {
+                println!("Marshal: Injection sequence completed.");
             }
         }
 
@@ -257,10 +296,10 @@ impl Launcher {
                 }
                 c
             } else {
-                // For Wine
+                // For Wine, WINEPREFIX must point to the folder containing drive_c
                 let mut c = Command::new(&options.runner.path);
                 c.arg("wineboot").arg("-u");
-                c.env("WINEPREFIX", &options.prefix_path);
+                c.env("WINEPREFIX", &pfx_dir);
                 c
             };
 
@@ -282,10 +321,34 @@ impl Launcher {
         Ok(())
     }
 
+    fn build_runner_command(&self, runner: &RunnerConfig, prefix: &PathBuf) -> Command {
+        match runner.runner_type {
+            RunnerType::Proton => {
+                let mut c = Command::new(&runner.path);
+                c.arg("run");
+                c.env("STEAM_COMPAT_DATA_PATH", prefix);
+                if let Some(parent) = runner.path.parent() {
+                    c.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", parent);
+                }
+                c.env("WINEDEBUG", "-all");
+                c
+            }
+            RunnerType::Wine => {
+                let mut c = Command::new(&runner.path);
+                // For Wine, WINEPREFIX must point to the actual prefix folder (pfx)
+                let pfx_dir = prefix.join("pfx");
+                c.env("WINEPREFIX", pfx_dir);
+                c.env("WINEDEBUG", "-all");
+                c
+            }
+            RunnerType::Native => Command::new("true"),
+        }
+    }
+
     pub fn build_command(&self, options: &LaunchOptions) -> Result<Command> {
         #[cfg(unix)]
         {
-            // Determine the base command (outermost wrapper)
+            // ... (outermost wrapper logic)
             let base_cmd = if options.use_gamemode {
                 "gamemoderun".to_string()
             } else if options.use_gamescope {
@@ -300,7 +363,7 @@ impl Launcher {
 
             let mut cmd = Command::new(&base_cmd);
 
-            // 1. Gamescope (if gamemode is outermost)
+            // ... (gamescope/mangohud logic)
             if options.use_gamemode && options.use_gamescope {
                 cmd.arg("gamescope");
             }
@@ -310,33 +373,27 @@ impl Launcher {
                     .arg(options.resolution.0.to_string())
                     .arg("-H")
                     .arg(options.resolution.1.to_string())
-                    .arg("-f") // Force fullscreen as recommended
+                    .arg("-f")
                     .arg("--");
             }
 
-            // 2. MangoHud (must be after gamescope --)
             if options.use_mangohud && (options.use_gamemode || options.use_gamescope) {
                 cmd.arg("mangohud");
             }
 
-            // 3. Runner / Exe
+            // Runner / Exe
             if !matches!(options.runner.runner_type, RunnerType::Native) {
                 if base_cmd != options.runner.path.to_string_lossy() {
                     cmd.arg(&options.runner.path);
                 }
 
-                // Suppress Wine logs
                 cmd.env("WINEDEBUG", "-all");
 
-                // DLL Overrides for 3DMigoto (Only for Proxy method)
                 if options.injection_method == InjectionMethod::Proxy {
-                    // d3d11,dxgi=n,b: Native (3DMigoto/ReShade), Builtin (System)
-                    // Note: If ReShade is NOT installed, setting dxgi=n,b is harmless if dxgi.dll is missing.
                     println!("Marshal: Setting WINEDLLOVERRIDES=\"d3d11,dxgi=n,b\"");
                     cmd.env("WINEDLLOVERRIDES", "d3d11,dxgi=n,b");
                 }
 
-                // Integrity Shield
                 if options.enable_linux_shield {
                     if let Some(shield_path) = &options.shield_path {
                         if shield_path.exists() {
@@ -352,8 +409,9 @@ impl Launcher {
                 match options.runner.runner_type {
                     RunnerType::Wine => {
                         if !options.prefix_path.as_os_str().is_empty() {
-                            println!("Marshal: Setting WINEPREFIX={:?}", options.prefix_path);
-                            cmd.env("WINEPREFIX", &options.prefix_path);
+                            let pfx_dir = options.prefix_path.join("pfx");
+                            println!("Marshal: Setting WINEPREFIX={:?}", pfx_dir);
+                            cmd.env("WINEPREFIX", pfx_dir);
                         }
                     }
                     RunnerType::Proton => {
@@ -364,12 +422,7 @@ impl Launcher {
                             );
                             cmd.env("STEAM_COMPAT_DATA_PATH", &options.prefix_path);
                         }
-                        // Set client install path to the directory containing the proton script
                         if let Some(parent) = options.runner.path.parent() {
-                            println!(
-                                "Marshal: Setting STEAM_COMPAT_CLIENT_INSTALL_PATH={:?}",
-                                parent
-                            );
                             cmd.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", parent);
                         }
                         cmd.arg("run");

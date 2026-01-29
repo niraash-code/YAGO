@@ -124,7 +124,8 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
             installPath: identified.install_path,
             exeName: identified.exe_name,
             autoUpdate: false,
-            injectionMethod: InjectionMethod.Proxy,
+            injectionMethod: identified.injection_method,
+            supportedInjectionMethods: identified.supported_injection_methods,
             activeRunnerId: undefined, // Will be set by backend defaults
             prefixPath: undefined,
           } as Game;
@@ -200,7 +201,8 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
           installPath: identified.install_path,
           exeName: identified.exe_name,
           autoUpdate: false,
-          injectionMethod: InjectionMethod.Proxy,
+          injectionMethod: identified.injection_method,
+          supportedInjectionMethods: identified.supported_injection_methods,
         };
         if (existingGameIds.includes(detectedGame.id)) {
           setDuplicateGame(detectedGame);

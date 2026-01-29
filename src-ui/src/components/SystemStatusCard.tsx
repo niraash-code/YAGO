@@ -32,7 +32,7 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
   const [copied, setCopied] = useState(false);
   const { isDownloading: storeDownloading, downloadProgress } = useAppStore();
 
-  const activeProfile = game.profiles.find((p) => p.id === game.activeProfileId);
+  const activeProfile = game.profiles.find(p => p.id === game.activeProfileId);
   const enabledModCount = activeProfile?.enabledModIds.length || 0;
   const isInjectionActive = game.injectionMethod !== InjectionMethod.None;
 
@@ -54,10 +54,10 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
     game.id === "genshin"
       ? "800123456"
       : game.id === "hsr"
-      ? "700987654"
-      : game.id === "zzz"
-      ? "100456789"
-      : "---";
+        ? "700987654"
+        : game.id === "zzz"
+          ? "100456789"
+          : "---";
 
   const handleCopyUid = () => {
     navigator.clipboard.writeText(mockUid);
@@ -87,8 +87,8 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
               isDownloading || game.status === InstallStatus.UPDATING
                 ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
                 : game.status === InstallStatus.PLAYING
-                ? "bg-indigo-500/10 text-indigo-300 border-indigo-500/20"
-                : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                  ? "bg-indigo-500/10 text-indigo-300 border-indigo-500/20"
+                  : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
             )}
           >
             {isDownloading ? "SYNC" : game.status.toUpperCase()}
@@ -117,15 +117,21 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             <div className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-xl border border-white/5">
               <div className="flex items-center gap-2 text-slate-400">
                 <HardDrive size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wide">Disk</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">
+                  Disk
+                </span>
               </div>
-              <span className="text-xs font-mono text-slate-200">{game.size}</span>
+              <span className="text-xs font-mono text-slate-200">
+                {game.size}
+              </span>
             </div>
-            
+
             <div className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-xl border border-white/5">
               <div className="flex items-center gap-2 text-slate-400">
                 <User size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wide">Profile</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">
+                  Profile
+                </span>
               </div>
               <span className="text-xs font-bold text-white truncate max-w-[100px]">
                 {activeProfile?.name || "Default"}
@@ -135,11 +141,22 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
             <div className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-xl border border-white/5">
               <div className="flex items-center gap-2 text-slate-400">
                 <Download size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wide">Mods</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">
+                  Mods
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className={cn("w-1.5 h-1.5 rounded-full", isInjectionActive ? "bg-emerald-500 shadow-[0_0_5px_#10b981]" : "bg-red-500")} />
-                <span className="text-xs font-mono text-white">{enabledModCount}</span>
+                <div
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    isInjectionActive
+                      ? "bg-emerald-500 shadow-[0_0_5px_#10b981]"
+                      : "bg-red-500"
+                  )}
+                />
+                <span className="text-xs font-mono text-white">
+                  {enabledModCount}
+                </span>
               </div>
             </div>
           </div>
@@ -150,15 +167,21 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
           <div className="flex items-center gap-3 opacity-80">
             <Cpu size={14} className="text-slate-500" />
             <div className="min-w-0 flex-1">
-              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Runner</div>
-              <div className="text-xs text-slate-300 truncate">{runnerName}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">
+                Runner
+              </div>
+              <div className="text-xs text-slate-300 truncate">
+                {runnerName}
+              </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3 opacity-80">
             <Monitor size={14} className="text-slate-500" />
             <div className="min-w-0 flex-1">
-              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Display</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">
+                Display
+              </div>
               <div className="text-xs text-slate-300">{displayResolution}</div>
             </div>
           </div>
@@ -167,7 +190,9 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
         {/* Identity Footer */}
         <div className="p-4 bg-white/5">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Gamer ID</span>
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+              Gamer ID
+            </span>
             {streamSafe ? (
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 italic">
                 <Shield size={10} />
@@ -175,9 +200,18 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
               </div>
             ) : (
               <div className="flex items-center gap-2 group">
-                <span className="font-mono text-xs text-indigo-300/80">{mockUid}</span>
-                <button onClick={handleCopyUid} className="text-slate-500 hover:text-white transition-colors">
-                  {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                <span className="font-mono text-xs text-indigo-300/80">
+                  {mockUid}
+                </span>
+                <button
+                  onClick={handleCopyUid}
+                  className="text-slate-500 hover:text-white transition-colors"
+                >
+                  {copied ? (
+                    <Check size={12} className="text-emerald-400" />
+                  ) : (
+                    <Copy size={12} />
+                  )}
                 </button>
               </div>
             )}

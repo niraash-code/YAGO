@@ -29,7 +29,7 @@ impl TemplateRegistry {
         }
 
         let template_vec = crate::template::load_templates(&self.templates_root)?;
-        
+
         for template in template_vec {
             // Index by executables
             if !template.executables.is_empty() {
@@ -37,11 +37,11 @@ impl TemplateRegistry {
                     templates.insert(exe.to_lowercase(), template.clone());
                 }
             }
-            
+
             // Also index by normalized template ID (usually the filename stem)
             templates.insert(template.id.to_lowercase(), template);
         }
-        
+
         Ok(templates)
     }
 }

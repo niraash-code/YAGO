@@ -147,6 +147,8 @@ async fn test_uninstall_loader() {
     File::create(game_dir.join("d3dx.ini")).unwrap();
     File::create(game_dir.join("dxgi.dll")).unwrap();
     File::create(game_dir.join("random_file.txt")).unwrap();
+    std::fs::create_dir(game_dir.join("Core")).unwrap();
+    std::fs::create_dir(game_dir.join("ShaderFixes")).unwrap();
 
     LoaderContext::uninstall_loader(&game_dir, None)
         .await
@@ -155,5 +157,7 @@ async fn test_uninstall_loader() {
     assert!(!game_dir.join("d3d11.dll").exists());
     assert!(!game_dir.join("d3dx.ini").exists());
     assert!(!game_dir.join("dxgi.dll").exists());
+    assert!(!game_dir.join("Core").exists());
+    assert!(!game_dir.join("ShaderFixes").exists());
     assert!(game_dir.join("random_file.txt").exists());
 }

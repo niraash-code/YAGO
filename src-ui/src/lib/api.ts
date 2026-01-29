@@ -32,6 +32,8 @@ export interface GameConfig {
   active_profile_id: string;
   fps_config?: FpsConfig;
   injection_method: InjectionMethod;
+  modloader_enabled: boolean;
+  supported_injection_methods?: InjectionMethod[];
   auto_update: boolean;
   active_runner_id?: string;
   prefix_path?: string;
@@ -155,10 +157,10 @@ export interface IdentifiedGame {
   color: string;
   accent_color: string;
   cover_image: string;
-  icon: string;
-  logo_initial: string;
   install_path: string;
   exe_name: string;
+  supported_injection_methods: InjectionMethod[];
+  injection_method: InjectionMethod;
 }
 
 export interface DiscoveredGame {
@@ -205,6 +207,7 @@ export interface GameConfigUpdate {
   accentColor?: string;
   logoInitial?: string;
   injectionMethod?: InjectionMethod;
+  modloaderEnabled?: boolean;
   autoUpdate?: boolean;
   activeProfileId?: string;
   activeRunnerId?: string;
@@ -240,7 +243,8 @@ export interface ModSnippet {
 
 export const api = {
   resolveAsset: (url: string) => invoke<string>("resolve_asset", { url }),
-  syncGameAssets: (gameId: string) => invoke<void>("sync_game_assets", { gameId }),
+  syncGameAssets: (gameId: string) =>
+    invoke<void>("sync_game_assets", { gameId }),
   getCommunityBackgrounds: (gameId: string) =>
     invoke<string[]>("get_community_backgrounds", { gameId }),
   getLibrary: () => invoke<Record<string, LibraryDatabase>>("get_library"),

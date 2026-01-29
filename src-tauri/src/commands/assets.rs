@@ -60,10 +60,7 @@ pub async fn get_community_backgrounds(
         .map_err(|e| e.to_string())?;
 
     if !response.status().is_success() {
-        return Err(format!(
-            "Failed to fetch repo tree: {}",
-            response.status()
-        ));
+        return Err(format!("Failed to fetch repo tree: {}", response.status()));
     }
 
     let contents: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
@@ -77,11 +74,11 @@ pub async fn get_community_backgrounds(
         // 3. Must be a blob (file)
         // 4. Must have an image extension
         let search_token = format!("/{}/", folder);
-        
+
         for entry in tree {
             if let (Some(path), Some(entry_type)) = (
                 entry.get("path").and_then(|p| p.as_str()),
-                entry.get("type").and_then(|t| t.as_str())
+                entry.get("type").and_then(|t| t.as_str()),
             ) {
                 // Filter criteria:
                 // 1. Must be inside the "output/" path
@@ -89,23 +86,24 @@ pub async fn get_community_backgrounds(
                 // 3. Must be in a "pure" category (textless/clean)
                 // 4. Must be a blob (file)
                 // 5. Must have an image extension
-                if entry_type == "blob" 
-                    && path.starts_with("output/") 
-                    && path.contains(&search_token)
-                    && path.contains("_pure") 
-                {
-                    if path.ends_with(".png") || path.ends_with(".webp") || path.ends_with(".jpg") || path.ends_with(".jpeg") {
-                        // The path already includes "output/", 
-                        // but our base_url already includes "output".
-                        // So we strip "output/" from the start of the path to join with base_url.
-                        let relative_path = &path[7..]; // Strip "output/"
-                        urls.push(format!("{}/{}", base_url, relative_path));
-                    }
-                }
+                                if entry_type == "blob"
+                                    && path.starts_with("output/")
+                                    && path.contains(&search_token)
+                                    && path.contains("_pure")
+                                    && (path.ends_with(".png")
+                                        || path.ends_with(".webp")
+                                        || path.ends_with(".jpg")
+                                        || path.ends_with(".jpeg"))
+                                {
+                                    // The path already includes "output/", 
+                                    // but our base_url already includes "output".
+                                    // So we strip "output/" from the start of the path to join with base_url.
+                                    let relative_path = &path[7..]; // Strip "output/"
+                                    urls.push(format!("{}/{}", base_url, relative_path));
+                                }
             }
         }
     }
 
     Ok(urls)
 }
-

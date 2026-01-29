@@ -25,6 +25,10 @@ vi.mock("../lib/api", () => ({
     deployMods: vi.fn(),
     fetchManifest: vi.fn(),
     downloadGame: vi.fn(),
+    ensureGameResources: vi.fn().mockResolvedValue(undefined),
+    syncGameAssets: vi.fn().mockResolvedValue(undefined),
+    getAppConfig: vi.fn().mockResolvedValue({}),
+    syncTemplates: vi.fn().mockResolvedValue(undefined),
   },
   InjectionMethod: {
     None: "None",

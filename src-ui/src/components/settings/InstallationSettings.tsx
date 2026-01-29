@@ -271,7 +271,9 @@ export const InstallationSettings: React.FC<InstallationSettingsProps> = ({
 
         <div className="py-6 flex items-center justify-between group transition-all border-b border-white/5">
           <div>
-            <div className="text-base font-bold text-white uppercase tracking-tight">Auto-Update</div>
+            <div className="text-base font-bold text-white uppercase tracking-tight">
+              Auto-Update
+            </div>
             <div className="text-sm text-slate-500 mt-1 font-medium">
               Keep game updated automatically
             </div>
@@ -280,7 +282,9 @@ export const InstallationSettings: React.FC<InstallationSettingsProps> = ({
             onClick={() => toggleFeature("autoupdate")}
             className={cn(
               "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-              game.autoUpdate ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+              game.autoUpdate
+                ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                : "bg-slate-800"
             )}
           >
             <div

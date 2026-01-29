@@ -16,6 +16,7 @@ import {
 import { Mod } from "../../types";
 import { cn } from "../../lib/utils";
 import { isModNSFW, getTagStyle } from "./types";
+import { useUiStore } from "../../store/uiStore";
 
 interface ModItemProps {
   mod: Mod;
@@ -50,6 +51,7 @@ export const ModItem: React.FC<ModItemProps> = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { showConfirm, showPrompt } = useUiStore();
 
   const isNsfw = isModNSFW(mod);
   const shouldBlur = isNsfw && streamSafe && nsfwBehavior === "blur";
@@ -64,17 +66,26 @@ export const ModItem: React.FC<ModItemProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu]);
 
-  const handleRename = (e: React.MouseEvent) => {
+  const handleRename = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    const newName = prompt("Enter new name:", mod.name);
-    if (newName) onRename(mod.id, newName);
+    const newName = await showPrompt(
+      "Enter new name for the mod:",
+      mod.name,
+      "Rename Mod"
+    );
+    if (newName && newName !== mod.name) onRename(mod.id, newName);
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    if (confirm(`Delete ${mod.name}?`)) onDelete(mod.id);
+    const confirmed = await showConfirm(
+      `Are you sure you want to delete "${mod.name}"?\nThis action cannot be undone.`,
+      "Delete Mod",
+      { confirmLabel: "Delete", cancelLabel: "Keep" }
+    );
+    if (confirmed) onDelete(mod.id);
   };
 
   const handleCopyId = (e: React.MouseEvent) => {
@@ -135,6 +146,7 @@ export const ModItem: React.FC<ModItemProps> = ({
 
       <div
         onClick={e => onToggle(mod.id, e)}
+        data-testid="mod-toggle"
         className="relative flex items-center cursor-pointer mr-4 shrink-0"
       >
         <div
@@ -320,6 +332,7 @@ export const CompactModItem: React.FC<any> = ({
               e.stopPropagation();
               onMoveUp();
             }}
+            data-testid="mod-move-up"
             disabled={!canMoveUp}
             className="text-slate-500 hover:text-white disabled:opacity-0"
           >

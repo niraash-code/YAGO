@@ -49,9 +49,9 @@ export const GameOverview: React.FC<GameOverviewProps> = ({
         {/* Game Title & Metadata */}
         <div className="space-y-4 mb-8">
           <div className="flex items-center gap-3">
-            <div 
-              className="w-1.5 h-10 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" 
-              style={{ backgroundColor: selectedGame.accentColor }} 
+            <div
+              className="w-1.5 h-10 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+              style={{ backgroundColor: selectedGame.accentColor }}
             />
             <h1 className="text-6xl font-black tracking-tighter text-white drop-shadow-2xl uppercase">
               {selectedGame.name}
@@ -64,15 +64,18 @@ export const GameOverview: React.FC<GameOverviewProps> = ({
               {selectedGame.regions} Regions
             </span>
             <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded border border-white/5 backdrop-blur-sm">
-              <Clock size={12} className="text-indigo-400" />
-              v{selectedGame.version}
+              <Clock size={12} className="text-indigo-400" />v
+              {selectedGame.version}
             </span>
             <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded border border-white/5 backdrop-blur-sm">
               <Circle
                 size={8}
                 className={cn(
-                  selectedGame.status === InstallStatus.NOT_INSTALLED ? "text-slate-500" : 
-                  selectedGame.status === InstallStatus.PLAYING ? "text-indigo-400 fill-indigo-400" : "text-emerald-400 fill-emerald-400"
+                  selectedGame.status === InstallStatus.NOT_INSTALLED
+                    ? "text-slate-500"
+                    : selectedGame.status === InstallStatus.PLAYING
+                      ? "text-indigo-400 fill-indigo-400"
+                      : "text-emerald-400 fill-emerald-400"
                 )}
               />
               {selectedGame.status}
@@ -91,7 +94,10 @@ export const GameOverview: React.FC<GameOverviewProps> = ({
             <button className="h-14 px-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg flex items-center gap-3 shadow-xl shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-95 group">
               <Download size={20} />
               <span>Install Content</span>
-              <ChevronRight size={18} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              <ChevronRight
+                size={18}
+                className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+              />
             </button>
           ) : (
             <button
@@ -99,8 +105,12 @@ export const GameOverview: React.FC<GameOverviewProps> = ({
               disabled={isDeploying || isLaunching}
               className={cn(
                 "h-14 px-10 rounded-xl font-bold text-lg flex items-center gap-3 shadow-[0_0_30px_-10px] transition-all hover:scale-[1.02] active:scale-95 text-white focus-visible:ring-4 focus-visible:ring-white outline-none group",
-                isRunning ? "bg-red-600 hover:bg-red-500 shadow-red-600/40" : "",
-                (isDeploying || isLaunching) ? "opacity-80 cursor-wait bg-indigo-600" : ""
+                isRunning
+                  ? "bg-red-600 hover:bg-red-500 shadow-red-600/40"
+                  : "",
+                isDeploying || isLaunching
+                  ? "opacity-80 cursor-wait bg-indigo-600"
+                  : ""
               )}
               style={
                 !isRunning && !isDeploying && !isLaunching
@@ -128,7 +138,11 @@ export const GameOverview: React.FC<GameOverviewProps> = ({
                 </>
               ) : (
                 <>
-                  <Play size={24} fill="currentColor" className="group-hover:scale-110 transition-transform" />
+                  <Play
+                    size={24}
+                    fill="currentColor"
+                    className="group-hover:scale-110 transition-transform"
+                  />
                   <span>Launch Game</span>
                 </>
               )}

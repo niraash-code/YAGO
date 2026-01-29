@@ -13,7 +13,10 @@
     "GenshinImpact.exe",
     "YuanShen.exe"
   ],
-  "injection_method": "Loader",
+  "injection_method_windows": "Loader",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy", "Loader", "RemoteThread"],
   "loader_repo": "SilentNightSound/GIMI-Package",
   "hash_db_url": "https://raw.githubusercontent.com/SilentNightSound/GI-Model-Importer/main/Tools/generator/hash.json",
   "patch_logic": {

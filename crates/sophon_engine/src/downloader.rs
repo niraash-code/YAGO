@@ -95,6 +95,9 @@ impl Downloader {
         }
 
         let mut resp = request.send().await?;
+        if !resp.status().is_success() {
+            return Err(crate::error::SophonError::Network(resp.error_for_status().unwrap_err()));
+        }
         let task_id = target_path
             .file_name()
             .unwrap_or_default()
@@ -116,6 +119,8 @@ impl Downloader {
                 },
             });
         }
+        
+        file.flush().await?;
 
         Ok(())
     }

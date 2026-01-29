@@ -12,7 +12,10 @@
   "executables": [
     "BH3.exe"
   ],
-  "injection_method": "Loader",
+  "injection_method_windows": "Loader",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy", "Loader", "RemoteThread"],
   "loader_repo": "leotorrez/HIMI-Package",
   "patch_logic": {},
   "launch_args": [],

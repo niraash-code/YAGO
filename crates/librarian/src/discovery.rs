@@ -117,16 +117,26 @@ impl Discovery {
                 active_profile_id: p_id.to_string(),
                 fps_config: template.and_then(|t| t.fps_config.clone()),
                 injection_method: template
-                    .and_then(|t| t.injection_method)
+                    .and_then(|t| {
+                        if cfg!(target_os = "windows") {
+                            t.injection_method_windows
+                        } else {
+                            t.injection_method_linux
+                        }
+                    })
                     .unwrap_or(crate::models::InjectionMethod::None),
                 auto_update: template.and_then(|t| t.auto_update).unwrap_or(true),
                 active_runner_id: None,
                 prefix_path: None,
+                modloader_enabled: template.and_then(|t| t.modloader_enabled).unwrap_or(true),
                 sandbox: crate::models::SandboxConfig::default(),
                 loader_repo: template.and_then(|t| t.loader_repo.clone()),
                 hash_db_url: template.and_then(|t| t.hash_db_url.clone()),
                 patch_logic: template.and_then(|t| t.patch_logic.clone()),
                 enable_linux_shield: true,
+                supported_injection_methods: template
+                    .and_then(|t| t.supported_injection_methods.clone())
+                    .unwrap_or_default(),
             };
 
             let mut db = LibraryDatabase::default();

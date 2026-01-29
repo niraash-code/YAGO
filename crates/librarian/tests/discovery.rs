@@ -26,7 +26,8 @@ async fn test_discovery_with_template_settings() {
             id: "testgame".to_string(),
             name: "Test Game".to_string(),
             executables: vec!["TestGame.exe".to_string()],
-            injection_method: Some(InjectionMethod::Proxy),
+            injection_method_windows: Some(InjectionMethod::Proxy),
+            injection_method_linux: Some(InjectionMethod::Proxy),
             launch_args: Some(vec!["-custom".to_string()]),
             auto_update: Some(false),
             ..Default::default()

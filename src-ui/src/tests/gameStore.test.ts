@@ -28,6 +28,8 @@ vi.mock("../lib/api", () => ({
     getSetupStatus: vi.fn(),
     getSkinInventory: vi.fn(),
     syncTemplates: vi.fn().mockResolvedValue(undefined),
+    syncGameAssets: vi.fn().mockResolvedValue(undefined),
+    ensureGameResources: vi.fn().mockResolvedValue(undefined),
     getAppConfig: vi.fn().mockResolvedValue({
       common_loader_repo: "",
       proton_repo: "",
@@ -126,5 +128,29 @@ describe("gameStore", () => {
       })
     );
     expect(useAppStore.getState().streamSafe).toBe(false);
+  });
+
+  it("calls ensureGameResources during launch", async () => {
+    const mockGame = {
+      id: "test",
+      name: "Test",
+      installPath: "/path",
+      exeName: "test.exe",
+      injectionMethod: "Proxy",
+    };
+    useAppStore.setState({
+      games: [mockGame as any],
+      selectedGameId: "test",
+    });
+
+    vi.mocked(api.ensureGameResources).mockResolvedValue(undefined);
+    vi.mocked(api.deployMods).mockResolvedValue({ overwritten_hashes: {} });
+    vi.mocked(api.launchGame).mockResolvedValue(undefined);
+
+    await useAppStore.getState().launchCurrentGame();
+
+    expect(api.ensureGameResources).toHaveBeenCalledWith("test");
+    expect(api.deployMods).toHaveBeenCalled();
+    expect(api.launchGame).toHaveBeenCalledWith("test");
   });
 });

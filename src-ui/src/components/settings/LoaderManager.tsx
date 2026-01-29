@@ -21,7 +21,9 @@ export const LoaderManager: React.FC<LoaderManagerProps> = ({ gameId }) => {
     <div className="p-5 rounded-2xl border border-white/5 bg-white/5 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-white uppercase tracking-tight">Mod Loader</h3>
+          <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+            Mod Loader
+          </h3>
           <p className="text-xs text-slate-500 mt-0.5">
             Essential engine for character skins & shaders.
           </p>
@@ -80,7 +82,9 @@ export const LoaderManager: React.FC<LoaderManagerProps> = ({ gameId }) => {
             <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">
               Engine Failure
             </p>
-            <p className="text-[10px] text-red-400/60 truncate font-mono mt-1">{error}</p>
+            <p className="text-[10px] text-red-400/60 truncate font-mono mt-1">
+              {error}
+            </p>
           </div>
           <button
             onClick={() => installGameLoader(gameId)}
@@ -94,7 +98,9 @@ export const LoaderManager: React.FC<LoaderManagerProps> = ({ gameId }) => {
       {/* ReShade Card */}
       <div className="pt-6 border-t border-white/5 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-white uppercase tracking-tight">ReShade Core</h3>
+          <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+            ReShade Core
+          </h3>
           <p className="text-xs text-slate-500 mt-0.5">
             Advanced post-processing (Bundled).
           </p>

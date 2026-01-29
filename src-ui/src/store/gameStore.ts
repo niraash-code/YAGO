@@ -111,10 +111,12 @@ const mapBackendGameToFrontend = (
     exeName: bg.exe_name,
     launchArgs: bg.launch_args || [],
     injectionMethod: bg.injection_method,
+    modloaderEnabled: bg.modloader_enabled,
     autoUpdate: bg.auto_update,
     activeRunnerId: bg.active_runner_id,
     prefixPath: bg.prefix_path,
     enableLinuxShield: bg.enable_linux_shield,
+    supportedInjectionMethods: bg.supported_injection_methods,
     // Get settings from active profile
     useGamescope: activeProfile?.useGamescope,
     useGamemode: activeProfile?.useGamemode,

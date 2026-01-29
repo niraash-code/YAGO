@@ -157,7 +157,9 @@ export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({
                   <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] mb-1">
                     System Hub
                   </h2>
-                  <p className="text-2xl font-black text-white tracking-tighter uppercase italic">App Settings</p>
+                  <p className="text-2xl font-black text-white tracking-tighter uppercase italic">
+                    App Settings
+                  </p>
                 </div>
               </div>
               <button

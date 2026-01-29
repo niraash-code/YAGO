@@ -66,7 +66,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
       <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-200/70 text-sm font-medium flex gap-5 backdrop-blur-sm">
         <AlertTriangle className="shrink-0 text-amber-500" size={20} />
         <p className="leading-relaxed">
-          Advanced configurations can cause runtime instability or game crashes. Proceed with caution and verify changes.
+          Advanced configurations can cause runtime instability or game crashes.
+          Proceed with caution and verify changes.
         </p>
       </div>
 
@@ -133,7 +134,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 onClick={() => toggleFeature("fps")}
                 className={cn(
                   "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-                  game.fpsConfig?.enabled ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+                  game.fpsConfig?.enabled
+                    ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                    : "bg-slate-800"
                 )}
               >
                 <div
@@ -231,29 +234,81 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 </div>
                 <div>
                   <div className="text-base font-bold text-white uppercase tracking-tight">
-                    Injection Method
+                    Enable Mod Loader
                   </div>
                   <div className="text-sm text-slate-500 mt-1 font-medium">
-                    How mod loader is attached to game
+                    Load character skins and active mods
                   </div>
                 </div>
               </div>
-              <select
-                value={game.injectionMethod || InjectionMethod.Proxy}
-                onChange={e =>
-                  setInjectionMethod(e.target.value as InjectionMethod)
+              <button
+                onClick={() =>
+                  updateGameConfig(game.id, {
+                    modloaderEnabled: !game.modloaderEnabled,
+                  })
                 }
-                className="bg-slate-900 border border-white/10 rounded-xl px-5 py-2.5 text-xs font-black text-white focus:outline-none focus:border-indigo-500 uppercase tracking-widest"
+                className={cn(
+                  "w-11 h-6 rounded-full transition-all relative focus:outline-none",
+                  game.modloaderEnabled
+                    ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                    : "bg-slate-800"
+                )}
               >
-                <option value={InjectionMethod.None}>None (Disabled)</option>
-                <option value={InjectionMethod.Proxy}>
-                  Proxy DLL (d3d11.dll)
-                </option>
-                <option value={InjectionMethod.Loader}>
-                  Direct Loader (3dmloader)
-                </option>
-              </select>
+                <div
+                  className={cn(
+                    "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
+                    game.modloaderEnabled ? "right-1" : "left-1"
+                  )}
+                />
+              </button>
             </div>
+
+            <AnimatePresence>
+              {game.modloaderEnabled && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden pt-4"
+                >
+                  <div className="flex items-center justify-between pl-14">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                      Injection Method
+                    </label>
+                    <select
+                      value={game.injectionMethod || InjectionMethod.Proxy}
+                      onChange={e =>
+                        setInjectionMethod(e.target.value as InjectionMethod)
+                      }
+                      className="bg-slate-900 border border-white/10 rounded-xl px-5 py-2.5 text-xs font-black text-white focus:outline-none focus:border-indigo-500 uppercase tracking-widest"
+                    >
+                      {(game.supportedInjectionMethods &&
+                      game.supportedInjectionMethods.length > 0
+                        ? game.supportedInjectionMethods
+                        : [InjectionMethod.Proxy, InjectionMethod.Loader]
+                      )
+                        .filter(
+                          method =>
+                            (!isLinux ||
+                              method !== InjectionMethod.RemoteThread) &&
+                            method !== InjectionMethod.None
+                        )
+                        .map(method => (
+                          <option key={method} value={method}>
+                            {method === InjectionMethod.Proxy
+                              ? "Proxy DLL (d3d11.dll)"
+                              : method === InjectionMethod.Loader
+                              ? "Direct Loader (Hook)"
+                              : method === InjectionMethod.RemoteThread
+                              ? "Remote Thread (Inject)"
+                              : method}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="py-6 flex items-center justify-between group">
@@ -278,7 +333,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
               }
               className={cn(
                 "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-                activeProfile.useReshade ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+                activeProfile.useReshade
+                  ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                  : "bg-slate-800"
               )}
             >
               <div
@@ -348,7 +405,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 onClick={() => toggleFeature("shield")}
                 className={cn(
                   "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-                  game.enableLinuxShield ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+                  game.enableLinuxShield
+                    ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                    : "bg-slate-800"
                 )}
               >
                 <div
@@ -362,7 +421,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
 
             <div className="py-6 flex items-center justify-between group">
               <div>
-                <div className="text-base font-bold text-white uppercase tracking-tight">Gamemode</div>
+                <div className="text-base font-bold text-white uppercase tracking-tight">
+                  Gamemode
+                </div>
                 <div className="text-sm text-slate-500 mt-1 font-medium">
                   Enable Feral GameMode optimizations
                 </div>
@@ -371,7 +432,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 onClick={() => toggleFeature("gamemode")}
                 className={cn(
                   "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-                  activeProfile.useGamemode ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+                  activeProfile.useGamemode
+                    ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                    : "bg-slate-800"
                 )}
               >
                 <div
@@ -397,7 +460,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                   onClick={() => toggleFeature("gamescope")}
                   className={cn(
                     "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-                    activeProfile.useGamescope ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+                    activeProfile.useGamescope
+                      ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                      : "bg-slate-800"
                   )}
                 >
                   <div
@@ -438,7 +503,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                             W
                           </span>
                         </div>
-                        <span className="text-slate-700 font-black text-xl">×</span>
+                        <span className="text-slate-700 font-black text-xl">
+                          ×
+                        </span>
                         <div className="relative flex-1">
                           <input
                             type="number"
@@ -464,7 +531,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
 
             <div className="py-6 flex items-center justify-between group">
               <div>
-                <div className="text-base font-bold text-white uppercase tracking-tight">MangoHud</div>
+                <div className="text-base font-bold text-white uppercase tracking-tight">
+                  MangoHud
+                </div>
                 <div className="text-sm text-slate-500 mt-1 font-medium">
                   Enable performance overlay
                 </div>
@@ -473,7 +542,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                 onClick={() => toggleFeature("mangohud")}
                 className={cn(
                   "w-11 h-6 rounded-full transition-all relative focus:outline-none",
-                  activeProfile.useMangohud ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]" : "bg-slate-800"
+                  activeProfile.useMangohud
+                    ? "bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+                    : "bg-slate-800"
                 )}
               >
                 <div
@@ -497,14 +568,20 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
             onClick={handleDeleteProfile}
             className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-400/80 hover:text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
           >
-            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+            <Trash2
+              size={16}
+              className="group-hover:scale-110 transition-transform"
+            />
             Delete Loadout
           </button>
           <button
             onClick={handleDeleteGame}
             className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-400/80 hover:text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
           >
-            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+            <Trash2
+              size={16}
+              className="group-hover:scale-110 transition-transform"
+            />
             Uninstall Game
           </button>
         </div>

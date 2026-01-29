@@ -12,7 +12,10 @@
   "executables": [
     "ZenlessZoneZero.exe"
   ],
-  "injection_method": "Loader",
+  "injection_method_windows": "Loader",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy", "Loader", "RemoteThread"],
   "loader_repo": "leotorrez/ZZMI-Package",
   "hash_db_url": "https://raw.githubusercontent.com/leotorrez/ZZMI-Package/main/Tools/hash_map.json",
   "patch_logic": {},

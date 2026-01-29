@@ -87,6 +87,7 @@ async fn test_launch_invalid_exe() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let result = launcher.launch(options).await;

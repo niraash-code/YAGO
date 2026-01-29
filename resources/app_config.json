@@ -1,5 +1,5 @@
 {
-  "common_loader_repo": "SilentNightSound/GI-Model-Importer",
+  "common_loader_repo": "SpectrumQT/XXMI-Libs-Package",
   "proton_repo": "GloriousEggroll/proton-ge-custom",
   "yago_update_url": "https://api.github.com/repos/your-org/yago/releases/latest",
   "reshade_url": "https://reshade.me/downloads/ReShade_Setup.exe",

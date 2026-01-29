@@ -63,13 +63,14 @@ pub fn run() {
         )
         .register_uri_scheme_protocol("yago-asset", |_ctx, request| {
             let url = request.uri().to_string();
-            
+
             // Robust parsing: strip protocol and host
             let mut path_str = url.replace("yago-asset://localhost/", "");
             path_str = path_str.replace("yago-asset://localhost", "");
             path_str = path_str.replace("yago-asset://", "");
-            
-            let decoded = urlencoding::decode(&path_str).unwrap_or(std::borrow::Cow::Borrowed(&path_str));
+
+            let decoded =
+                urlencoding::decode(&path_str).unwrap_or(std::borrow::Cow::Borrowed(&path_str));
             let mut path = std::path::PathBuf::from(decoded.as_ref());
 
             // Check if we need to prepend a slash (Linux absolute paths)
@@ -100,7 +101,10 @@ pub fn run() {
                     .body(content)
                     .unwrap()
             } else {
-                eprintln!("Asset Access Denied or Not Found: {:?} (Safe: {})", path, is_safe);
+                eprintln!(
+                    "Asset Access Denied or Not Found: {:?} (Safe: {})",
+                    path, is_safe
+                );
                 tauri::http::Response::builder()
                     .status(403)
                     .body(vec![])
@@ -145,7 +149,8 @@ pub fn run() {
                 std::fs::create_dir_all(&assets_root).expect("failed to create assets directory");
             }
             if !templates_root.exists() {
-                std::fs::create_dir_all(&templates_root).expect("failed to create templates directory");
+                std::fs::create_dir_all(&templates_root)
+                    .expect("failed to create templates directory");
             }
 
             // EXTRACT BUNDLED ASSETS
@@ -185,8 +190,12 @@ pub fn run() {
             let templates: HashMap<String, GameTemplate> = tauri::async_runtime::block_on(async {
                 registry.load_all().await.unwrap_or_default()
             });
-            println!("Loaded {} game templates from {:?}.", templates.len(), templates_root);
-            
+            println!(
+                "Loaded {} game templates from {:?}.",
+                templates.len(),
+                templates_root
+            );
+
             if let Some(t) = templates.get("genshin") {
                 println!("Genshin cover: {}", t.cover_image);
             }
@@ -254,9 +263,10 @@ pub fn run() {
             commands::library::scan_for_games,
             commands::library::sync_templates,
             commands::setup::install_common_libs,
-                            commands::setup::download_loader,
-                            commands::setup::ensure_game_resources,
-                            commands::setup::download_proton,            commands::setup::check_setup,
+            commands::setup::download_loader,
+            commands::setup::ensure_game_resources,
+            commands::setup::download_proton,
+            commands::setup::check_setup,
             commands::setup::get_setup_status,
             commands::library::detect_steam_proton_path,
             commands::library::remove_runner,

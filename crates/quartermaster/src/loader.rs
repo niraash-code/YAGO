@@ -37,8 +37,8 @@ where
         .iter()
         .find(|a| {
             let name = a.name.to_lowercase();
-            if repo == "GI-Model-Importer" {
-                name.contains("playing-mods") && name.ends_with(".zip")
+            if repo == "XXMI-Libs-Package" {
+                name.contains("xxmi-package") && name.ends_with(".zip")
             } else {
                 name.ends_with(".zip")
             }

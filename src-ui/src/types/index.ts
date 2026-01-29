@@ -87,6 +87,8 @@ export interface Game {
   useGamemode?: boolean;
   useMangohud?: boolean;
   injectionMethod: InjectionMethod;
+  modloaderEnabled: boolean;
+  supportedInjectionMethods?: InjectionMethod[];
   resolution?: [number, number];
   fpsConfig?: FpsConfig;
   autoUpdate: boolean;

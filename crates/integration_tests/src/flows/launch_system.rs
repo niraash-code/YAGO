@@ -52,6 +52,7 @@ async fn test_game_launch_with_real_fake_process() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let launcher = Launcher;
@@ -109,6 +110,7 @@ async fn test_game_kill_flow() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let launcher = Launcher;
@@ -173,6 +175,7 @@ echo "COMPAT_DATA: $STEAM_COMPAT_DATA_PATH" >> "{}"
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
 
     let launcher = Launcher;

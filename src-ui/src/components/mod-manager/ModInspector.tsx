@@ -15,6 +15,7 @@ import {
 import { api } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { FileNode } from "./types";
+import { useUiStore } from "../../store/uiStore";
 
 // Sub-components
 import { ModInspectorInfo } from "./inspector/ModInspectorInfo";
@@ -50,6 +51,7 @@ export const ModInspector = ({
   const [openWithModal, setOpenWithModal] = useState<{ file: FileNode } | null>(
     null
   );
+  const { showAlert } = useUiStore();
 
   useEffect(() => {
     if (selectedMod && game) {
@@ -257,7 +259,7 @@ export const ModInspector = ({
                   activeFileContent
                 );
               } catch (e) {
-                alert(e);
+                showAlert(String(e), "Error");
               }
             }}
           />

@@ -16,13 +16,13 @@ mod tests {
 
         let encoded = urlencoding::encode(&path_str);
         let protocol_url = format!("yago-asset://{}", encoded);
-        
+
         println!("Protocol URL: {}", protocol_url);
 
         let uri_string = protocol_url.clone();
         let mut path_part = uri_string.replace("yago-asset://localhost", "");
         path_part = path_part.replace("yago-asset://", "");
-        
+
         let decoded = urlencoding::decode(&path_part).expect("Decode failed");
         let mut resolved_path = PathBuf::from(decoded.into_owned());
 
@@ -42,7 +42,10 @@ mod tests {
 
         let strip = |url: &str| -> String {
             let path_str = url.strip_prefix("local://").unwrap();
-            path_str.strip_prefix("templates/").unwrap_or(path_str).to_string()
+            path_str
+                .strip_prefix("templates/")
+                .unwrap_or(path_str)
+                .to_string()
         };
 
         assert_eq!(strip(input_1), "genshin_background.webp");

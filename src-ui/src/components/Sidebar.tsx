@@ -140,8 +140,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => selectGame(game.id)}
                       className={cn(
                         "w-full h-full group relative flex items-center px-4 rounded-2xl transition-all duration-300 outline-none overflow-hidden",
-                        isSelected 
-                          ? "bg-indigo-500/10 ring-1 ring-white/10 shadow-lg" 
+                        isSelected
+                          ? "bg-indigo-500/10 ring-1 ring-white/10 shadow-lg"
                           : "hover:bg-white/5"
                       )}
                     >
@@ -188,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           >
                             {game.name}
                           </div>
-                          
+
                           <div className="flex items-center gap-2 mt-1">
                             {game.status === InstallStatus.PLAYING ? (
                               <span className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-black uppercase tracking-tighter">
@@ -196,13 +196,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                               </span>
                             ) : game.status === InstallStatus.UPDATING ? (
                               <span className="flex items-center gap-1.5 text-[10px] text-yellow-500 font-black uppercase tracking-tighter animate-pulse">
-                                <RefreshCw size={10} className="animate-spin" /> Sync
+                                <RefreshCw size={10} className="animate-spin" />{" "}
+                                Sync
                               </span>
                             ) : (
-                              <span className={cn(
-                                "text-[10px] font-black uppercase tracking-tighter",
-                                isSelected ? "text-slate-400" : "text-slate-600"
-                              )}>
+                              <span
+                                className={cn(
+                                  "text-[10px] font-black uppercase tracking-tighter",
+                                  isSelected
+                                    ? "text-slate-400"
+                                    : "text-slate-600"
+                                )}
+                              >
                                 {game.regions} Regions
                               </span>
                             )}
@@ -235,7 +240,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="p-1.5 rounded-lg bg-white/5 group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
                   <Plus size={20} />
                 </div>
-                <span className="text-sm font-bold uppercase tracking-widest">Add Game</span>
+                <span className="text-sm font-bold uppercase tracking-widest">
+                  Add Game
+                </span>
               </button>
             </Tooltip>
           </div>
@@ -244,14 +251,23 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer */}
       <div className="p-4 border-t border-white/5 bg-black/20 shrink-0">
-        <Tooltip content="Manage Global Settings" position="right" className="w-full">
+        <Tooltip
+          content="Manage Global Settings"
+          position="right"
+          className="w-full"
+        >
           <button
             onClick={onOpenAppSettings}
             className="w-full flex items-center justify-between px-5 py-4 rounded-2xl text-slate-500 hover:text-white hover:bg-white/5 transition-all duration-200 outline-none group"
           >
             <div className="flex items-center gap-3">
-              <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
-              <span className="text-xs font-bold uppercase tracking-widest">App Settings</span>
+              <Settings
+                size={20}
+                className="group-hover:rotate-90 transition-transform duration-500"
+              />
+              <span className="text-xs font-bold uppercase tracking-widest">
+                App Settings
+              </span>
             </div>
             <div className="w-2 h-2 rounded-full bg-slate-800 group-hover:bg-indigo-500 transition-colors shadow-[0_0_10px_rgba(99,102,241,0)] group-hover:shadow-indigo-500/50" />
           </button>

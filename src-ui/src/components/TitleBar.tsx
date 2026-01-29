@@ -103,8 +103,12 @@ const TitleBar: React.FC = () => {
             <Minus size={16} />
           </button>
         </Tooltip>
-        
-        <Tooltip content={isMaximized ? "Restore" : "Maximize"} position="bottom" className="h-full">
+
+        <Tooltip
+          content={isMaximized ? "Restore" : "Maximize"}
+          position="bottom"
+          className="h-full"
+        >
           <button
             onClick={toggleMaximize}
             className="h-full px-4 hover:bg-white/5 text-slate-400 hover:text-white transition-colors outline-none focus-visible:bg-white/10 flex items-center justify-center"

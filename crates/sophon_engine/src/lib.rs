@@ -14,7 +14,7 @@ pub use orchestrator::{ChunkOrchestrator, OrchestratorEvent};
 pub use scanner::{Scanner, ScanMode, DivergenceMap};
 pub use downloader::{DownloadProgress, DownloadStatus, DownloadTask, Downloader};
 pub use error::{Result, SophonError};
-pub use protocol::{ChunkInfo, SophonManifest, SophonProtocol};
+pub use protocol::{ChunkInfo, SophonManifest, SophonProtocol, ManifestStats, ManifestFile, FileChunkReference, DiffPackage};
 pub use provider::{GameInfo, GamePackage, Provider};
 pub use verifier::Verifier;
 

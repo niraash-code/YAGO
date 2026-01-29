@@ -14,6 +14,9 @@ chrono = "0.4"
 urlencoding = "2"
 zip = { version = "2.2.2", features = ["deflate"] }
 md-5 = "0.10"
+reqwest = { version = "0.12", features = ["json"] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 
 # Backend Pillars
 fs_engine = { path = "../fs_engine" }

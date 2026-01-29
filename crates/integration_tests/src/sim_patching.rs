@@ -56,6 +56,7 @@ async fn test_sim_patching_and_launch() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
     let result = launcher.launch(options).await;
     assert!(result.is_ok());
@@ -93,6 +94,7 @@ async fn test_sim_prefix_management() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
     // Simulate launch_game ensure_structure logic
     let pfx_dir = options.prefix_path.clone();
@@ -168,6 +170,7 @@ async fn test_sim_disabled_injection() {
         sandbox_data_dir: None,
         enable_linux_shield: true,
         shield_path: None,
+        helper_path: None,
     };
     // Simulate the logic in deploy_mods (skipping actual deploy_mods call for unit test simplicity)
     if options.injection_method == InjectionMethod::None {
