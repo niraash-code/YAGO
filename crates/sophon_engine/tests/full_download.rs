@@ -40,6 +40,7 @@ fn create_test_manifest() -> SophonManifest {
             chunk_count: 2,
             file_count: 1,
         },
+        diff_packages: vec![],
     }
 }
 
