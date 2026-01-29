@@ -1,7 +1,7 @@
 use crate::error::{Result, SophonError};
 use crate::protocol::SophonManifest;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 const SOPHON_API_BASE: &str = "https://sg-public-api.hoyoverse.com/downloader/sophon_chunk/api";
 
@@ -76,5 +76,17 @@ impl SophonClient {
              .map_err(|e| SophonError::Network(e))?;
              
         Ok(manifest)
+    }
+
+    pub async fn download_raw(&self, url: &str) -> Result<Vec<u8>> {
+        let resp = self.http.get(url)
+            .send()
+            .await
+            .map_err(|e| SophonError::Network(e))?;
+            
+        let bytes = resp.bytes().await
+             .map_err(|e| SophonError::Network(e))?;
+             
+        Ok(bytes.to_vec())
     }
 }

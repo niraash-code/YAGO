@@ -4,8 +4,10 @@ pub mod protocol;
 pub mod provider;
 pub mod verifier;
 pub mod client;
+pub mod orchestrator;
 
 pub use client::SophonClient;
+pub use orchestrator::{ChunkOrchestrator, OrchestratorEvent};
 pub use downloader::{DownloadProgress, DownloadStatus, DownloadTask, Downloader};
 pub use error::{Result, SophonError};
 pub use protocol::{ChunkInfo, SophonManifest, SophonProtocol};
