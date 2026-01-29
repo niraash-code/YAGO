@@ -164,10 +164,23 @@ export interface IdentifiedGame {
   color: string;
   accent_color: string;
   cover_image: string;
+  icon: string;
+  logo_initial: string;
   install_path: string;
   exe_name: string;
   supported_injection_methods: InjectionMethod[];
   injection_method: InjectionMethod;
+  modloader_enabled: boolean;
+}
+
+export interface ManifestCategory {
+  id: string;
+  name: string;
+}
+
+export interface RemoteCatalogEntry {
+  template: any;
+  remote_info?: any;
 }
 
 export interface DiscoveredGame {
@@ -351,7 +364,10 @@ export const api = {
     invoke("initialize_remote_game", { templateId }),
   getInstallOptions: (gameId: string): Promise<any[]> =>
     invoke("get_install_options", { gameId }),
-  startGameDownload: (gameId: string, selectedCategoryIds: string[]): Promise<void> =>
+  startGameDownload: (
+    gameId: string,
+    selectedCategoryIds: string[]
+  ): Promise<void> =>
     invoke("start_game_download", { gameId, selectedCategoryIds }),
   pauseGameDownload: (gameId: string): Promise<void> =>
     invoke("pause_game_download", { gameId }),

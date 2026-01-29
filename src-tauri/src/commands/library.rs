@@ -14,8 +14,10 @@ use uuid::Uuid;
 pub async fn get_remote_catalog(
     state: State<'_, AppState>,
 ) -> Result<Vec<RemoteCatalogEntry>, String> {
-    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
-    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     let installed_ids: Vec<String> = dbs.keys().cloned().collect();
 
     CatalogManager::get_remote_catalog(&templates, &installed_ids)
@@ -29,7 +31,8 @@ pub async fn initialize_remote_game(
     state: State<'_, AppState>,
     template_id: String,
 ) -> Result<String, String> {
-    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
     let template = templates
         .get(&template_id)
         .ok_or_else(|| format!("Template {} not found", template_id))?;
@@ -101,7 +104,8 @@ pub async fn initialize_remote_game(
             .await
             .map_err(|e| e.to_string())?;
 
-        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
         dbs.insert(game_id.clone(), db);
         let _ = app.emit("library-updated", dbs.clone());
     }
@@ -114,7 +118,8 @@ pub async fn get_install_options(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<Vec<sophon_engine::protocol::ManifestCategory>, String> {
-    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     let db = dbs
         .get(&game_id)
         .ok_or_else(|| format!("Game {} not found", game_id))?;
@@ -125,7 +130,8 @@ pub async fn get_install_options(
 
     // We need RemoteInfo to get the manifest URL
     // If it's missing, we try to fetch it from template
-    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
     let template = templates.get(&game_id).ok_or("Template not found")?;
 
     let client = SophonClient::new();
@@ -229,6 +235,7 @@ pub struct ProfileUpdate {
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn force_reset_state(state: State<'_, AppState>) -> Result<(), String> {
     let mut running = state.running_game_name.lock().await;
     *running = None;
@@ -243,7 +250,8 @@ pub async fn force_reset_state(state: State<'_, AppState>) -> Result<(), String>
 pub async fn get_library(
     state: State<'_, AppState>,
 ) -> Result<HashMap<String, LibraryDatabase>, String> {
-    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     Ok(dbs.clone())
 }
 
@@ -252,7 +260,8 @@ pub async fn get_skin_inventory(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<HashMap<String, librarian::queries::CharacterGroup>, String> {
-    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     let db = dbs
         .get(&game_id)
         .ok_or_else(|| format!("Game {} not found", game_id))?;
@@ -332,7 +341,8 @@ pub async fn identify_game(
         return Err("Could not identify game executable".to_string());
     }
     let game_id = exe_name.to_lowercase();
-    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
     let template = templates_guard.get(&game_id).or_else(|| {
         if game_id.ends_with(".exe") {
             templates_guard.get(game_id.trim_end_matches(".exe"))
@@ -436,8 +446,10 @@ pub async fn sync_game_assets(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<(), String> {
-    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
-    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
+    let templates: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
 
     if let (Some(db), Some(template)) = (dbs.get_mut(&game_id), templates.get(&game_id)) {
         if let Some(config) = db.games.get_mut(&game_id) {
@@ -469,7 +481,8 @@ pub async fn add_game(
     path: String,
 ) -> Result<String, String> {
     let path_buf = PathBuf::from(&path);
-    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
     let game_id = Discovery::add_game_by_path(&state.librarian, path_buf, &templates_guard)
         .await
         .map_err(|e| e.to_string())?;
@@ -481,7 +494,8 @@ pub async fn add_game(
         if !prefix_path.exists() {
             std::fs::create_dir_all(prefix_path.join("pfx")).map_err(|e| e.to_string())?;
         }
-        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
         if let Some(db) = dbs.get_mut(&game_id) {
             if let Some(config) = db.games.get_mut(&game_id) {
                 config.prefix_path = Some(prefix_path);
@@ -494,7 +508,8 @@ pub async fn add_game(
         }
     }
     if let Ok(db) = state.librarian.load_game_db(&game_id).await {
-        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
         dbs.insert(game_id.clone(), db);
         let _ = app.emit("library-updated", dbs.clone());
     }
@@ -507,7 +522,8 @@ pub async fn remove_game(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<(), String> {
-    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> = state.game_dbs.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     if let Some(db) = dbs.remove(&game_id) {
         let game_dir = state.librarian.games_root.join(&game_id);
         if game_dir.exists() {
@@ -535,7 +551,8 @@ pub async fn scan_for_games(state: State<'_, AppState>) -> Result<Vec<Discovered
     if !templates_root.exists() {
         return Ok(vec![]);
     }
-    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
     let templates_vec: Vec<_> = templates_guard.values().cloned().collect();
     let discovered = librarian::scanner::scan(&templates_vec);
     Ok(discovered)
@@ -552,7 +569,8 @@ pub async fn sync_templates(
     }
     let registry = librarian::TemplateRegistry::new(templates_root);
     let new_templates = registry.load_all().await.map_err(|e| e.to_string())?;
-    let mut templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> = state.game_templates.lock().await;
+    let mut templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
     *templates_guard = new_templates;
     Ok(())
 }

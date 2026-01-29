@@ -13,8 +13,13 @@ pub async fn start_game_download(
 ) -> Result<(), String> {
     // 1. Validation & Initialization
     let dbs = state.game_dbs.lock().await;
-    let db = dbs.get(&game_id).ok_or_else(|| format!("Game {} not found", game_id))?;
-    let config = db.games.get(&game_id).ok_or_else(|| format!("Config for {} missing", game_id))?;
+    let db = dbs
+        .get(&game_id)
+        .ok_or_else(|| format!("Game {} not found", game_id))?;
+    let config = db
+        .games
+        .get(&game_id)
+        .ok_or_else(|| format!("Config for {} missing", game_id))?;
 
     if config.install_status == InstallStatus::Downloading {
         return Err("Download already in progress".to_string());
@@ -83,10 +88,9 @@ pub async fn start_game_download(
 
     tauri::async_runtime::spawn(async move {
         let (tx_events, mut rx_events) = mpsc::channel(100);
-        
-        let orchestrator_handle = tokio::spawn(async move {
-            orchestrator.run(tx_events, rx_pause).await
-        });
+
+        let orchestrator_handle =
+            tokio::spawn(async move { orchestrator.run(tx_events, rx_pause).await });
 
         while let Some(event) = rx_events.recv().await {
             match event {
@@ -99,7 +103,12 @@ pub async fn start_game_download(
                 }
                 OrchestratorEvent::Completed => {
                     println!("Download completed for {}", game_id_clone);
-                    let _ = update_game_status_internal(&app_clone, &game_id_clone, InstallStatus::Installed).await;
+                    let _ = update_game_status_internal(
+                        &app_clone,
+                        &game_id_clone,
+                        InstallStatus::Installed,
+                    )
+                    .await;
                     let _ = app_clone.emit("download-complete", game_id_clone.clone());
                 }
                 _ => {}
@@ -149,7 +158,11 @@ async fn update_game_status(
     if let Some(db) = dbs.get_mut(game_id) {
         if let Some(config) = db.games.get_mut(game_id) {
             config.install_status = status;
-            state.librarian.save_game_db(game_id, db).await.map_err(|e| e.to_string())?;
+            state
+                .librarian
+                .save_game_db(game_id, db)
+                .await
+                .map_err(|e| e.to_string())?;
             return Ok(());
         }
     }
@@ -166,7 +179,11 @@ async fn update_game_status_internal(
     if let Some(db) = dbs.get_mut(game_id) {
         if let Some(config) = db.games.get_mut(game_id) {
             config.install_status = status;
-            state.librarian.save_game_db(game_id, db).await.map_err(|e| e.to_string())?;
+            state
+                .librarian
+                .save_game_db(game_id, db)
+                .await
+                .map_err(|e| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }

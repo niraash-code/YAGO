@@ -1,5 +1,5 @@
 use crate::AppState;
-use librarian::Profile;
+use librarian::models::Profile;
 use tauri::{Emitter, State};
 use uuid::Uuid;
 

@@ -1,5 +1,5 @@
 use crate::error::{Result, SophonError};
-use libc::{c_void, c_uchar, c_uint};
+use libc::{c_uchar, c_uint, c_void};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ptr;
 
@@ -12,7 +12,12 @@ type hpatch_StreamPos_t = u64;
 struct hpatch_TStreamInput {
     stream_import: *mut c_void,
     stream_size: hpatch_StreamPos_t,
-    read: extern "C" fn(*const hpatch_TStreamInput, hpatch_StreamPos_t, *mut c_uchar, *mut c_uchar) -> hpatch_BOOL,
+    read: extern "C" fn(
+        *const hpatch_TStreamInput,
+        hpatch_StreamPos_t,
+        *mut c_uchar,
+        *mut c_uchar,
+    ) -> hpatch_BOOL,
     private_reserved: *mut c_void,
 }
 
@@ -20,8 +25,20 @@ struct hpatch_TStreamInput {
 struct hpatch_TStreamOutput {
     stream_import: *mut c_void,
     stream_size: hpatch_StreamPos_t,
-    read_writed: Option<extern "C" fn(*const hpatch_TStreamOutput, hpatch_StreamPos_t, *mut c_uchar, *mut c_uchar) -> hpatch_BOOL>,
-    write: extern "C" fn(*const hpatch_TStreamOutput, hpatch_StreamPos_t, *const c_uchar, *const c_uchar) -> hpatch_BOOL,
+    read_writed: Option<
+        extern "C" fn(
+            *const hpatch_TStreamOutput,
+            hpatch_StreamPos_t,
+            *mut c_uchar,
+            *mut c_uchar,
+        ) -> hpatch_BOOL,
+    >,
+    write: extern "C" fn(
+        *const hpatch_TStreamOutput,
+        hpatch_StreamPos_t,
+        *const c_uchar,
+        *const c_uchar,
+    ) -> hpatch_BOOL,
 }
 
 extern "C" {
@@ -35,15 +52,11 @@ extern "C" {
 pub struct Patcher;
 
 impl Patcher {
-    pub fn apply_patch<R, D, W>(
-        old_data: &mut R,
-        diff_data: &mut D,
-        new_data: &mut W,
-    ) -> Result<()>
+    pub fn apply_patch<R, D, W>(old_data: &mut R, diff_data: &mut D, new_data: &mut W) -> Result<()>
     where
         R: Read + Seek,
         D: Read + Seek,
-        W: Write + Seek, 
+        W: Write + Seek,
     {
         // Get sizes
         let old_size = old_data.seek(SeekFrom::End(0))?;
@@ -73,9 +86,7 @@ impl Patcher {
             write: output_write::<W>,
         };
 
-        let result = unsafe {
-            patch_stream(&new_stream, &old_stream, &diff_stream)
-        };
+        let result = unsafe { patch_stream(&new_stream, &old_stream, &diff_stream) };
 
         if result == 0 {
             return Err(SophonError::Protocol("hpatchz patch failed".to_string()));
@@ -116,7 +127,7 @@ extern "C" fn output_write<T: Write>(
         let writer = &mut *((*stream).stream_import as *mut T);
         let len = data_end as usize - data as usize;
         let buf = std::slice::from_raw_parts(data, len);
-        
+
         if writer.write_all(buf).is_err() {
             return 0;
         }

@@ -42,15 +42,15 @@ impl Scanner {
             }
 
             let metadata = fs::metadata(&full_path).await?;
-            
+
             // Fast Check: Size mismatch
             if metadata.len() != file_entry.size {
                 // If size mismatch, we need to deep scan or just redownload all chunks for this file
                 // For now, let's mark it for deep scan or just assume all chunks need checking
                 match mode {
                     ScanMode::MetadataOnly => {
-                         // Mark all chunks as missing for simplicity in MetadataOnly mode if size differs
-                         for chunk_ref in &file_entry.chunks {
+                        // Mark all chunks as missing for simplicity in MetadataOnly mode if size differs
+                        for chunk_ref in &file_entry.chunks {
                             if !missing_chunks.contains(&chunk_ref.chunk_id) {
                                 missing_chunks.push(chunk_ref.chunk_id.clone());
                             }
@@ -71,14 +71,26 @@ impl Scanner {
             // For MVP, we can reuse the Verifier logic but at a chunk level.
             for file_entry in &manifest.files {
                 let full_path = target_dir.join(&file_entry.name);
-                if !full_path.exists() { continue; }
+                if !full_path.exists() {
+                    continue;
+                }
 
                 // Check chunk by chunk
                 // Note: Sophon manifest chunk_id is the MD5 of the chunk data.
                 for chunk_ref in &file_entry.chunks {
-                    if missing_chunks.contains(&chunk_ref.chunk_id) { continue; }
+                    if missing_chunks.contains(&chunk_ref.chunk_id) {
+                        continue;
+                    }
 
-                    if let Err(_) = Self::verify_chunk(&full_path, chunk_ref.offset, chunk_ref.size, &chunk_ref.chunk_id).await {
+                    if Self::verify_chunk(
+                        &full_path,
+                        chunk_ref.offset,
+                        chunk_ref.size,
+                        &chunk_ref.chunk_id,
+                    )
+                    .await
+                    .is_err()
+                    {
                         missing_chunks.push(chunk_ref.chunk_id.clone());
                         if !corrupted_files.contains(&PathBuf::from(&file_entry.name)) {
                             corrupted_files.push(PathBuf::from(&file_entry.name));
@@ -108,14 +120,20 @@ impl Scanner {
         while remaining > 0 {
             let to_read = std::cmp::min(remaining, buffer.len() as u64);
             let n = file.read(&mut buffer[..to_read as usize]).await?;
-            if n == 0 { break; }
+            if n == 0 {
+                break;
+            }
             hasher.update(&buffer[..n]);
             remaining -= n as u64;
         }
 
         let hash = hex::encode(hasher.finalize());
         if hash.to_lowercase() != expected_md5.to_lowercase() {
-            return Err(crate::error::SophonError::ChecksumMismatch(format!("{}:{}", path.display(), offset)));
+            return Err(crate::error::SophonError::ChecksumMismatch(format!(
+                "{}:{}",
+                path.display(),
+                offset
+            )));
         }
 
         Ok(())

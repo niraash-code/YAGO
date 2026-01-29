@@ -6,7 +6,7 @@ import React from "react";
 describe("Tooltip Component", () => {
   it("renders children and shows tooltip on hover", async () => {
     vi.useFakeTimers();
-    
+
     render(
       <Tooltip content="Tooltip Label" delay={0.1}>
         <button>Hover Me</button>
@@ -14,13 +14,13 @@ describe("Tooltip Component", () => {
     );
 
     const trigger = screen.getByText("Hover Me");
-    
+
     // Initial state: not visible
     expect(screen.queryByText("Tooltip Label")).not.toBeInTheDocument();
 
     // Hover
     fireEvent.mouseEnter(trigger);
-    
+
     // Fast-forward delay
     act(() => {
       vi.advanceTimersByTime(150);
@@ -32,7 +32,7 @@ describe("Tooltip Component", () => {
     // Un-hover
     fireEvent.mouseLeave(trigger);
     expect(screen.queryByText("Tooltip Label")).not.toBeInTheDocument();
-    
+
     vi.useRealTimers();
   });
 
@@ -42,7 +42,7 @@ describe("Tooltip Component", () => {
         <div>Child</div>
       </Tooltip>
     );
-    
+
     expect(container.firstChild).toHaveClass("custom-class");
   });
 });

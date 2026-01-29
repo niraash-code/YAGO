@@ -42,7 +42,9 @@ pub struct JournalManager {
 impl JournalManager {
     pub fn new(app_data_dir: &Path, game_id: &str) -> Self {
         Self {
-            journal_path: app_data_dir.join("journals").join(format!("{}_patch.json", game_id)),
+            journal_path: app_data_dir
+                .join("journals")
+                .join(format!("{}_patch.json", game_id)),
         }
     }
 
@@ -54,7 +56,7 @@ impl JournalManager {
         let content = fs::read_to_string(&self.journal_path).await?;
         let journal: PatchJournal = serde_json::from_str(&content)
             .map_err(|e| crate::error::SophonError::Serialization(e.to_string()))?;
-        
+
         Ok(Some(journal))
     }
 
@@ -65,7 +67,7 @@ impl JournalManager {
 
         let content = serde_json::to_string_pretty(journal)
             .map_err(|e| crate::error::SophonError::Serialization(e.to_string()))?;
-        
+
         fs::write(&self.journal_path, content).await?;
         Ok(())
     }

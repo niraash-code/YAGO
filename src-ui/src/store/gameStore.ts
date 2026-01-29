@@ -79,7 +79,10 @@ interface AppState {
   removeRunner: (id: string) => Promise<void>;
   deployCurrentMods: () => Promise<void>;
   startDownload: (manifestUrl: string, installPath: string) => Promise<void>;
-  startGameDownload: (gameId: string, selectedCategoryIds: string[]) => Promise<void>;
+  startGameDownload: (
+    gameId: string,
+    selectedCategoryIds: string[]
+  ) => Promise<void>;
   pauseDownload: (gameId: string) => Promise<void>;
   resumeDownload: (gameId: string) => Promise<void>;
 }
@@ -129,12 +132,14 @@ const mapBackendGameToFrontend = (
     prefixPath: bg.prefix_path,
     enableLinuxShield: bg.enable_linux_shield,
     supportedInjectionMethods: bg.supported_injection_methods,
-    remoteInfo: bg.remote_info ? {
-      manifestUrl: bg.remote_info.manifest_url,
-      chunkBaseUrl: bg.remote_info.chunk_base_url,
-      totalSize: bg.remote_info.total_size,
-      version: bg.remote_info.version,
-    } : undefined,
+    remoteInfo: bg.remote_info
+      ? {
+          manifestUrl: bg.remote_info.manifest_url,
+          chunkBaseUrl: bg.remote_info.chunk_base_url,
+          totalSize: bg.remote_info.total_size,
+          version: bg.remote_info.version,
+        }
+      : undefined,
     // Get settings from active profile
     useGamescope: activeProfile?.useGamescope,
     useGamemode: activeProfile?.useGamemode,

@@ -8,6 +8,7 @@ import {
   Plus,
   Play,
   Download,
+  Cloud,
   RefreshCw,
   Package,
   LayoutDashboard,
@@ -194,7 +195,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                               <span className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-black uppercase tracking-tighter">
                                 <Play size={10} fill="currentColor" /> Live
                               </span>
-                            ) : game.status === InstallStatus.UPDATING || game.status === InstallStatus.DOWNLOADING ? (
+                            ) : game.status === InstallStatus.UPDATING ||
+                              game.status === InstallStatus.DOWNLOADING ? (
                               <span className="flex items-center gap-1.5 text-[10px] text-yellow-500 font-black uppercase tracking-tighter animate-pulse">
                                 <RefreshCw size={10} className="animate-spin" />{" "}
                                 Sync

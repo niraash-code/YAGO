@@ -9,14 +9,22 @@ mod windows_impl {
     fn log(msg: &str) {
         println!("{}", msg);
         std::io::stdout().flush().ok();
-        
+
         // Try to log to C:\yago_helper.log (which is in the prefix)
         if let Ok(mut file) = OpenOptions::new()
             .create(true)
             .append(true)
             .open("C:\\yago_helper.log")
         {
-            let _ = writeln!(file, "[{}] {}", time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_secs(), msg);
+            let _ = writeln!(
+                file,
+                "[{}] {}",
+                time::SystemTime::now()
+                    .duration_since(time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                msg
+            );
         }
     }
 
@@ -33,13 +41,19 @@ mod windows_impl {
         let dll_path = PathBuf::from(&args[3]);
 
         if mode == "hook" {
-            log(&format!("Helper: Mode=Hook, Target={}, DLL={:?}", target_process, dll_path));
-            
+            log(&format!(
+                "Helper: Mode=Hook, Target={}, DLL={:?}",
+                target_process, dll_path
+            ));
+
             // Wait a bit for filesystem to sync in Wine
             thread::sleep(time::Duration::from_millis(500));
 
             if !dll_path.exists() {
-                log(&format!("Helper Error: DLL not found at {:?}. Retrying in 1s...", dll_path));
+                log(&format!(
+                    "Helper Error: DLL not found at {:?}. Retrying in 1s...",
+                    dll_path
+                ));
                 thread::sleep(time::Duration::from_secs(1));
                 if !dll_path.exists() {
                     log("Helper Error: DLL still not found. Exiting.");
@@ -55,7 +69,7 @@ mod windows_impl {
                         return;
                     }
                     log("Helper: Hook set successfully. Entering message loop.");
-                    
+
                     let hook_ref = std::sync::Arc::new(hook);
                     let hook_clone = hook_ref.clone();
                     std::thread::spawn(move || {
@@ -90,7 +104,7 @@ mod windows_impl {
 fn main() {
     #[cfg(windows)]
     windows_impl::main();
-    
+
     #[cfg(not(windows))]
     println!("This tool must be compiled for Windows.");
 }

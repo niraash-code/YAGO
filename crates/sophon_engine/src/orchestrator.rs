@@ -73,6 +73,16 @@ pub struct ChunkOrchestrator {
     chunk_base_url: String,
 }
 
+struct WorkerContext {
+    rx: Arc<async_channel::Receiver<ChunkWork>>,
+    client: Arc<SophonClient>,
+    target_dir: Arc<PathBuf>,
+    base_url: Arc<String>,
+    tx_events: mpsc::Sender<OrchestratorEvent>,
+    tx_raw_progress: mpsc::Sender<u64>,
+    rx_pause: tokio::sync::watch::Receiver<bool>,
+}
+
 impl ChunkOrchestrator {
     pub fn new(
         game_id: String,
@@ -112,7 +122,7 @@ impl ChunkOrchestrator {
                 });
             }
         }
-        
+
         let works: Vec<ChunkWork> = work_map.into_values().collect();
         let total_bytes = works.iter().map(|w| w.size).sum();
 
@@ -159,27 +169,17 @@ impl ChunkOrchestrator {
         let mut worker_handles = Vec::new();
 
         for i in 0..self.worker_count {
-            let rx = rx_work.clone();
-            let client = client.clone();
-            let target_dir = target_dir.clone();
-            let base_url = base_url.clone();
-            let tx_events = tx_events.clone();
-            let tx_raw_progress = tx_raw_progress.clone();
-            let rx_pause_worker = rx_pause.clone();
+            let ctx = WorkerContext {
+                rx: rx_work.clone(),
+                client: client.clone(),
+                target_dir: target_dir.clone(),
+                base_url: base_url.clone(),
+                tx_events: tx_events.clone(),
+                tx_raw_progress: tx_raw_progress.clone(),
+                rx_pause: rx_pause.clone(),
+            };
 
-            let handle = tokio::spawn(async move {
-                Self::worker_loop(
-                    i,
-                    rx,
-                    client,
-                    target_dir,
-                    base_url,
-                    tx_events,
-                    tx_raw_progress,
-                    rx_pause_worker,
-                )
-                .await
-            });
+            let handle = tokio::spawn(async move { Self::worker_loop(i, ctx).await });
             worker_handles.push(handle);
         }
 
@@ -221,7 +221,9 @@ impl ChunkOrchestrator {
                         total_bytes: monitor_total_bytes,
                     };
 
-                    let _ = monitor_tx_events.send(OrchestratorEvent::Progress(progress)).await;
+                    let _ = monitor_tx_events
+                        .send(OrchestratorEvent::Progress(progress))
+                        .await;
                     last_emit = now;
                 }
             }
@@ -259,61 +261,56 @@ impl ChunkOrchestrator {
                 if let Some(parent) = full_path.parent() {
                     fs::create_dir_all(parent)?;
                 }
-                
+
                 // Open for write/create and set length
                 let file = fs::OpenOptions::new()
                     .write(true)
                     .create(true)
+                    .truncate(false)
                     .open(&full_path)?;
-                
+
                 file.set_len(file_entry.size)?;
             }
             Ok(())
         })
         .await
-        .map_err(|e| SophonError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))??;
+        .map_err(|e| SophonError::Io(std::io::Error::other(e.to_string())))??;
 
         Ok(())
     }
 
-    async fn worker_loop(
-        _id: usize,
-        rx: Arc<async_channel::Receiver<ChunkWork>>,
-        client: Arc<SophonClient>,
-        target_dir: Arc<PathBuf>,
-        base_url: Arc<String>,
-        tx_events: mpsc::Sender<OrchestratorEvent>,
-        tx_raw_progress: mpsc::Sender<u64>,
-        mut rx_pause: tokio::sync::watch::Receiver<bool>,
-    ) {
-        while let Ok(work) = rx.recv().await {
+    async fn worker_loop(_id: usize, mut ctx: WorkerContext) {
+        while let Ok(work) = ctx.rx.recv().await {
             // Check pause state
-            while *rx_pause.borrow() {
-                if rx_pause.changed().await.is_err() {
+            while *ctx.rx_pause.borrow() {
+                if ctx.rx_pause.changed().await.is_err() {
                     return; // Channel closed
                 }
             }
 
-            match Self::process_chunk(&client, &work, &target_dir, &base_url).await {
+            match Self::process_chunk(&ctx.client, &work, &ctx.target_dir, &ctx.base_url).await {
                 Ok(_) => {
-                    let _ = tx_events
+                    let _ = ctx
+                        .tx_events
                         .send(OrchestratorEvent::ChunkVerified {
                             chunk_id: work.chunk_id.clone(),
                             size: work.size,
                         })
                         .await;
 
-                    let _ = tx_events
+                    let _ = ctx
+                        .tx_events
                         .send(OrchestratorEvent::ChunkWritten {
                             chunk_id: work.chunk_id.clone(),
                             file_count: work.targets.len(),
                         })
                         .await;
 
-                    let _ = tx_raw_progress.send(work.size).await;
+                    let _ = ctx.tx_raw_progress.send(work.size).await;
                 }
                 Err(e) => {
-                    let _ = tx_events
+                    let _ = ctx
+                        .tx_events
                         .send(OrchestratorEvent::Error {
                             chunk_id: work.chunk_id,
                             error: e.to_string(),
@@ -340,14 +337,14 @@ impl ChunkOrchestrator {
                 let url = format!("{}/{}", base_url.trim_end_matches('/'), work.chunk_id);
                 Self::download_with_retry(client, &url).await
             };
-            
+
             match data_res {
                 Ok(data) => {
                     // 2. Verify
                     let mut hasher = Md5::new();
                     hasher.update(&data);
                     let hash_result = hasher.finalize();
-                    let hash_hex = hex::encode(&hash_result);
+                    let hash_hex = hex::encode(hash_result);
 
                     if hash_hex.to_lowercase() == work.chunk_id.to_lowercase() {
                         // 3. Write
@@ -358,15 +355,13 @@ impl ChunkOrchestrator {
                         task::spawn_blocking(move || -> Result<()> {
                             for target in targets {
                                 let full_path = target_dir_owned.join(&target.relative_path);
-                                
+
                                 if let Some(parent) = full_path.parent() {
                                     fs::create_dir_all(parent)?;
                                 }
 
-                                let mut file = fs::OpenOptions::new()
-                                    .write(true)
-                                    .create(true)
-                                    .open(&full_path)?;
+                                let mut file =
+                                    fs::OpenOptions::new().write(true).open(&full_path)?;
 
                                 file.seek(SeekFrom::Start(target.offset))?;
                                 file.write_all(&data_owned)?;
@@ -374,7 +369,7 @@ impl ChunkOrchestrator {
                             Ok(())
                         })
                         .await
-                        .map_err(|e| SophonError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))??;
+                        .map_err(|e| SophonError::Io(std::io::Error::other(e.to_string())))??;
 
                         return Ok(());
                     } else {
@@ -387,9 +382,12 @@ impl ChunkOrchestrator {
                     }
                 }
                 Err(e) => {
-                     let err = e;
-                     eprintln!("Chunk {} processing failed: {} (Attempt {}/{})", work.chunk_id, err, attempt, max_attempts);
-                     last_error = Some(err);
+                    let err = e;
+                    eprintln!(
+                        "Chunk {} processing failed: {} (Attempt {}/{})",
+                        work.chunk_id, err, attempt, max_attempts
+                    );
+                    last_error = Some(err);
                 }
             }
 
@@ -415,13 +413,8 @@ impl ChunkOrchestrator {
         // If it's a "Repair" or "Delta", we assume the old chunk is on disk somewhere.
         // For MVP, we'll try to find any target that already exists and has the old chunk.
         // Actually, Sophon patching usually happens at the chunk level.
-        
-        let mut old_chunk_data = Vec::new();
-        // Search targets for the old chunk? This is tricky because chunk boundaries might change.
-        // Usually Sophon patch manifests provide the exact location of the source data.
-        
-        // Mocking source data retrieval for now
-        old_chunk_data.push(0); 
+
+        let old_chunk_data = vec![0u8];
 
         // 3. Apply Patch
         let mut new_chunk_data = Vec::new();

@@ -1,15 +1,17 @@
 use crate::config::AppConfig;
 use crate::AppState;
-use librarian::GlobalSettings;
+use librarian::settings::GlobalSettings;
 use tauri::{Emitter, State};
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn get_app_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
     let config = state.app_config.lock().await;
-    Ok((*config).clone())
+    Ok(config.clone())
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn update_app_config(
     app: tauri::AppHandle,
     state: State<'_, AppState>,

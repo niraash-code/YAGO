@@ -61,7 +61,7 @@ impl Launcher {
                 // Linux RemoteThread via helper?
                 // If helper is missing, fail.
                 if options.helper_path.is_none() {
-                     return Err(MarshalError::Io(std::io::Error::new(
+                    return Err(MarshalError::Io(std::io::Error::new(
                         std::io::ErrorKind::Unsupported,
                         "Remote Injection on Linux requires win_helper.exe",
                     )));
@@ -137,7 +137,8 @@ impl Launcher {
         // Linux Hook (Loader Method via Helper)
         #[cfg(unix)]
         if options.injection_method == InjectionMethod::Loader {
-            if let (Some(helper), Some(loader_path)) = (&options.helper_path, &options.loader_path) {
+            if let (Some(helper), Some(loader_path)) = (&options.helper_path, &options.loader_path)
+            {
                 if helper.exists() {
                     let dll_path = loader_path.join("3dmloader.dll");
                     let exe_name = options
@@ -148,10 +149,13 @@ impl Launcher {
 
                     println!("Marshal: Spawning win_helper for Hook mode...");
 
-                    let dll_win_path = format!("Z:{}", dll_path.to_string_lossy().replace('/', "\\"));
+                    let dll_win_path =
+                        format!("Z:{}", dll_path.to_string_lossy().replace('/', "\\"));
 
-                    let mut h_cmd = self.build_runner_command(&options.runner, &options.prefix_path);
-                    h_cmd.arg(helper)
+                    let mut h_cmd =
+                        self.build_runner_command(&options.runner, &options.prefix_path);
+                    h_cmd
+                        .arg(helper)
                         .arg("hook")
                         .arg(exe_name.to_string())
                         .arg(dll_win_path);

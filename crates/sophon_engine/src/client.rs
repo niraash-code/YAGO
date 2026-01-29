@@ -30,6 +30,12 @@ pub struct SophonBuildInfo {
     pub chunk_base_url: String,
 }
 
+impl Default for SophonClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SophonClient {
     pub fn new() -> Self {
         Self {
@@ -38,9 +44,17 @@ impl SophonClient {
         }
     }
 
-    pub async fn get_build(&self, branch: &str, package_id: &str, password: &str, plat_app: &str) -> Result<SophonBuildInfo> {
+    pub async fn get_build(
+        &self,
+        branch: &str,
+        package_id: &str,
+        password: &str,
+        plat_app: &str,
+    ) -> Result<SophonBuildInfo> {
         let url = format!("{}/getBuild", self.base_url);
-        let resp = self.http.get(&url)
+        let resp = self
+            .http
+            .get(&url)
             .query(&[
                 ("branch", branch),
                 ("package_id", package_id),
@@ -49,44 +63,50 @@ impl SophonClient {
             ])
             .send()
             .await
-            .map_err(|e| SophonError::Network(e))?;
+            .map_err(SophonError::Network)?;
 
-        let body: GetBuildResponse = resp.json().await
-            .map_err(|e| SophonError::Network(e))?;
+        let body: GetBuildResponse = resp.json().await.map_err(SophonError::Network)?;
 
         if body.retcode != 0 {
-             return Err(SophonError::Api(format!("API Error {}: {}", body.retcode, body.message)));
+            return Err(SophonError::Api(format!(
+                "API Error {}: {}",
+                body.retcode, body.message
+            )));
         }
-        
-        let data = body.data.ok_or_else(|| SophonError::Api("No data in response".to_string()))?;
+
+        let data = body
+            .data
+            .ok_or_else(|| SophonError::Api("No data in response".to_string()))?;
 
         Ok(SophonBuildInfo {
             manifest_url: data.manifest_url,
             chunk_base_url: data.chunk_base_url,
         })
     }
-    
+
     pub async fn fetch_manifest(&self, url: &str) -> Result<SophonManifest> {
-        let resp = self.http.get(url)
+        let resp = self
+            .http
+            .get(url)
             .send()
             .await
-            .map_err(|e| SophonError::Network(e))?;
-            
-        let manifest: SophonManifest = resp.json().await
-             .map_err(|e| SophonError::Network(e))?;
-             
+            .map_err(SophonError::Network)?;
+
+        let manifest: SophonManifest = resp.json().await.map_err(SophonError::Network)?;
+
         Ok(manifest)
     }
 
     pub async fn download_raw(&self, url: &str) -> Result<Vec<u8>> {
-        let resp = self.http.get(url)
+        let resp = self
+            .http
+            .get(url)
             .send()
             .await
-            .map_err(|e| SophonError::Network(e))?;
-            
-        let bytes = resp.bytes().await
-             .map_err(|e| SophonError::Network(e))?;
-             
+            .map_err(SophonError::Network)?;
+
+        let bytes = resp.bytes().await.map_err(SophonError::Network)?;
+
         Ok(bytes.to_vec())
     }
 }

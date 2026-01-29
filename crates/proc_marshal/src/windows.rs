@@ -172,7 +172,7 @@ impl LoaderHook {
 
     pub fn set_hook(&self, process_name: &str) -> Result<()> {
         use windows_sys::Win32::System::LibraryLoader::GetProcAddress;
-        
+
         let wide_name: Vec<u16> = process_name
             .encode_utf16()
             .chain(std::iter::once(0))
@@ -181,7 +181,7 @@ impl LoaderHook {
         unsafe {
             let func_name = b"HookLibrary\0";
             let func_ptr = GetProcAddress(self.h_module, func_name.as_ptr());
-            
+
             if let Some(ptr) = func_ptr {
                 // ANSI Version
                 let ansi_name = std::ffi::CString::new(process_name).unwrap();
@@ -190,7 +190,7 @@ impl LoaderHook {
                 hook_library_ansi(ansi_name.as_ptr() as *const u8);
                 println!("Marshal: HookLibrary called successfully.");
             } else {
-                 return Err(MarshalError::Io(std::io::Error::new(
+                return Err(MarshalError::Io(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     "HookLibrary function not found in 3dmloader.dll",
                 )));
@@ -206,12 +206,12 @@ impl LoaderHook {
             let func_name = b"WaitForInjection\0";
             let func_ptr = GetProcAddress(self.h_module, func_name.as_ptr());
 
-             if let Some(ptr) = func_ptr {
+            if let Some(ptr) = func_ptr {
                 let wait_func: unsafe extern "C" fn() = std::mem::transmute(ptr);
                 wait_func();
                 println!("Marshal: WaitForInjection returned.");
             } else {
-                 return Err(MarshalError::Io(std::io::Error::new(
+                return Err(MarshalError::Io(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     "WaitForInjection function not found in 3dmloader.dll",
                 )));

@@ -155,6 +155,14 @@ Ensure the container is up-to-date:
 ./build_tools/setup-build-containers.sh
 ```
 This script handles updates and dependency installation automatically.
+## Technical Build Notes
+
+### Native Dependencies (HDiffZ)
+YAGO's maintenance engine requires `hpatchz` for delta updates. This is compiled from source during the Rust build process via the `cc` crate.
+- **Prerequisites**: A C compiler (`gcc` or `clang`) must be available on the build host.
+- **Cross-compilation**: For Windows releases (`x86_64-pc-windows-gnu`), `mingw-w64-gcc` is required to compile the native C components.
+
+---
 
 ## CI/CD Integration
 

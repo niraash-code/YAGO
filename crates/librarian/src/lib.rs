@@ -15,7 +15,10 @@ pub use catalog::{CatalogManager, RemoteCatalogEntry};
 pub use discovery::Discovery;
 pub use error::{LibrarianError, Result};
 pub use import::Importer;
-pub use models::{FpsConfig, GameConfig, LibraryDatabase, ModRecord, Profile, InjectionMethod, ModCompatibility, ModConfig, ModMetadata, SandboxConfig, InstallStatus};
+pub use models::{
+    FpsConfig, GameConfig, InjectionMethod, InstallStatus, LibraryDatabase, ModCompatibility,
+    ModConfig, ModMetadata, ModRecord, Profile, SandboxConfig,
+};
 pub use scanner::DiscoveredGame;
 pub use settings::{GlobalSettings, SettingsManager};
 pub use storage::{Librarian, TemplateRegistry};

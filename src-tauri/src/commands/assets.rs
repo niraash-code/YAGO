@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::AppState;
 use tauri::State;
 
@@ -86,21 +87,21 @@ pub async fn get_community_backgrounds(
                 // 3. Must be in a "pure" category (textless/clean)
                 // 4. Must be a blob (file)
                 // 5. Must have an image extension
-                                if entry_type == "blob"
-                                    && path.starts_with("output/")
-                                    && path.contains(&search_token)
-                                    && path.contains("_pure")
-                                    && (path.ends_with(".png")
-                                        || path.ends_with(".webp")
-                                        || path.ends_with(".jpg")
-                                        || path.ends_with(".jpeg"))
-                                {
-                                    // The path already includes "output/", 
-                                    // but our base_url already includes "output".
-                                    // So we strip "output/" from the start of the path to join with base_url.
-                                    let relative_path = &path[7..]; // Strip "output/"
-                                    urls.push(format!("{}/{}", base_url, relative_path));
-                                }
+                if entry_type == "blob"
+                    && path.starts_with("output/")
+                    && path.contains(&search_token)
+                    && path.contains("_pure")
+                    && (path.ends_with(".png")
+                        || path.ends_with(".webp")
+                        || path.ends_with(".jpg")
+                        || path.ends_with(".jpeg"))
+                {
+                    // The path already includes "output/",
+                    // but our base_url already includes "output".
+                    // So we strip "output/" from the start of the path to join with base_url.
+                    let relative_path = &path[7..]; // Strip "output/"
+                    urls.push(format!("{}/{}", base_url, relative_path));
+                }
             }
         }
     }

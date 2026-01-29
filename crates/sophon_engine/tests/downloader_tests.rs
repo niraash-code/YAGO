@@ -1,8 +1,8 @@
 use sophon_engine::Downloader;
+use std::fs;
+use tempfile::tempdir;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-use tempfile::tempdir;
-use std::fs;
 
 #[tokio::test]
 async fn test_downloader_resume() {
@@ -27,14 +27,17 @@ async fn test_downloader_resume() {
 
     let dir = tempdir().unwrap();
     let target_path = dir.path().join("test.file");
-    
+
     // Create partial file
     fs::write(&target_path, "01234").unwrap();
 
     let downloader = Downloader::default();
     let url = format!("{}{}", mock_server.uri(), file_path);
 
-    downloader.download_file(&url, &target_path, |_| {}).await.unwrap();
+    downloader
+        .download_file(&url, &target_path, |_| {})
+        .await
+        .unwrap();
 
     let content = fs::read_to_string(&target_path).unwrap();
     assert_eq!(content, file_content);
@@ -64,7 +67,10 @@ async fn test_downloader_full() {
     let downloader = Downloader::default();
     let url = format!("{}{}", mock_server.uri(), file_path);
 
-    downloader.download_file(&url, &target_path, |_| {}).await.unwrap();
+    downloader
+        .download_file(&url, &target_path, |_| {})
+        .await
+        .unwrap();
 
     let content = fs::read_to_string(&target_path).unwrap();
     assert_eq!(content, file_content);

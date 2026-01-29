@@ -123,6 +123,7 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
             autoUpdate: false,
             injectionMethod: identified.injection_method,
             supportedInjectionMethods: identified.supported_injection_methods,
+            modloaderEnabled: identified.modloader_enabled,
             activeRunnerId: undefined, // Will be set by backend defaults
             prefixPath: undefined,
           } as Game;
@@ -200,6 +201,7 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
           autoUpdate: false,
           injectionMethod: identified.injection_method,
           supportedInjectionMethods: identified.supported_injection_methods,
+          modloaderEnabled: identified.modloader_enabled,
         };
         if (existingGameIds.includes(detectedGame.id)) {
           setDuplicateGame(detectedGame);
@@ -241,8 +243,28 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                   Hub Discovery
                 </h2>
                 <div className="flex items-center gap-4 mt-1">
-                  <button onClick={() => setStep("initial")} className={cn("text-xs font-bold uppercase tracking-widest", step === "initial" ? "text-indigo-400" : "text-slate-500 hover:text-slate-300")}>Local</button>
-                  <button onClick={fetchCatalog} className={cn("text-xs font-bold uppercase tracking-widest", step === "discover" ? "text-indigo-400" : "text-slate-500 hover:text-slate-300")}>Cloud</button>
+                  <button
+                    onClick={() => setStep("initial")}
+                    className={cn(
+                      "text-xs font-bold uppercase tracking-widest",
+                      step === "initial"
+                        ? "text-indigo-400"
+                        : "text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    Local
+                  </button>
+                  <button
+                    onClick={fetchCatalog}
+                    className={cn(
+                      "text-xs font-bold uppercase tracking-widest",
+                      step === "discover"
+                        ? "text-indigo-400"
+                        : "text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    Cloud
+                  </button>
                 </div>
               </div>
               <button
@@ -297,50 +319,94 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                 <div className="space-y-8">
                   {isLoadingCatalog ? (
                     <div className="h-[300px] flex flex-col items-center justify-center gap-4">
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 1,
+                          ease: "linear",
+                        }}
+                      >
                         <Cloud className="text-indigo-500" size={48} />
                       </motion.div>
-                      <p className="text-xs font-black text-slate-500 uppercase tracking-[0.3em]">Querying Sophon API...</p>
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-[0.3em]">
+                        Querying Sophon API...
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-6">
-                      {remoteCatalog.map((entry) => (
-                        <div key={entry.template.id} className="group relative rounded-3xl bg-slate-800/40 border border-white/5 overflow-hidden flex flex-col shadow-2xl transition-all hover:border-indigo-500/30">
+                      {remoteCatalog.map(entry => (
+                        <div
+                          key={entry.template.id}
+                          className="group relative rounded-3xl bg-slate-800/40 border border-white/5 overflow-hidden flex flex-col shadow-2xl transition-all hover:border-indigo-500/30"
+                        >
                           {/* Card Cover */}
                           <div className="h-32 w-full relative overflow-hidden">
-                            <img src={entry.template.cover_image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                            <img
+                              src={entry.template.cover_image}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                              alt=""
+                            />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
                             <div className="absolute top-4 right-4">
-                              <span className="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full shadow-lg">Cloud</span>
+                              <span className="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full shadow-lg">
+                                Cloud
+                              </span>
                             </div>
                           </div>
 
                           {/* Card Content */}
                           <div className="p-6 pt-2 flex-1">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-xl font-black text-white tracking-tighter uppercase italic">{entry.template.name}</h4>
+                              <h4 className="text-xl font-black text-white tracking-tighter uppercase italic">
+                                {entry.template.name}
+                              </h4>
                               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                                <img src={entry.template.icon} className="w-6 h-6 object-contain" alt="" />
+                                <img
+                                  src={entry.template.icon}
+                                  className="w-6 h-6 object-contain"
+                                  alt=""
+                                />
                               </div>
                             </div>
-                            
+
                             <div className="flex flex-wrap gap-2 mb-6">
                               {entry.remote_info ? (
                                 <>
                                   <span className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                                    <Info size={10} className="text-indigo-400" /> v{entry.remote_info.version}
+                                    <Info
+                                      size={10}
+                                      className="text-indigo-400"
+                                    />{" "}
+                                    v{entry.remote_info.version}
                                   </span>
                                   <span className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                                    <HardDrive size={10} className="text-indigo-400" /> {(entry.remote_info.total_size / (1024*1024*1024)).toFixed(1)} GB
+                                    <HardDrive
+                                      size={10}
+                                      className="text-indigo-400"
+                                    />{" "}
+                                    {(
+                                      entry.remote_info.total_size /
+                                      (1024 * 1024 * 1024)
+                                    ).toFixed(1)}{" "}
+                                    GB
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-[9px] font-black text-slate-600 uppercase italic">Metadata Unavailable</span>
+                                <span className="text-[9px] font-black text-slate-600 uppercase italic">
+                                  Metadata Unavailable
+                                </span>
                               )}
                             </div>
 
-                            <button 
-                              onClick={() => onStartInstall(entry.template.id, entry.template.name, entry.template.id)}
+                            <button
+                              onClick={() =>
+                                onStartInstall(
+                                  entry.template.id,
+                                  entry.template.name,
+                                  entry.template.id
+                                )
+                              }
                               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
                             >
                               <Download size={14} /> Initialize Install
@@ -367,7 +433,9 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                     />
                     <HardDrive size={32} className="text-slate-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2 tracking-tight uppercase">Analyzing System</h3>
+                  <h3 className="text-xl font-bold text-white mb-2 tracking-tight uppercase">
+                    Analyzing System
+                  </h3>
                   <p className="text-xs text-slate-500 font-mono mb-8 h-6 tracking-widest uppercase">
                     {scanText}
                   </p>
@@ -465,13 +533,17 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                       size={48}
                       className="mx-auto text-slate-500 mb-5"
                     />
-                    <h3 className="text-xl font-bold text-white tracking-tight uppercase">Locate Game Folder</h3>
+                    <h3 className="text-xl font-bold text-white tracking-tight uppercase">
+                      Locate Game Folder
+                    </h3>
                     <p className="text-sm text-slate-400 mt-2">
                       Navigate to the installation directory of the game.
                     </p>
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Folder Path</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                      Folder Path
+                    </label>
                     <div className="flex gap-3">
                       <input
                         type="text"

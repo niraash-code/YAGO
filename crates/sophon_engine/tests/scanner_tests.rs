@@ -1,9 +1,7 @@
-use sophon_engine::scanner::{Scanner, ScanMode};
-use sophon_engine::protocol::{
-    FileChunkReference, ManifestFile, SophonManifest, ManifestStats
-};
-use tempfile::tempdir;
+use sophon_engine::protocol::{FileChunkReference, ManifestFile, ManifestStats, SophonManifest};
+use sophon_engine::scanner::{ScanMode, Scanner};
 use std::fs;
+use tempfile::tempdir;
 
 #[tokio::test]
 async fn test_scanner_missing_file() {
@@ -32,12 +30,17 @@ async fn test_scanner_missing_file() {
         diff_packages: vec![],
     };
 
-    let divergence = Scanner::scan(dir.path(), &manifest, ScanMode::MetadataOnly).await.unwrap();
-    
+    let divergence = Scanner::scan(dir.path(), &manifest, ScanMode::MetadataOnly)
+        .await
+        .unwrap();
+
     assert_eq!(divergence.missing_chunks.len(), 1);
     assert_eq!(divergence.missing_chunks[0], "chunk_1");
     assert_eq!(divergence.corrupted_files.len(), 1);
-    assert_eq!(divergence.corrupted_files[0].to_string_lossy(), "missing.dat");
+    assert_eq!(
+        divergence.corrupted_files[0].to_string_lossy(),
+        "missing.dat"
+    );
 }
 
 #[tokio::test]
@@ -70,8 +73,10 @@ async fn test_scanner_size_mismatch() {
         diff_packages: vec![],
     };
 
-    let divergence = Scanner::scan(dir.path(), &manifest, ScanMode::MetadataOnly).await.unwrap();
-    
+    let divergence = Scanner::scan(dir.path(), &manifest, ScanMode::MetadataOnly)
+        .await
+        .unwrap();
+
     assert_eq!(divergence.missing_chunks.len(), 1);
     assert_eq!(divergence.missing_chunks[0], "chunk_corrupt");
 }

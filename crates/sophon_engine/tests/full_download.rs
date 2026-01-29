@@ -87,14 +87,20 @@ async fn test_full_download_integration() {
     let client = SophonClient::new();
     let base_url = mock_server.uri();
 
-    let orchestrator = ChunkOrchestrator::new(client, manifest, target_dir.clone(), base_url, 2);
+    let orchestrator = ChunkOrchestrator::new(
+        "test".to_string(),
+        client,
+        manifest,
+        target_dir.clone(),
+        base_url,
+        2,
+    );
 
     let (tx, mut rx) = mpsc::channel(100);
+    let (_tx_pause, rx_pause) = tokio::sync::watch::channel(false);
 
     // 4. Run
-    let handle = tokio::spawn(async move {
-        orchestrator.run(tx).await
-    });
+    let handle = tokio::spawn(async move { orchestrator.run(tx, rx_pause).await });
 
     // 5. Monitor
     let mut completed = false;

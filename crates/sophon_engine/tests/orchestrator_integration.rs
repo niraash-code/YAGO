@@ -61,7 +61,14 @@ async fn test_deduplication_logic() {
     let target_dir = PathBuf::from("/tmp/test_download");
     let base_url = "http://localhost:8080".to_string();
 
-    let orchestrator = ChunkOrchestrator::new(client, manifest, target_dir, base_url, 1);
+    let orchestrator = ChunkOrchestrator::new(
+        "test_game".to_string(),
+        client,
+        manifest,
+        target_dir,
+        base_url,
+        1,
+    );
     let (work_items, total_bytes) = orchestrator.deduplicate_work();
 
     assert_eq!(total_bytes, 100); // 50 (A) + 50 (B)
@@ -70,11 +77,20 @@ async fn test_deduplication_logic() {
     let chunk_a = work_items.iter().find(|w| w.chunk_id == "chunk_A").unwrap();
     assert_eq!(chunk_a.targets.len(), 2);
     // Should be file1.dat @ 0 and file2.dat @ 0
-    assert!(chunk_a.targets.iter().any(|t| t.relative_path.to_string_lossy() == "file1.dat" && t.offset == 0));
-    assert!(chunk_a.targets.iter().any(|t| t.relative_path.to_string_lossy() == "file2.dat" && t.offset == 0));
+    assert!(chunk_a
+        .targets
+        .iter()
+        .any(|t| t.relative_path.to_string_lossy() == "file1.dat" && t.offset == 0));
+    assert!(chunk_a
+        .targets
+        .iter()
+        .any(|t| t.relative_path.to_string_lossy() == "file2.dat" && t.offset == 0));
 
     let chunk_b = work_items.iter().find(|w| w.chunk_id == "chunk_B").unwrap();
     assert_eq!(chunk_b.targets.len(), 1);
-    assert_eq!(chunk_b.targets[0].relative_path.to_string_lossy(), "file1.dat");
+    assert_eq!(
+        chunk_b.targets[0].relative_path.to_string_lossy(),
+        "file1.dat"
+    );
     assert_eq!(chunk_b.targets[0].offset, 50);
 }

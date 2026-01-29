@@ -16,6 +16,7 @@ cargo test -p <crate_name>
 | **Filesystem** | `archives.rs`, `safety.rs`, `vfs.rs` |
 | **Database** | `discovery.rs`, `storage.rs`, `templates.rs` |
 | **Logic** | `merger.rs`, `compiler.rs`, `validator.rs` |
+| **Maintenance** | `full_download.rs`, `orchestrator_integration.rs`, `scanner_tests.rs` |
 
 ## 🔗 2. Functional Flow Integration
 
@@ -25,6 +26,8 @@ Located in `crates/integration_tests/src/flows/`, these tests validate complex c
 *   `mod_management.rs`: End-to-end import, namespacing, and database persistence.
 *   `launch_system.rs`: Binary identification, environment injection, and process monitoring.
 *   `deployment.rs`: Planning and execution of the Virtual File System.
+*   `sim_downloader.rs`: Real-world simulation of manifest parsing, block deduplication, and progress emitters.
+*   `sim_patching.rs`: Validation of the HDiffZ FFI bridge and atomic file reconstruction.
 
 ## 🤖 3. Simulation System
 

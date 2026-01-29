@@ -1,5 +1,5 @@
 use md5::{Digest, Md5};
-use sophon_engine::{Verifier, SophonManifest, ManifestStats};
+use sophon_engine::{ManifestStats, SophonManifest, Verifier};
 use std::fs;
 use tempfile::tempdir;
 

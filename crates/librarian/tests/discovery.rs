@@ -1,5 +1,5 @@
-use librarian::*;
 use librarian::models::InjectionMethod;
+use librarian::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;

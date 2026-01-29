@@ -16,7 +16,10 @@ fn test_template_deserialization_full() {
     let json = r#"{"name": "Full Test", "executables": ["game.exe"], "injection_method_windows": "Proxy", "injection_method_linux": "Proxy"}"#;
     let template: GameTemplate = serde_json::from_str(json).unwrap();
     assert_eq!(template.name, "Full Test");
-    assert_eq!(template.injection_method_windows, Some(InjectionMethod::Proxy));
+    assert_eq!(
+        template.injection_method_windows,
+        Some(InjectionMethod::Proxy)
+    );
 }
 
 #[tokio::test]

@@ -1,5 +1,5 @@
-use sophon_engine::journal::{JournalManager, PatchJournal, PatchStatus, PatchEntry};
 use chrono::Utc;
+use sophon_engine::journal::{JournalManager, PatchEntry, PatchJournal, PatchStatus};
 use tempfile::tempdir;
 
 #[tokio::test]
@@ -16,14 +16,12 @@ async fn test_journal_persistence() {
     let journal_data = PatchJournal {
         game_id: game_id.to_string(),
         target_version: "1.0.1".to_string(),
-        entries: vec![
-            PatchEntry {
-                chunk_id: "chunk_a".to_string(),
-                status: PatchStatus::Applied,
-                targets: vec![],
-                retry_count: 0,
-            }
-        ],
+        entries: vec![PatchEntry {
+            chunk_id: "chunk_a".to_string(),
+            status: PatchStatus::Applied,
+            targets: vec![],
+            retry_count: 0,
+        }],
         started_at: Utc::now(),
     };
 
@@ -38,7 +36,10 @@ async fn test_journal_persistence() {
     // 4. Update status helper (Need to update struct directly as JournalManager only has static update helper which takes &mut PatchJournal)
     let mut journal_to_modify = loaded.clone();
     JournalManager::update_entry_status(&mut journal_to_modify, "chunk_a", PatchStatus::Verified);
-    assert!(matches!(journal_to_modify.entries[0].status, PatchStatus::Verified));
+    assert!(matches!(
+        journal_to_modify.entries[0].status,
+        PatchStatus::Verified
+    ));
 
     // 5. Delete
     manager.delete().await.unwrap();

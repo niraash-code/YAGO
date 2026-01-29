@@ -299,7 +299,7 @@ fn test_command_generation_loader_method() {
     // On Linux, it builds a standard command (Proxy logic is upstream).
     let cmd = launcher.build_command(&options).unwrap();
     let std_cmd = cmd.as_std();
-    
+
     // Just verify it produced a command for the game exe
     assert_eq!(std_cmd.get_program(), "game.exe");
 }

@@ -15,6 +15,7 @@ YAGO uses **Symlinks** (Linux) and **Junctions** (Windows) to "deploy" mods.
 
 - **Instant**: Toggling a mod takes 0ms regardless of its size.
 - **Clean**: No files are actually copied into your game folder. When you close YAGO or turn off a mod, the game folder returns to its vanilla state.
+- **Maintenance Safety**: If a game is in the `Downloading` or `Updating` state, YAGO automatically locks deployment to prevent data corruption.
 
 ## 🔄 Toggling and Profiles
 

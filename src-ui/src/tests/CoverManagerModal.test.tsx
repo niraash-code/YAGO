@@ -9,7 +9,7 @@ vi.mock("../lib/api", () => ({
   api: {
     getCommunityBackgrounds: vi.fn().mockResolvedValue([]),
     updateGameConfig: vi.fn().mockResolvedValue(undefined),
-  }
+  },
 }));
 
 import { api } from "../lib/api";
@@ -44,7 +44,7 @@ describe("CoverManagerModal", () => {
     );
 
     expect(screen.getByText("Official Gallery")).toBeInTheDocument();
-    
+
     await waitFor(() => {
       expect(api.getCommunityBackgrounds).toHaveBeenCalledWith("genshin");
     });
@@ -72,7 +72,7 @@ describe("CoverManagerModal", () => {
       galleryImg = imgs.find(img => img.src.includes("official1.jpg")) || null;
       expect(galleryImg).not.toBeNull();
     });
-    
+
     const galleryItem = galleryImg!.closest("button");
     if (galleryItem) {
       fireEvent.click(galleryItem);

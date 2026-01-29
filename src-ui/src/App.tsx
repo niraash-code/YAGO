@@ -68,7 +68,11 @@ const App: React.FC = () => {
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
   const [isCoverManagerOpen, setIsCoverManagerOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [installWizardGame, setInstallWizardGame] = useState<{ id: string, name: string, templateId: string } | null>(null);
+  const [installWizardGame, setInstallWizardGame] = useState<{
+    id: string;
+    name: string;
+    templateId: string;
+  } | null>(null);
 
   const { showAlert, showPrompt } = useUiStore();
 
@@ -193,6 +197,10 @@ const App: React.FC = () => {
             <AddGameModal
               isOpen={isAddGameOpen}
               onClose={() => setIsAddGameOpen(false)}
+              onStartInstall={(id, name, templateId) => {
+                setIsAddGameOpen(false);
+                setInstallWizardGame({ id, name, templateId });
+              }}
               existingGameIds={[]}
             />
           </div>
@@ -280,7 +288,7 @@ const App: React.FC = () => {
         }}
         existingGameIds={games.map(g => g.id)}
       />
-      <InstallWizard 
+      <InstallWizard
         isOpen={!!installWizardGame}
         onClose={() => setInstallWizardGame(null)}
         gameId={installWizardGame?.id || ""}

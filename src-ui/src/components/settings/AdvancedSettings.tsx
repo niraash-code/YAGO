@@ -298,10 +298,10 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
                             {method === InjectionMethod.Proxy
                               ? "Proxy DLL (d3d11.dll)"
                               : method === InjectionMethod.Loader
-                              ? "Direct Loader (Hook)"
-                              : method === InjectionMethod.RemoteThread
-                              ? "Remote Thread (Inject)"
-                              : method}
+                                ? "Direct Loader (Hook)"
+                                : method === InjectionMethod.RemoteThread
+                                  ? "Remote Thread (Inject)"
+                                  : method}
                           </option>
                         ))}
                     </select>

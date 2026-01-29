@@ -59,7 +59,13 @@ Independent crates, each with their own `tests/` directory.
 | **`ini_forge`** | Custom logic-aware INI parser/compiler. |
 | **`loader_ctl`** | Mod loader installation and proxy chaining. |
 | **`quartermaster`** | Network fetching and asset caching. |
-| **`sophon_engine`** | Delta update protocol and verification. |
+| **`sophon_engine`** | Maintenance Brain: Block-level orchestrator and delta patcher. |
+
+#### 📦 Sophon Engine Sub-modules
+*   **`orchestrator`**: MPMC worker pool managing parallel block downloads and deduplication.
+*   **`patcher`**: Safe FFI wrapper for `HDiffZ` for high-performance delta-patching.
+*   **`scanner`**: Tiered integrity verifier (Metadata vs. Deep block MD5).
+*   **`journal`**: Crash-resilient tracker for chunk-level progress (Pending/Applied/Verified).
 
 ---
 

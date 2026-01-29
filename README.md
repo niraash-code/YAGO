@@ -45,20 +45,21 @@ The core logic is distributed across 8 specialized Rust crates. For a deep archi
 | **`proc_marshal`** | Process execution, FPS Unlocking, Sandbox snapshots. | `sysinfo`, `tokio` |
 | **`loader_ctl`** | Mod loader installation & dual-proxy chaining. | (Pure Rust) |
 | **`quartermaster`** | High-perf asset caching and network fetching. | `reqwest`, `md5` |
-| **`sophon_engine`** | Delta update protocol and checksum verification. | `tokio`, `md5` |
+| **`sophon_engine`** | Maintenance Brain: Block-level parallel downloader and delta patcher. | `hpatchz`, `tokio`, `md5` |
 
 ---
 
 ## 🏗️ Technical Innovations
 
+### Sophon Content Delivery
+YAGO features a native implementation of the Sophon protocol, allowing it to maintain games completely independently:
+- **Block-Level Deduplication**: Chunks shared between versions or language packs are downloaded only once.
+- **Bit-Perfect Patching**: Native FFI bridge to `HDiffZ` ensuring delta updates are identical to official patches.
+- **Selective Installation**: Install only the languages and audio packs you need to save bandwidth and disk space.
+- **Hybrid Integrity**: Tiered scanning (Fast/Metadata vs. Deep/MD5) ensures library health without the performance penalty of a full hash pass.
+
 ### Decentralized Storage
 YAGO identifies games by executable name. Each game has an isolated home in `app_data/games/` containing its database and mods. This ensures zero "orphaned mods" and simple manual cleanup.
-
-### Template-Driven Metadata
-The frontend is 100% agnostic. All game-specific colors, descriptions, and icons are loaded dynamically from `resources/templates/` blueprints.
-
-### Native Archive Support
-Support for direct import of `.zip` and `.7z` mod archives with automatic extraction and filename sanitization.
 
 ---
 
@@ -98,15 +99,15 @@ YAGO implements standardized metadata to ensure mods are portable and self-descr
 - Virtual File System (Symlinks) implementation.
 - Basic Mod Manager & Library synchronization.
 
-### Phase 2: The IDE (In Progress)
+### Phase 2: The IDE (Completed)
 - DXBC Shader Patching (Buffer re-indexing).
 - Integrated File Manager & Logic-aware INI Editor.
 - Character Roster & Wardrobe view.
 
-### Phase 3: The Super App (Planned)
-- Sophon delta update implementation.
-- Game executable patching & memory injection.
-- Advanced Sandbox snapshotting.
+### Phase 3: The Super App (In Progress)
+- **Sophon Engine**: Content delivery, delta updates, and selective install. (COMPLETED)
+- **Unified Discovery**: Cloud catalog querying and one-click installs. (COMPLETED)
+- Advanced Sandbox snapshotting and memory injection. (UP NEXT)
 
 ---
 

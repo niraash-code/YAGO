@@ -97,10 +97,13 @@ mod tests {
         )
         .await;
         assert_eq!(rtype, proc_marshal::RunnerType::Proton);
-        assert!(path.to_string_lossy().contains("app_data/runners/GE-Proton-1/proton"));
+        assert!(path
+            .to_string_lossy()
+            .contains("app_data/runners/GE-Proton-1/proton"));
 
         // 2. Default fallback to wine
-        let (path, rtype) = crate::commands::launcher::resolve_runner_path(None, &app_data, &settings).await;
+        let (path, rtype) =
+            crate::commands::launcher::resolve_runner_path(None, &app_data, &settings).await;
         assert_eq!(rtype, proc_marshal::RunnerType::Wine);
         assert_eq!(path.to_string_lossy(), "wine");
     }

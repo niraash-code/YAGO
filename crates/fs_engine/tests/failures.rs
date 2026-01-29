@@ -10,7 +10,10 @@ fn test_make_symlink_non_existent_source() {
 
     let result = make_symlink(&source, &link);
     assert!(result.is_ok());
-    assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+    assert!(fs::symlink_metadata(&link)
+        .unwrap()
+        .file_type()
+        .is_symlink());
 }
 
 #[test]
@@ -29,11 +32,11 @@ fn test_extract_corrupt_zip() {
 #[cfg(unix)]
 fn test_sanitize_read_only_dir() {
     use std::os::unix::fs::PermissionsExt;
-    
+
     let dir = tempdir().unwrap();
     let root = dir.path().join("ro_root");
     fs::create_dir(&root).unwrap();
-    
+
     let file = root.join("FILE.TXT");
     fs::write(&file, "data").unwrap();
 

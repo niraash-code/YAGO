@@ -4,18 +4,24 @@ import { ModItem, CompactModItem } from "../components/mod-manager/ModItems";
 import React from "react";
 
 describe("Mod Items Components", () => {
-  const mockMod = {
-    id: "mod-1",
-    name: "Cool Mod",
-    author: "Author X",
-    version: "1.0",
-    description: "Desc",
-    tags: ["NSFW"],
-    imageUrl: "test.png",
-    enabled: true,
-    size: "10 MB",
-    updated: new Date().toISOString(),
-  };
+const mockMod = {
+  id: "1",
+  name: "Test Mod",
+  author: "Author",
+  version: "1.0.0",
+  description: "Description",
+  tags: ["Tag1"],
+  imageUrl: "",
+  enabled: true,
+  size: "1MB",
+  updated: "2023-01-01",
+  compatibility: {
+    game: "Test Game",
+    character: "Test Character",
+    hashes: [],
+    fingerprint: "test-fp",
+  },
+};
 
   it("ModItem renders and handles toggle", () => {
     const onToggle = vi.fn();
@@ -37,12 +43,12 @@ describe("Mod Items Components", () => {
       />
     );
 
-    expect(screen.getByText("Cool Mod")).toBeInTheDocument();
-    
+    expect(screen.getByText("Test Mod")).toBeInTheDocument();
+
     // Use the new data-testid
     const toggle = screen.getByTestId("mod-toggle");
     fireEvent.click(toggle);
-    
+
     expect(onToggle).toHaveBeenCalled();
   });
 
@@ -66,7 +72,7 @@ describe("Mod Items Components", () => {
 
     const upBtn = screen.getByTestId("mod-move-up");
     fireEvent.click(upBtn);
-    
+
     expect(onMoveUp).toHaveBeenCalled();
   });
 });
