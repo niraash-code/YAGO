@@ -38,6 +38,13 @@ export interface GameConfig {
   active_runner_id?: string;
   prefix_path?: string;
   enable_linux_shield: boolean;
+  install_status: string;
+  remote_info?: {
+    manifest_url: string;
+    chunk_base_url: string;
+    total_size: number;
+    version: string;
+  };
   // Advanced settings (legacy or flattened from profile in some views)
   use_gamescope?: boolean;
   use_gamemode?: boolean;
@@ -337,6 +344,19 @@ export const api = {
     filePath: string,
     content: string
   ): Promise<void> => invoke("write_mod_file", { modId, filePath, content }),
+
+  // New Sophon Commands
+  getRemoteCatalog: (): Promise<any[]> => invoke("get_remote_catalog"),
+  initializeRemoteGame: (templateId: string): Promise<string> =>
+    invoke("initialize_remote_game", { templateId }),
+  getInstallOptions: (gameId: string): Promise<any[]> =>
+    invoke("get_install_options", { gameId }),
+  startGameDownload: (gameId: string, selectedCategoryIds: string[]): Promise<void> =>
+    invoke("start_game_download", { gameId, selectedCategoryIds }),
+  pauseGameDownload: (gameId: string): Promise<void> =>
+    invoke("pause_game_download", { gameId }),
+  resumeGameDownload: (gameId: string): Promise<void> =>
+    invoke("resume_game_download", { gameId }),
 };
 // Event Listeners
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";

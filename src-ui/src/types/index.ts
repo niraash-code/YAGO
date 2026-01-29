@@ -1,7 +1,10 @@
 export enum InstallStatus {
-  NOT_INSTALLED = "Not Installed",
-  INSTALLED = "Installed",
+  REMOTE = "Remote",
+  QUEUED = "Queued",
+  DOWNLOADING = "Downloading",
   UPDATING = "Updating",
+  INSTALLED = "Installed",
+  CORRUPTED = "Corrupted",
   PLAYING = "Playing",
 }
 
@@ -95,6 +98,12 @@ export interface Game {
   activeRunnerId?: string;
   prefixPath?: string;
   enableLinuxShield?: boolean;
+  remoteInfo?: {
+    manifestUrl: String;
+    chunkBaseUrl: String;
+    totalSize: number;
+    version: String;
+  };
 }
 
 export interface SystemStats {

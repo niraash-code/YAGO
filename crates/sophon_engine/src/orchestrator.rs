@@ -30,6 +30,18 @@ pub struct PatchSource {
     pub diff_url: String,
 }
 
+use std::time::Instant;
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ProgressDetailed {
+    pub game_id: String,
+    pub percentage: f64,
+    pub speed_bps: u64,
+    pub eta_secs: u64,
+    pub downloaded_bytes: u64,
+    pub total_bytes: u64,
+}
+
 #[derive(Debug, Clone)]
 pub enum OrchestratorEvent {
     Started {
@@ -44,9 +56,7 @@ pub enum OrchestratorEvent {
         chunk_id: String,
         file_count: usize,
     },
-    Progress {
-        downloaded_bytes: u64,
-    },
+    Progress(ProgressDetailed),
     Error {
         chunk_id: String,
         error: String,
@@ -55,6 +65,7 @@ pub enum OrchestratorEvent {
 }
 
 pub struct ChunkOrchestrator {
+    game_id: String,
     client: SophonClient,
     manifest: SophonManifest,
     target_dir: PathBuf,
@@ -64,6 +75,7 @@ pub struct ChunkOrchestrator {
 
 impl ChunkOrchestrator {
     pub fn new(
+        game_id: String,
         client: SophonClient,
         manifest: SophonManifest,
         target_dir: PathBuf,
@@ -71,6 +83,7 @@ impl ChunkOrchestrator {
         worker_count: usize,
     ) -> Self {
         Self {
+            game_id,
             client,
             manifest,
             target_dir,
@@ -106,7 +119,11 @@ impl ChunkOrchestrator {
         (works, total_bytes)
     }
 
-    pub async fn run(self, tx_events: mpsc::Sender<OrchestratorEvent>) -> Result<()> {
+    pub async fn run(
+        self,
+        tx_events: mpsc::Sender<OrchestratorEvent>,
+        rx_pause: tokio::sync::watch::Receiver<bool>,
+    ) -> Result<()> {
         let (work_items, total_bytes) = self.deduplicate_work();
         let total_chunks = work_items.len();
 
@@ -126,7 +143,10 @@ impl ChunkOrchestrator {
         let client = Arc::new(self.client.clone());
         let target_dir = Arc::new(self.target_dir.clone());
         let base_url = Arc::new(self.chunk_base_url.clone());
-        
+
+        // Internal channel for workers to report raw progress to the orchestrator monitor
+        let (tx_raw_progress, mut rx_raw_progress) = mpsc::channel::<u64>(100);
+
         // Feed the work queue
         let work_feeder = tokio::spawn(async move {
             for work in work_items {
@@ -144,22 +164,82 @@ impl ChunkOrchestrator {
             let target_dir = target_dir.clone();
             let base_url = base_url.clone();
             let tx_events = tx_events.clone();
+            let tx_raw_progress = tx_raw_progress.clone();
+            let rx_pause_worker = rx_pause.clone();
 
             let handle = tokio::spawn(async move {
-                Self::worker_loop(i, rx, client, target_dir, base_url, tx_events).await
+                Self::worker_loop(
+                    i,
+                    rx,
+                    client,
+                    target_dir,
+                    base_url,
+                    tx_events,
+                    tx_raw_progress,
+                    rx_pause_worker,
+                )
+                .await
             });
             worker_handles.push(handle);
         }
 
+        // Progress Monitor Loop
+        let monitor_tx_events = tx_events.clone();
+        let monitor_game_id = self.game_id.clone();
+        let monitor_total_bytes = total_bytes;
+
+        let monitor_handle = tokio::spawn(async move {
+            let mut total_downloaded = 0u64;
+            let mut last_emit = Instant::now();
+            let mut samples: Vec<(Instant, u64)> = Vec::new();
+
+            while let Some(bytes) = rx_raw_progress.recv().await {
+                total_downloaded += bytes;
+                let now = Instant::now();
+                samples.push((now, bytes));
+
+                // Cleanup samples older than 5 seconds
+                samples.retain(|(t, _)| now.duration_since(*t).as_secs() < 5);
+
+                if now.duration_since(last_emit).as_millis() >= 500 {
+                    let interval_bytes: u64 = samples.iter().map(|(_, b)| b).sum();
+                    let interval_secs = 5.0; // Over 5 second window
+                    let speed_bps = (interval_bytes as f64 / interval_secs) as u64;
+
+                    let eta_secs = if speed_bps > 0 {
+                        (monitor_total_bytes.saturating_sub(total_downloaded)) / speed_bps
+                    } else {
+                        0
+                    };
+
+                    let progress = ProgressDetailed {
+                        game_id: monitor_game_id.clone(),
+                        percentage: (total_downloaded as f64 / monitor_total_bytes as f64) * 100.0,
+                        speed_bps,
+                        eta_secs,
+                        downloaded_bytes: total_downloaded,
+                        total_bytes: monitor_total_bytes,
+                    };
+
+                    let _ = monitor_tx_events.send(OrchestratorEvent::Progress(progress)).await;
+                    last_emit = now;
+                }
+            }
+        });
+
         // Wait for feeder
         let _ = work_feeder.await;
-        
+
         // Wait for workers
         for handle in worker_handles {
             if let Err(e) = handle.await {
                 eprintln!("Worker panic: {}", e);
             }
         }
+
+        // Cleanup monitor
+        drop(tx_raw_progress);
+        let _ = monitor_handle.await;
 
         tx_events
             .send(OrchestratorEvent::Completed)
@@ -203,8 +283,17 @@ impl ChunkOrchestrator {
         target_dir: Arc<PathBuf>,
         base_url: Arc<String>,
         tx_events: mpsc::Sender<OrchestratorEvent>,
+        tx_raw_progress: mpsc::Sender<u64>,
+        mut rx_pause: tokio::sync::watch::Receiver<bool>,
     ) {
         while let Ok(work) = rx.recv().await {
+            // Check pause state
+            while *rx_pause.borrow() {
+                if rx_pause.changed().await.is_err() {
+                    return; // Channel closed
+                }
+            }
+
             match Self::process_chunk(&client, &work, &target_dir, &base_url).await {
                 Ok(_) => {
                     let _ = tx_events
@@ -213,7 +302,7 @@ impl ChunkOrchestrator {
                             size: work.size,
                         })
                         .await;
-                    
+
                     let _ = tx_events
                         .send(OrchestratorEvent::ChunkWritten {
                             chunk_id: work.chunk_id.clone(),
@@ -221,11 +310,7 @@ impl ChunkOrchestrator {
                         })
                         .await;
 
-                    let _ = tx_events
-                        .send(OrchestratorEvent::Progress {
-                            downloaded_bytes: work.size,
-                        })
-                        .await;
+                    let _ = tx_raw_progress.send(work.size).await;
                 }
                 Err(e) => {
                     let _ = tx_events

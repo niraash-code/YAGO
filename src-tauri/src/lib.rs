@@ -34,6 +34,7 @@ pub struct AppState {
     pub settings_manager: Arc<SettingsManager>,
     pub global_settings: Arc<Mutex<GlobalSettings>>,
     pub app_config: Arc<Mutex<AppConfig>>,
+    pub download_controls: Arc<Mutex<HashMap<String, tokio::sync::watch::Sender<bool>>>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -223,6 +224,7 @@ pub fn run() {
                 settings_manager,
                 global_settings: Arc::new(Mutex::new(settings)),
                 app_config,
+                download_controls: Arc::new(Mutex::new(HashMap::new())),
             });
 
             Ok(())
@@ -273,6 +275,9 @@ pub fn run() {
             commands::library::get_remote_catalog,
             commands::library::initialize_remote_game,
             commands::library::get_install_options,
+            commands::download::start_game_download,
+            commands::download::pause_game_download,
+            commands::download::resume_game_download,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

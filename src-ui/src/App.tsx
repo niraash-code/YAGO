@@ -21,6 +21,7 @@ import { GlobalDialogs } from "./components/ui/GlobalDialogs";
 import { AppLayout } from "./components/dashboard/AppLayout";
 import { GameHeader } from "./components/dashboard/GameHeader";
 import { GameOverview } from "./components/dashboard/GameOverview";
+import { InstallWizard } from "./components/InstallWizard";
 
 const App: React.FC = () => {
   const [initError, setInitError] = useState<string | null>(null);
@@ -67,6 +68,7 @@ const App: React.FC = () => {
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
   const [isCoverManagerOpen, setIsCoverManagerOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [installWizardGame, setInstallWizardGame] = useState<{ id: string, name: string, templateId: string } | null>(null);
 
   const { showAlert, showPrompt } = useUiStore();
 
@@ -101,6 +103,16 @@ const App: React.FC = () => {
       } catch (e) {
         showAlert("Failed to launch game: " + e, "Launch Error");
       }
+    }
+  };
+
+  const handleInstall = () => {
+    if (selectedGame) {
+      setInstallWizardGame({
+        id: selectedGame.id,
+        name: selectedGame.name,
+        templateId: selectedGame.id,
+      });
     }
   };
 
@@ -221,6 +233,7 @@ const App: React.FC = () => {
               isLaunching={isLaunching}
               launchStatus={launchStatus}
               handleLaunch={handleLaunch}
+              handleInstall={handleInstall}
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
           ) : currentView === "mods" ? (
@@ -261,7 +274,18 @@ const App: React.FC = () => {
       <AddGameModal
         isOpen={isAddGameOpen}
         onClose={() => setIsAddGameOpen(false)}
+        onStartInstall={(id, name, templateId) => {
+          setIsAddGameOpen(false);
+          setInstallWizardGame({ id, name, templateId });
+        }}
         existingGameIds={games.map(g => g.id)}
+      />
+      <InstallWizard 
+        isOpen={!!installWizardGame}
+        onClose={() => setInstallWizardGame(null)}
+        gameId={installWizardGame?.id || ""}
+        gameName={installWizardGame?.name || ""}
+        templateId={installWizardGame?.templateId || ""}
       />
       <CoverManagerModal
         isOpen={isCoverManagerOpen}

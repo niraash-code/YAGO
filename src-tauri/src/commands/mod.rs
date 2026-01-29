@@ -5,3 +5,4 @@ pub mod library;
 pub mod mods;
 pub mod profiles;
 pub mod setup;
+pub mod download;

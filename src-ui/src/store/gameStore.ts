@@ -79,6 +79,18 @@ interface AppState {
   removeRunner: (id: string) => Promise<void>;
   deployCurrentMods: () => Promise<void>;
   startDownload: (manifestUrl: string, installPath: string) => Promise<void>;
+  startGameDownload: (gameId: string, selectedCategoryIds: string[]) => Promise<void>;
+  pauseDownload: (gameId: string) => Promise<void>;
+  resumeDownload: (gameId: string) => Promise<void>;
+}
+
+export interface ProgressDetailed {
+  game_id: string;
+  percentage: number;
+  speed_bps: number;
+  eta_secs: number;
+  downloaded_bytes: number;
+  total_bytes: number;
 }
 
 const mapBackendGameToFrontend = (
@@ -95,7 +107,7 @@ const mapBackendGameToFrontend = (
     shortName: bg.short_name || bg.name,
     developer: bg.developer || "Unknown",
     description: bg.description || "No description provided.",
-    status: InstallStatus.INSTALLED,
+    status: bg.install_status as unknown as InstallStatus,
     version: bg.version,
     regions: bg.regions,
     color: bg.color || "slate-400",
@@ -117,6 +129,12 @@ const mapBackendGameToFrontend = (
     prefixPath: bg.prefix_path,
     enableLinuxShield: bg.enable_linux_shield,
     supportedInjectionMethods: bg.supported_injection_methods,
+    remoteInfo: bg.remote_info ? {
+      manifestUrl: bg.remote_info.manifest_url,
+      chunkBaseUrl: bg.remote_info.chunk_base_url,
+      totalSize: bg.remote_info.total_size,
+      version: bg.remote_info.version,
+    } : undefined,
     // Get settings from active profile
     useGamescope: activeProfile?.useGamescope,
     useGamemode: activeProfile?.useGamemode,
@@ -281,6 +299,32 @@ export const useAppStore = create<AppState>()(
           throw e;
         } finally {
           set({ isDownloading: false });
+        }
+      },
+
+      startGameDownload: async (gameId, selectedCategoryIds) => {
+        try {
+          await api.startGameDownload(gameId, selectedCategoryIds);
+          set({ isDownloading: true });
+        } catch (e) {
+          console.error("Failed to start Sophon download:", e);
+          throw e;
+        }
+      },
+
+      pauseDownload: async gameId => {
+        try {
+          await api.pauseGameDownload(gameId);
+        } catch (e) {
+          console.error("Failed to pause download:", e);
+        }
+      },
+
+      resumeDownload: async gameId => {
+        try {
+          await api.resumeGameDownload(gameId);
+        } catch (e) {
+          console.error("Failed to resume download:", e);
         }
       },
 
@@ -486,10 +530,44 @@ export const useAppStore = create<AppState>()(
           }
         );
 
-        const unlistenDownload = await listen<DownloadProgress>(
+        const unlistenDownload = await listen<ProgressDetailed>(
           "download-progress",
           event => {
-            set({ downloadProgress: event.payload.overall_progress });
+            const p = event.payload;
+            set(state => ({
+              downloadProgress: p.percentage,
+              statsMap: {
+                ...state.statsMap,
+                [p.game_id]: {
+                  ...(state.statsMap[p.game_id] || {
+                    modsEnabled: false,
+                    performance: "Good",
+                    runner: "Standard",
+                  }),
+                  downloadProgress: p.percentage,
+                  statusText: `${(p.speed_bps / (1024 * 1024)).toFixed(1)} MB/s • ${Math.floor(p.eta_secs / 60)}m remaining`,
+                },
+              },
+            }));
+          }
+        );
+
+        const unlistenComplete = await listen<string>(
+          "download-complete",
+          event => {
+            const gameId = event.payload;
+            set(state => ({
+              isDownloading: false,
+              downloadProgress: 100,
+              statsMap: {
+                ...state.statsMap,
+                [gameId]: {
+                  ...state.statsMap[gameId],
+                  downloadProgress: 100,
+                  statusText: "Ready to Play",
+                },
+              },
+            }));
           }
         );
 
@@ -558,6 +636,7 @@ export const useAppStore = create<AppState>()(
           unlistenStarted();
           unlistenStopped();
           unlistenDownload();
+          unlistenComplete();
           unlistenLibrary();
         };
       },

@@ -10,33 +10,42 @@ import {
   AlertCircle,
   AlertTriangle,
   Layers,
+  Cloud,
+  Download,
+  Info,
 } from "lucide-react";
 import { Game, InstallStatus } from "../types";
 import { useAppStore } from "../store/gameStore";
 import { useUiStore } from "../store/uiStore";
-import { api, InjectionMethod } from "../lib/api";
+import { api, InjectionMethod, RemoteCatalogEntry } from "../lib/api";
+import { cn } from "../lib/utils";
+import { InstallWizard } from "./InstallWizard";
 
 interface AddGameModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onStartInstall: (id: string, name: string, templateId: string) => void;
   existingGameIds: string[];
 }
 
 const AddGameModal: React.FC<AddGameModalProps> = ({
   isOpen,
   onClose,
+  onStartInstall,
   existingGameIds,
 }) => {
   const { addGame } = useAppStore();
   const { showAlert } = useUiStore();
   const [step, setStep] = useState<
-    "initial" | "scanning" | "results" | "manual" | "duplicate"
+    "initial" | "scanning" | "results" | "manual" | "duplicate" | "discover"
   >("initial");
   const [scanProgress, setScanProgress] = useState(0);
   const [scanText, setScanText] = useState("Initializing scan...");
   const [foundGames, setFoundGames] = useState<Game[]>([]);
   const [manualPath, setManualPath] = useState("");
   const [duplicateGame, setDuplicateGame] = useState<Game | null>(null);
+  const [remoteCatalog, setRemoteCatalog] = useState<RemoteCatalogEntry[]>([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +56,19 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
       setDuplicateGame(null);
     }
   }, [isOpen]);
+
+  const fetchCatalog = async () => {
+    setStep("discover");
+    setIsLoadingCatalog(true);
+    try {
+      const catalog = await api.getRemoteCatalog();
+      setRemoteCatalog(catalog);
+    } catch (e) {
+      showAlert("Failed to load catalog: " + e, "Error");
+    } finally {
+      setIsLoadingCatalog(false);
+    }
+  };
 
   const startScan = async () => {
     setStep("scanning");
@@ -63,33 +85,8 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
       clearInterval(interval);
       setScanProgress(100);
 
-      const games: Game[] = discovered
-        .map(d => {
-          // Map identified game to full Game object (using default/empty values where needed)
-          // Ideally backend returns full IdentifiedGame struct or we fetch details.
-          // But DiscoveredGame only has template_id and path.
-          // We should probably call identifyGame on each path to get full metadata?
-          // OR the backend scan should return IdentifiedGame?
-          // The scan_for_games command currently returns Vec<DiscoveredGame>.
-          // Let's assume we can map it or we need to update backend to return more info.
-          // Actually, we can just use the path to call identifyGame, OR trust the template_id.
-
-          // For now, let's call identifyGame for each result to populate metadata.
-          // This might be slow if many games found, but robust.
-          return null;
-        })
-        .filter(g => g !== null) as Game[];
-
-      // Wait, parallel identify
       const gamePromises = discovered.map(async d => {
         try {
-          // Determine the full path to the executable
-          // DiscoveredGame.path IS the executable path from scanner
-          // On Windows/Linux scanner returns the executable path directly.
-          const pathStr =
-            typeof d.path === "string" ? d.path : (d.path as any).toString(); // Handle if path is object
-          // Note: d.path comes from serde PathBuf which serializes as string usually.
-
           const identified = await api.identifyGame(
             d.path as unknown as string
           );
@@ -234,18 +231,19 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative z-[51]"
+            className="w-full max-w-3xl bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative z-[51]"
           >
             {/* Header */}
             <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-800/30">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Gamepad2 className="text-indigo-400" />
-                  Add Game to Library
+                  Hub Discovery
                 </h2>
-                <p className="text-sm text-slate-400 mt-1">
-                  Scan your system or manually locate game files
-                </p>
+                <div className="flex items-center gap-4 mt-1">
+                  <button onClick={() => setStep("initial")} className={cn("text-xs font-bold uppercase tracking-widest", step === "initial" ? "text-indigo-400" : "text-slate-500 hover:text-slate-300")}>Local</button>
+                  <button onClick={fetchCatalog} className={cn("text-xs font-bold uppercase tracking-widest", step === "discover" ? "text-indigo-400" : "text-slate-500 hover:text-slate-300")}>Cloud</button>
+                </div>
               </div>
               <button
                 onClick={onClose}
@@ -256,9 +254,9 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
             </div>
 
             {/* Content Area */}
-            <div className="p-10 min-h-[300px] flex flex-col justify-center">
+            <div className="p-10 min-h-[400px] flex flex-col overflow-y-auto custom-scrollbar">
               {step === "initial" && (
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-2 gap-8 my-auto">
                   <button
                     onClick={startScan}
                     className="group relative p-8 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 hover:border-indigo-500/50 transition-all hover:bg-indigo-500/20 text-left flex flex-col gap-5 shadow-lg"
@@ -271,8 +269,7 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                         Auto Scan
                       </h3>
                       <p className="text-sm text-slate-400 leading-relaxed">
-                        Automatically detect installed HoYoverse games on your
-                        drives.
+                        Detect installed HoYoverse games on your system.
                       </p>
                     </div>
                   </button>
@@ -289,16 +286,75 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                         Locate Manually
                       </h3>
                       <p className="text-sm text-slate-400 leading-relaxed">
-                        Select the game installation folder directly from your
-                        file system.
+                        Select the game executable from your disk.
                       </p>
                     </div>
                   </button>
                 </div>
               )}
 
+              {step === "discover" && (
+                <div className="space-y-8">
+                  {isLoadingCatalog ? (
+                    <div className="h-[300px] flex flex-col items-center justify-center gap-4">
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                        <Cloud className="text-indigo-500" size={48} />
+                      </motion.div>
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-[0.3em]">Querying Sophon API...</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-6">
+                      {remoteCatalog.map((entry) => (
+                        <div key={entry.template.id} className="group relative rounded-3xl bg-slate-800/40 border border-white/5 overflow-hidden flex flex-col shadow-2xl transition-all hover:border-indigo-500/30">
+                          {/* Card Cover */}
+                          <div className="h-32 w-full relative overflow-hidden">
+                            <img src={entry.template.cover_image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+                            <div className="absolute top-4 right-4">
+                              <span className="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full shadow-lg">Cloud</span>
+                            </div>
+                          </div>
+
+                          {/* Card Content */}
+                          <div className="p-6 pt-2 flex-1">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-xl font-black text-white tracking-tighter uppercase italic">{entry.template.name}</h4>
+                              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                                <img src={entry.template.icon} className="w-6 h-6 object-contain" alt="" />
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 mb-6">
+                              {entry.remote_info ? (
+                                <>
+                                  <span className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                    <Info size={10} className="text-indigo-400" /> v{entry.remote_info.version}
+                                  </span>
+                                  <span className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                    <HardDrive size={10} className="text-indigo-400" /> {(entry.remote_info.total_size / (1024*1024*1024)).toFixed(1)} GB
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-[9px] font-black text-slate-600 uppercase italic">Metadata Unavailable</span>
+                              )}
+                            </div>
+
+                            <button 
+                              onClick={() => onStartInstall(entry.template.id, entry.template.name, entry.template.id)}
+                              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+                            >
+                              <Download size={14} /> Initialize Install
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {step === "scanning" && (
-                <div className="text-center max-w-md mx-auto w-full">
+                <div className="text-center max-w-md mx-auto w-full my-auto">
                   <div className="mb-8 relative w-32 h-32 mx-auto flex items-center justify-center">
                     <motion.div
                       animate={{ rotate: 360 }}
@@ -311,15 +367,13 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                     />
                     <HardDrive size={32} className="text-slate-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Analyzing System
-                  </h3>
-                  <p className="text-sm text-slate-400 font-mono mb-8 h-6">
+                  <h3 className="text-xl font-bold text-white mb-2 tracking-tight uppercase">Analyzing System</h3>
+                  <p className="text-xs text-slate-500 font-mono mb-8 h-6 tracking-widest uppercase">
                     {scanText}
                   </p>
-                  <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full bg-indigo-500"
+                      className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                       initial={{ width: 0 }}
                       animate={{ width: `${scanProgress}%` }}
                     />
@@ -404,31 +458,27 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
               {step === "manual" && (
                 <form
                   onSubmit={handleManualSubmit}
-                  className="max-w-lg mx-auto w-full space-y-8"
+                  className="max-w-lg mx-auto w-full space-y-8 my-auto"
                 >
                   <div className="text-center mb-6">
                     <FolderOpen
                       size={48}
                       className="mx-auto text-slate-500 mb-5"
                     />
-                    <h3 className="text-xl font-bold text-white">
-                      Locate Game Folder
-                    </h3>
-                    <p className="text-base text-slate-400 mt-2">
+                    <h3 className="text-xl font-bold text-white tracking-tight uppercase">Locate Game Folder</h3>
+                    <p className="text-sm text-slate-400 mt-2">
                       Navigate to the installation directory of the game.
                     </p>
                   </div>
                   <div className="space-y-3">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      Folder Path
-                    </label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Folder Path</label>
                     <div className="flex gap-3">
                       <input
                         type="text"
                         value={manualPath}
                         onChange={e => setManualPath(e.target.value)}
-                        placeholder="e.g., C:\Program Files\HoYoverse\Genshin Impact"
-                        className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-5 py-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        placeholder="e.g., C:\Games\Genshin Impact"
+                        className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -436,14 +486,14 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setStep("initial")}
-                      className="flex-1 py-3 border border-white/10 hover:bg-white/5 text-slate-300 rounded-xl text-sm font-medium transition-colors"
+                      className="flex-1 py-4 border border-white/10 hover:bg-white/5 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={!manualPath}
-                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg"
+                      className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3"
                     >
                       <Search size={18} /> Detect Game
                     </button>
