@@ -71,7 +71,10 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
     setIsLoading(true);
     try {
       // Pin the game as "Remote" first if not already done
-      await api.initializeRemoteGame(templateId);
+      const id = await api.initializeRemoteGame(templateId);
+      
+      // Select it in the store so UI knows we are working on it
+      useAppStore.getState().selectGame(id);
 
       const opts = await api.getInstallOptions(templateId);
       setCategories(opts);

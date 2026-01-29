@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "./lib/api";
 import TitleBar from "./components/TitleBar";
 import SystemStatusCard from "./components/SystemStatusCard";
@@ -87,6 +87,36 @@ const App: React.FC = () => {
     );
   }
 
+  if (initError)
+    return (
+      <div className="flex h-screen w-full bg-slate-950 items-center justify-center text-white p-10">
+        <div className="text-center max-w-lg">
+          <div className="text-red-500 mb-4 font-bold text-xl">
+            Critical Initialization Error
+          </div>
+          <pre className="bg-black/40 p-4 rounded-xl border border-red-500/20 text-xs font-mono text-left overflow-auto max-h-60">
+            {initError}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-6 px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+          >
+            Retry Application
+          </button>
+        </div>
+      </div>
+    );
+
+  if (!isInitialized)
+    return (
+      <div className="flex h-screen w-full bg-slate-950 items-center justify-center text-white">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 font-medium">Synchronizing Library...</p>
+        </div>
+      </div>
+    );
+
   const selectedGame =
     games.find(g => g.id === selectedGameId) ||
     (games.length > 0 ? games[0] : null);
@@ -152,126 +182,104 @@ const App: React.FC = () => {
       showAlert("Profile name cannot be empty.", "Validation Error");
   };
 
-  if (initError)
-    return (
-      <div className="flex h-screen w-full bg-slate-950 items-center justify-center text-white p-10">
-        <div className="text-center max-w-lg">
-          <div className="text-red-500 mb-4 font-bold text-xl">
-            Critical Initialization Error
-          </div>
-          <pre className="bg-black/40 p-4 rounded-xl border border-red-500/20 text-xs font-mono text-left overflow-auto max-h-60">
-            {initError}
-          </pre>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-6 px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
-          >
-            Retry Application
-          </button>
-        </div>
-      </div>
-    );
-  if (!isInitialized)
-    return (
-      <div className="flex h-screen w-full bg-slate-950 items-center justify-center text-white">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400 font-medium">Synchronizing Library...</p>
-        </div>
-      </div>
-    );
-
-  if (!selectedGame) {
-    return (
-      <div className="flex flex-col h-screen w-full bg-slate-950 items-center justify-center text-white">
-        <TitleBar />
-        <div className="flex-1 flex items-center justify-center text-center">
-          <div>
-            <h1 className="text-3xl font-bold mb-4">No Games Library</h1>
-            <button
-              onClick={() => setIsAddGameOpen(true)}
-              className="px-8 py-3 bg-indigo-600 rounded-xl font-medium text-lg shadow-lg"
-            >
-              Add Your First Game
-            </button>
-            <AddGameModal
-              isOpen={isAddGameOpen}
-              onClose={() => setIsAddGameOpen(false)}
-              onStartInstall={(id, name, templateId) => {
-                setIsAddGameOpen(false);
-                setInstallWizardGame({ id, name, templateId });
-              }}
-              existingGameIds={[]}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <AppLayout
-      selectedGameId={selectedGameId}
+      selectedGameId={selectedGame?.id || null}
       backgroundStyle={backgroundStyle}
       currentView={currentView}
       setCurrentView={setCurrentView}
       onOpenAddGame={() => setIsAddGameOpen(true)}
       onOpenAppSettings={() => setIsGlobalSettingsOpen(true)}
     >
-      <GameHeader
-        selectedGame={selectedGame}
-        streamSafe={streamSafe}
-        nsfwBehavior={nsfwBehavior}
-        isProfileDropdownOpen={isProfileDropdownOpen}
-        setIsProfileDropdownOpen={setIsProfileDropdownOpen}
-        handleSwitchProfile={handleSwitchProfile}
-        handleAddProfile={handleAddProfile}
-        setNsfwBehavior={setNsfwBehavior}
-        toggleStreamSafe={toggleStreamSafe}
-        onOpenCoverManager={() => setIsCoverManagerOpen(true)}
-      />
-
-      <div className="flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {currentView === "overview" ? (
-            <GameOverview
+      <AnimatePresence mode="wait">
+        {selectedGame ? (
+          <motion.div
+            key="dashboard"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            <GameHeader
               selectedGame={selectedGame}
-              isRunning={isRunning}
-              isDeploying={isDeploying}
-              isLaunching={isLaunching}
-              launchStatus={launchStatus}
-              handleLaunch={handleLaunch}
-              handleInstall={handleInstall}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-            />
-          ) : currentView === "mods" ? (
-            <ModManager
-              key="modmanager"
-              game={selectedGame}
-              onUpdateGame={updateGame}
               streamSafe={streamSafe}
               nsfwBehavior={nsfwBehavior}
-              onClose={() => setCurrentView("overview")}
+              isProfileDropdownOpen={isProfileDropdownOpen}
+              setIsProfileDropdownOpen={setIsProfileDropdownOpen}
+              handleSwitchProfile={handleSwitchProfile}
+              handleAddProfile={handleAddProfile}
+              setNsfwBehavior={setNsfwBehavior}
+              toggleStreamSafe={toggleStreamSafe}
+              onOpenCoverManager={() => setIsCoverManagerOpen(true)}
             />
-          ) : (
-            <SkinManager
-              key="skinmanager"
-              gameId={selectedGame.id}
-              streamSafe={streamSafe}
-            />
-          )}
-        </AnimatePresence>
 
-        {stats && currentView === "overview" && (
-          <div className="absolute right-12 bottom-20 z-20">
-            <SystemStatusCard
-              stats={stats}
-              game={selectedGame}
-              streamSafe={streamSafe}
-            />
-          </div>
+            <div className="flex-1 overflow-hidden relative">
+              <AnimatePresence mode="wait">
+                {currentView === "overview" ? (
+                  <GameOverview
+                    selectedGame={selectedGame}
+                    isRunning={isRunning}
+                    isDeploying={isDeploying}
+                    isLaunching={isLaunching}
+                    launchStatus={launchStatus}
+                    handleLaunch={handleLaunch}
+                    handleInstall={handleInstall}
+                    onOpenSettings={() => setIsSettingsOpen(true)}
+                  />
+                ) : currentView === "mods" ? (
+                  <ModManager
+                    key="modmanager"
+                    game={selectedGame}
+                    onUpdateGame={updateGame}
+                    streamSafe={streamSafe}
+                    nsfwBehavior={nsfwBehavior}
+                    onClose={() => setCurrentView("overview")}
+                  />
+                ) : (
+                  <SkinManager
+                    key="skinmanager"
+                    gameId={selectedGame.id}
+                    streamSafe={streamSafe}
+                  />
+                )}
+              </AnimatePresence>
+
+              {stats && currentView === "overview" && (
+                <div className="absolute right-12 bottom-20 z-20">
+                  <SystemStatusCard
+                    stats={stats}
+                    game={selectedGame}
+                    streamSafe={streamSafe}
+                  />
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex items-center justify-center text-center relative"
+          >
+            <div className="relative z-10">
+              <h1 className="text-4xl font-black mb-2 tracking-tighter uppercase italic text-white">
+                No Games Library
+              </h1>
+              <p className="text-slate-500 font-medium mb-8 uppercase tracking-widest text-xs">
+                Your journey begins with a single title.
+              </p>
+              <button
+                onClick={() => setIsAddGameOpen(true)}
+                className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95 uppercase tracking-[0.2em]"
+              >
+                Add Your First Game
+              </button>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
       <SettingsDrawer
         isOpen={isSettingsOpen}

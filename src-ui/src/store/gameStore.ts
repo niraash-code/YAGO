@@ -310,7 +310,7 @@ export const useAppStore = create<AppState>()(
       startGameDownload: async (gameId, selectedCategoryIds) => {
         try {
           await api.startGameDownload(gameId, selectedCategoryIds);
-          set({ isDownloading: true });
+          set({ isDownloading: true, selectedGameId: gameId });
         } catch (e) {
           console.error("Failed to start Sophon download:", e);
           throw e;
@@ -624,16 +624,17 @@ export const useAppStore = create<AppState>()(
                   updated: m.added_at,
                 }));
 
-                const activeProfile =
-                  profiles.find(p => p.id === bg.active_profile_id) ||
-                  profiles[0];
-
                 allLoadedGames.push(
                   mapBackendGameToFrontend(bg, profiles, gameMods)
                 );
               }
             }
-            set({ games: allLoadedGames });
+            
+            const currentSelected = get().selectedGameId;
+            set({ 
+              games: allLoadedGames,
+              selectedGameId: currentSelected || (allLoadedGames.length > 0 ? allLoadedGames[0].id : "")
+            });
           }
         );
 
