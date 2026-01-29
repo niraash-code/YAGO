@@ -587,6 +587,23 @@ pub async fn scan_for_games(state: State<'_, AppState>) -> Result<Vec<Discovered
 }
 
 #[tauri::command]
+pub async fn recursive_scan_path(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<Vec<DiscoveredGame>, String> {
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
+        state.game_templates.lock().await;
+    let templates_vec: Vec<_> = templates_guard.values().cloned().collect();
+    
+    let path_buf = PathBuf::from(path);
+    if !path_buf.exists() {
+        return Err("Path does not exist".to_string());
+    }
+
+    Ok(librarian::scanner::recursive_scan(&path_buf, &templates_vec, 4))
+}
+
+#[tauri::command]
 pub async fn sync_templates(
     _app: tauri::AppHandle,
     state: State<'_, AppState>,

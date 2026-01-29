@@ -29,6 +29,7 @@ export const SetupWizard: React.FC = () => {
     updateGlobalSettings,
     setupStatus,
     refreshSetupStatus,
+    addGame,
   } = useAppStore();
   const { showAlert } = useUiStore();
 
@@ -43,10 +44,14 @@ export const SetupWizard: React.FC = () => {
   const [runnersPath, setRunnersPath] = useState("");
   const [prefixesPath, setPrefixesPath] = useState("");
   const [cachePath, setCachePath] = useState("");
+  const [defaultGamesPath, setDefaultGamesPath] = useState("");
+  const [discoveredGames, setFoundGames] = useState<any[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     if (globalSettings) {
       setStoragePath(globalSettings.yago_storage_path || "");
+      setDefaultGamesPath(globalSettings.default_games_path || "");
       setModsPath(globalSettings.mods_path || "");
       setRunnersPath(globalSettings.runners_path || "");
       setPrefixesPath(globalSettings.prefixes_path || "");
@@ -77,12 +82,89 @@ export const SetupWizard: React.FC = () => {
       await updateGlobalSettings({
         ...globalSettings,
         yago_storage_path: storagePath,
+        default_games_path: defaultGamesPath,
         mods_path: modsPath,
         runners_path: runnersPath,
         prefixes_path: prefixesPath,
         cache_path: cachePath,
       });
-      setStep(isLinux ? 1 : 2);
+
+      if (defaultGamesPath) {
+        setStep(0.5 as any);
+        startAutoDiscovery();
+      } else {
+        setStep(isLinux ? 1 : 2);
+      }
+    }
+  };
+
+  const startAutoDiscovery = async () => {
+    if (!defaultGamesPath) return;
+    setIsScanning(true);
+    try {
+      const discovered = await api.recursiveScanPath(defaultGamesPath);
+      const gamePromises = discovered.map(async d => {
+        try {
+          const identified = await api.identifyGame(
+            d.path as unknown as string
+          );
+          return {
+            id: identified.id,
+            name: identified.name,
+            logoInitial: identified.logo_initial,
+            installPath: identified.install_path,
+            exeName: identified.exe_name,
+            modloader_enabled: identified.modloader_enabled,
+            injection_method: identified.injection_method,
+            supported_injection_methods: identified.supported_injection_methods,
+            version: identified.version,
+            size: identified.size,
+            color: identified.color,
+            accentColor: identified.accent_color,
+            coverImage: identified.cover_image,
+            icon: identified.icon,
+            developer: identified.developer,
+            description: identified.description,
+            regions: identified.regions,
+            shortName: identified.short_name,
+          };
+        } catch (e) {
+          return null;
+        }
+      });
+      const resolved = (await Promise.all(gamePromises)).filter(g => g !== null);
+      setFoundGames(resolved);
+    } catch (e) {
+      console.error("Discovery failed:", e);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const addDiscoveredGame = async (game: any) => {
+    try {
+      const g: any = {
+        ...game,
+        status: "Installed",
+        activeProfileId: "default",
+        profiles: [
+          {
+            id: "default",
+            name: "Default",
+            description: "Default Loadout",
+            type: "default",
+            created: new Date().toISOString(),
+            enabledModIds: [],
+            loadOrder: [],
+          },
+        ],
+        mods: [],
+        autoUpdate: false,
+      };
+      await addGame(g);
+      setFoundGames(prev => prev.filter(pg => pg.id !== game.id));
+    } catch (e) {
+      showAlert("Failed to add game: " + e, "Error");
     }
   };
 
@@ -164,7 +246,7 @@ export const SetupWizard: React.FC = () => {
         {/* Steps Progress */}
         <div className="px-10 mb-8">
           <div className="flex items-center justify-center gap-3">
-            {[0, 1, 2, 3].map(s => {
+            {[0, 0.5, 1, 2, 3].map(s => {
               if (s === 1 && !isLinux) return null;
               return (
                 <div
@@ -173,7 +255,7 @@ export const SetupWizard: React.FC = () => {
                     "h-1.5 rounded-full transition-all duration-500",
                     step === s
                       ? "w-12 bg-indigo-500"
-                      : s < step
+                      : s < (step as number)
                         ? "w-6 bg-emerald-500"
                         : "w-6 bg-white/10"
                   )}
@@ -200,42 +282,72 @@ export const SetupWizard: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white mb-2">
-                      Storage Location
+                      Storage & Library
                     </h2>
                     <p className="text-slate-400 text-sm leading-relaxed">
-                      Choose where YAGO will store your game library, mods, and
-                      cached assets. You can use your internal drive or an
-                      external SSD.
+                      Choose your storage and installation directories. We'll
+                      automatically scan your Games Root for supported titles.
                     </p>
                   </div>
 
                   <div className="w-full space-y-4">
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={storagePath}
-                        onChange={e => setStoragePath(e.target.value)}
-                        placeholder="Default (App Data)"
-                        className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
-                      />
-                      <button
-                        onClick={() =>
-                          handleSelectGranularPath(
-                            setStoragePath,
-                            "Select YAGO Storage Directory"
-                          )
-                        }
-                        className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
-                      >
-                        <FolderOpen size={20} />
-                      </button>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        YAGO Storage (Mods, Prefixes, Runners)
+                      </label>
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={storagePath}
+                          onChange={e => setStoragePath(e.target.value)}
+                          placeholder="Default (App Data)"
+                          className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                        />
+                        <button
+                          onClick={() =>
+                            handleSelectGranularPath(
+                              setStoragePath,
+                              "Select YAGO Storage Directory"
+                            )
+                          }
+                          className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
+                        >
+                          <FolderOpen size={20} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+                        Games Root (Where games are installed)
+                      </label>
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={defaultGamesPath}
+                          onChange={e => setDefaultGamesPath(e.target.value)}
+                          placeholder="e.g., /home/user/Games"
+                          className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                        />
+                        <button
+                          onClick={() =>
+                            handleSelectGranularPath(
+                              setDefaultGamesPath,
+                              "Select Games Directory"
+                            )
+                          }
+                          className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
+                        >
+                          <FolderOpen size={20} />
+                        </button>
+                      </div>
                     </div>
 
                     <button
                       onClick={() => setShowAdvanced(!showAdvanced)}
                       className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-colors flex items-center gap-2 px-1"
                     >
-                      {showAdvanced ? "Hide" : "Show"} Advanced Path Options
+                      {showAdvanced ? "Hide" : "Show"} Advanced Path Overrides
                     </button>
 
                     <AnimatePresence>
@@ -299,18 +411,76 @@ export const SetupWizard: React.FC = () => {
                         </motion.div>
                       )}
                     </AnimatePresence>
-
-                    {!storagePath && (
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 p-3 rounded-xl border border-amber-400/10">
-                        <AlertCircle size={14} /> Recommended: Choose a path
-                        with at least 100GB free space.
-                      </div>
-                    )}
                   </div>
                 </div>
 
                 <button
                   onClick={handleConfirmStorage}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                >
+                  Continue <ArrowRight size={20} />
+                </button>
+              </motion.div>
+            )}
+
+            {step === (0.5 as any) && (
+              <motion.div
+                key="stepDiscovery"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-4">
+                  <h2 className="text-xl font-bold text-white mb-1 uppercase tracking-tighter italic">
+                    {isScanning ? "Scanning Library..." : "Games Identified"}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">
+                    {isScanning
+                      ? "Looking for supported titles 3 levels deep..."
+                      : `${discoveredGames.length} titles found in your games root.`}
+                  </p>
+                </div>
+
+                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                  {isScanning ? (
+                    <div className="h-40 flex items-center justify-center">
+                      <Loader2 size={48} className="text-indigo-500 animate-spin" />
+                    </div>
+                  ) : discoveredGames.length > 0 ? (
+                    discoveredGames.map(game => (
+                      <div
+                        key={game.id}
+                        className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 group hover:bg-white/10 transition-all"
+                      >
+                        <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-inner">
+                          {game.logoInitial}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-white truncate">
+                            {game.name}
+                          </h4>
+                          <p className="text-[10px] text-slate-500 truncate font-mono">
+                            {game.installPath}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => addDiscoveredGame(game)}
+                          className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 opacity-50 italic">
+                      <p className="text-sm text-slate-400">No supported games found in this directory.</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setStep(isLinux ? 1 : 2)}
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
                 >
                   Continue to Components <ArrowRight size={20} />

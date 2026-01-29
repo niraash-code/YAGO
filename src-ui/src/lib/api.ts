@@ -197,6 +197,7 @@ export interface GlobalSettings {
   steam_compat_tools_path: string; // PathBuf string
   wine_prefix_path: string;
   yago_storage_path: string;
+  default_games_path: string;
   mods_path: string;
   runners_path: string;
   prefixes_path: string;
@@ -277,6 +278,8 @@ export const api = {
   identifyGame: (path: string): Promise<IdentifiedGame> =>
     invoke("identify_game", { path }),
   scanForGames: (): Promise<DiscoveredGame[]> => invoke("scan_for_games"),
+  recursiveScanPath: (path: string): Promise<DiscoveredGame[]> =>
+    invoke("recursive_scan_path", { path }),
   syncTemplates: (): Promise<void> => invoke("sync_templates"),
   addGame: (path: string): Promise<string> => invoke("add_game", { path }),
   removeGame: (gameId: string): Promise<void> =>

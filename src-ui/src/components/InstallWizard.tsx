@@ -32,7 +32,7 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
   gameName,
   templateId,
 }) => {
-  const { startGameDownload } = useAppStore();
+  const { startGameDownload, globalSettings } = useAppStore();
   const { showAlert } = useUiStore();
   const [step, setStep] = useState<"path" | "categories" | "confirm" | "done">(
     "path"
@@ -45,11 +45,19 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
   useEffect(() => {
     if (isOpen) {
       setStep("path");
-      setInstallPath("");
+      
+      // Default path from settings
+      if (globalSettings?.default_games_path) {
+        const separator = globalSettings.default_games_path.includes("\\") ? "\\" : "/";
+        setInstallPath(`${globalSettings.default_games_path}${separator}${gameName}`);
+      } else {
+        setInstallPath("");
+      }
+
       setCategories([]);
       setSelectedCategoryIds([]);
     }
-  }, [isOpen]);
+  }, [isOpen, globalSettings, gameName]);
 
   const handleNextToCategories = async () => {
     if (!installPath) {

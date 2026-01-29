@@ -66,6 +66,7 @@ describe("gameStore", () => {
     steam_compat_tools_path: "/test/steam",
     wine_prefix_path: "/test/wine",
     yago_storage_path: "/test/yago",
+    default_games_path: "",
     mods_path: "",
     runners_path: "",
     prefixes_path: "",

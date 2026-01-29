@@ -18,6 +18,7 @@ pub struct GamePaths {
 
 pub struct LibrarianConfig {
     pub base_path: PathBuf,
+    pub games_install_path: Option<PathBuf>,
     pub mods_path: Option<PathBuf>,
     pub runners_path: Option<PathBuf>,
     pub prefixes_path: Option<PathBuf>,
@@ -27,6 +28,7 @@ pub struct LibrarianConfig {
 pub struct Librarian {
     pub base_path: PathBuf,
     pub games_root: PathBuf,
+    pub games_install_root: PathBuf,
     pub assets_root: PathBuf,
     pub templates_root: PathBuf,
     pub runners_root: PathBuf,
@@ -41,6 +43,11 @@ impl Librarian {
         let mut s = Self {
             base_path: config.base_path.clone(),
             games_root: config.base_path.join("games"),
+            games_install_root: config
+                .games_install_path
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| config.base_path.join("Library")),
             assets_root: config.base_path.join("assets"),
             templates_root: config.base_path.join("templates"),
             runners_root: config
@@ -77,6 +84,9 @@ impl Librarian {
         self.templates_root = base.join("templates");
         self.loaders_root = base.join("loaders");
 
+        self.games_install_root = config
+            .games_install_path
+            .unwrap_or_else(|| base.join("Library"));
         self.runners_root = config.runners_path.unwrap_or_else(|| base.join("runners"));
         self.prefixes_root = config.prefixes_path.unwrap_or_else(|| base.join("prefixes"));
         self.cache_root = config.cache_path.unwrap_or_else(|| base.join("cache"));
@@ -86,6 +96,7 @@ impl Librarian {
     pub fn ensure_core_dirs(&self) -> Result<()> {
         let dirs = [
             &self.games_root,
+            &self.games_install_root,
             &self.assets_root,
             &self.templates_root,
             &self.runners_root,

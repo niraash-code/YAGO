@@ -24,6 +24,11 @@ pub fn scan(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
     results
 }
 
+/// Scans a specific directory recursively for supported games.
+pub fn recursive_scan(root: &Path, templates: &[GameTemplate], max_depth: usize) -> Vec<DiscoveredGame> {
+    scan_roots(templates, vec![root.to_path_buf()], max_depth)
+}
+
 #[cfg(target_os = "windows")]
 fn scan_windows(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
     use std::collections::HashSet;
@@ -66,22 +71,12 @@ fn scan_windows(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
     found
 }
 
-#[cfg(target_os = "linux")]
-fn scan_linux(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let candidates = vec![
-        PathBuf::from(&home).join("Games"),
-        PathBuf::from(&home).join(".steam/steam/steamapps/common"),
-        PathBuf::from(&home).join(".local/share/steam/steamapps/common"),
-        PathBuf::from(&home).join(".local/share/lutris/runners/wine"),
-    ];
-
-    scan_roots(templates, candidates)
-}
-
-#[cfg(target_os = "linux")]
 #[doc(hidden)]
-pub fn scan_roots(templates: &[GameTemplate], roots: Vec<PathBuf>) -> Vec<DiscoveredGame> {
+pub fn scan_roots(
+    templates: &[GameTemplate],
+    roots: Vec<PathBuf>,
+    max_depth: usize,
+) -> Vec<DiscoveredGame> {
     use std::collections::HashSet;
     let mut found = Vec::new();
     let mut seen_paths = HashSet::new();
@@ -89,9 +84,8 @@ pub fn scan_roots(templates: &[GameTemplate], roots: Vec<PathBuf>) -> Vec<Discov
     for root in roots {
         if root.exists() {
             // Walk directories looking for executables
-            // Increased depth to 5 to handle deep nesting (e.g. TwinTail/Hoyoverse/Genshin Impact/UUID/...)
             for entry in walkdir::WalkDir::new(&root)
-                .max_depth(5)
+                .max_depth(max_depth)
                 .into_iter()
                 .filter_map(|e| e.ok())
             {
@@ -121,6 +115,19 @@ pub fn scan_roots(templates: &[GameTemplate], roots: Vec<PathBuf>) -> Vec<Discov
         }
     }
     found
+}
+
+#[cfg(target_os = "linux")]
+fn scan_linux(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let candidates = vec![
+        PathBuf::from(&home).join("Games"),
+        PathBuf::from(&home).join(".steam/steam/steamapps/common"),
+        PathBuf::from(&home).join(".local/share/steam/steamapps/common"),
+        PathBuf::from(&home).join(".local/share/lutris/runners/wine"),
+    ];
+
+    scan_roots(templates, candidates, 5)
 }
 
 #[doc(hidden)]

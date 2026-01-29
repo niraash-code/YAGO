@@ -143,6 +143,7 @@ pub fn run() {
 
             let lib_config = librarian::storage::LibrarianConfig {
                 base_path: base_storage,
+                games_install_path: if settings.default_games_path.as_os_str().is_empty() { None } else { Some(settings.default_games_path.clone()) },
                 mods_path: if settings.mods_path.as_os_str().is_empty() { None } else { Some(settings.mods_path.clone()) },
                 runners_path: if settings.runners_path.as_os_str().is_empty() { None } else { Some(settings.runners_path.clone()) },
                 prefixes_path: if settings.prefixes_path.as_os_str().is_empty() { None } else { Some(settings.prefixes_path.clone()) },
@@ -260,6 +261,7 @@ pub fn run() {
             commands::mods::read_mod_file,
             commands::mods::write_mod_file,
             commands::library::scan_for_games,
+            commands::library::recursive_scan_path,
             commands::library::sync_templates,
             commands::setup::install_common_libs,
             commands::setup::download_loader,
