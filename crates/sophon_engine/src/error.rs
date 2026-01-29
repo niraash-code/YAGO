@@ -14,6 +14,15 @@ pub enum SophonError {
     #[error("Protocol error: {0}")]
     Protocol(String),
 
+    #[error("API error: {0}")]
+    Api(String),
+
+    #[error("Serialization error: {0}")]
+    Serialization(String),
+
+    #[error("Invalid data: {0}")]
+    InvalidData(String),
+
     #[error("Download interrupted")]
     Interrupted,
 }

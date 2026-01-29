@@ -1,9 +1,7 @@
 use crate::error::Result;
-use crate::protocol::{ChunkInfo, SophonManifest};
-use futures_util::StreamExt;
+use crate::protocol::SophonManifest;
 use reqwest::header::RANGE;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -124,6 +122,8 @@ impl Downloader {
         Ok(())
     }
 
+    // TODO: Implement install logic using ChunkOrchestrator
+    /*
     pub async fn install<F>(
         &self,
         manifest: SophonManifest,
@@ -133,79 +133,7 @@ impl Downloader {
     where
         F: Fn(DownloadProgress) + Send + Sync + 'static,
     {
-        let chunks = manifest.chunks;
-        let total_size: u64 = chunks.iter().map(|c| c.size).sum();
-        let downloaded_accumulator = Arc::new(tokio::sync::Mutex::new(0u64));
-        let on_progress = Arc::new(on_progress);
-
-        let download_queue: Vec<_> = chunks.into_iter().filter(|c| !c.is_optional).collect();
-
-        let fetches = futures_util::stream::iter(download_queue)
-            .map(|chunk| {
-                let client = &self.client;
-                let downloaded_acc = downloaded_accumulator.clone();
-                let progress_cb = on_progress.clone();
-                async move {
-                    self.download_chunk(
-                        client,
-                        chunk,
-                        target_dir,
-                        total_size,
-                        downloaded_acc,
-                        progress_cb,
-                    )
-                    .await
-                }
-            })
-            .buffer_unordered(self.max_concurrent_downloads);
-
-        fetches
-            .for_each(|res| async {
-                if let Err(e) = res {
-                    eprintln!("Chunk download failed: {}", e);
-                }
-            })
-            .await;
-
-        Ok(())
+       // ...
     }
-
-    async fn download_chunk<F>(
-        &self,
-        client: &reqwest::Client,
-        chunk: ChunkInfo,
-        target_dir: &Path,
-        overall_total: u64,
-        downloaded_accumulator: Arc<tokio::sync::Mutex<u64>>,
-        on_progress: Arc<F>,
-    ) -> Result<()>
-    where
-        F: Fn(DownloadProgress) + Send + Sync + 'static,
-    {
-        let chunk_url = format!("https://cdn.example.com/chunks/{}", chunk.id);
-        let dest_path = target_dir.join(&chunk.path);
-
-        if let Some(parent) = dest_path.parent() {
-            fs::create_dir_all(parent).await?;
-        }
-
-        let mut resp: reqwest::Response = client.get(chunk_url).send().await?;
-        let mut file = fs::File::create(dest_path).await?;
-
-        while let Some(item) = resp.chunk().await? {
-            file.write_all(&item).await?;
-
-            let mut acc = downloaded_accumulator.lock().await;
-            *acc += item.len() as u64;
-
-            (on_progress)(DownloadProgress {
-                chunk_id: chunk.id.clone(),
-                bytes_downloaded: *acc,
-                total_bytes: overall_total,
-                overall_progress: (*acc as f64 / overall_total as f64) * 100.0,
-            });
-        }
-
-        Ok(())
-    }
+    */
 }
