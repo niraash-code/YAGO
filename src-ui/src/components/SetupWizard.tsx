@@ -38,23 +38,34 @@ export const SetupWizard: React.FC = () => {
     setupStatus?.detected_steam_path || null
   );
   const [storagePath, setStoragePath] = useState<string>("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [modsPath, setModsPath] = useState("");
+  const [runnersPath, setRunnersPath] = useState("");
+  const [prefixesPath, setPrefixesPath] = useState("");
+  const [cachePath, setCachePath] = useState("");
 
   useEffect(() => {
     if (globalSettings) {
       setStoragePath(globalSettings.yago_storage_path || "");
+      setModsPath(globalSettings.mods_path || "");
+      setRunnersPath(globalSettings.runners_path || "");
+      setPrefixesPath(globalSettings.prefixes_path || "");
+      setCachePath(globalSettings.cache_path || "");
     }
   }, [globalSettings]);
 
-  const handleSelectStoragePath = async () => {
+  const handleSelectGranularPath = async (
+    setter: (p: string) => void,
+    title: string
+  ) => {
     try {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select YAGO Storage Directory",
+        title,
       });
-
       if (selected && typeof selected === "string") {
-        setStoragePath(selected);
+        setter(selected);
       }
     } catch (e) {
       console.error("Failed to select directory:", e);
@@ -66,6 +77,10 @@ export const SetupWizard: React.FC = () => {
       await updateGlobalSettings({
         ...globalSettings,
         yago_storage_path: storagePath,
+        mods_path: modsPath,
+        runners_path: runnersPath,
+        prefixes_path: prefixesPath,
+        cache_path: cachePath,
       });
       setStep(isLinux ? 1 : 2);
     }
@@ -204,12 +219,87 @@ export const SetupWizard: React.FC = () => {
                         className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
                       />
                       <button
-                        onClick={handleSelectStoragePath}
+                        onClick={() =>
+                          handleSelectGranularPath(
+                            setStoragePath,
+                            "Select YAGO Storage Directory"
+                          )
+                        }
                         className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
                       >
                         <FolderOpen size={20} />
                       </button>
                     </div>
+
+                    <button
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-colors flex items-center gap-2 px-1"
+                    >
+                      {showAdvanced ? "Hide" : "Show"} Advanced Path Options
+                    </button>
+
+                    <AnimatePresence>
+                      {showAdvanced && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="space-y-4 overflow-hidden"
+                        >
+                          <div className="grid grid-cols-1 gap-4">
+                            {[
+                              {
+                                label: "Mods Path",
+                                value: modsPath,
+                                setter: setModsPath,
+                              },
+                              {
+                                label: "Runners Path",
+                                value: runnersPath,
+                                setter: setRunnersPath,
+                              },
+                              {
+                                label: "Prefixes Path",
+                                value: prefixesPath,
+                                setter: setPrefixesPath,
+                              },
+                              {
+                                label: "Cache Path",
+                                value: cachePath,
+                                setter: setCachePath,
+                              },
+                            ].map(item => (
+                              <div key={item.label} className="space-y-1.5">
+                                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+                                  {item.label}
+                                </label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={item.value}
+                                    onChange={e => item.setter(e.target.value)}
+                                    placeholder="Use Storage Default"
+                                    className="flex-1 bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      handleSelectGranularPath(
+                                        item.setter,
+                                        `Select ${item.label}`
+                                      )
+                                    }
+                                    className="px-3 bg-white/5 border border-white/5 rounded-xl text-slate-500 hover:text-slate-300"
+                                  >
+                                    <FolderOpen size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     {!storagePath && (
                       <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 p-3 rounded-xl border border-amber-400/10">
                         <AlertCircle size={14} /> Recommended: Choose a path

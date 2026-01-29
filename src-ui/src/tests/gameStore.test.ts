@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useAppStore } from "../store/gameStore";
-import { api } from "../lib/api";
+import { api, GlobalSettings } from "../lib/api";
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -61,16 +61,20 @@ describe("gameStore", () => {
       has_common_loaders: true,
       detected_steam_path: null,
     });
-    const mockSettings = {
-      language: "en-US",
-      steam_compat_tools_path: "",
-      wine_prefix_path: "",
-      yago_storage_path: "",
-      default_runner_id: null,
-      stream_safe: true,
-      nsfw_behavior: "blur" as const,
-      close_on_launch: false,
-    };
+  const mockSettings: GlobalSettings = {
+    language: "en-US",
+    steam_compat_tools_path: "/test/steam",
+    wine_prefix_path: "/test/wine",
+    yago_storage_path: "/test/yago",
+    mods_path: "",
+    runners_path: "",
+    prefixes_path: "",
+    cache_path: "",
+    default_runner_id: null,
+    stream_safe: true,
+    nsfw_behavior: "blur",
+    close_on_launch: false,
+  };
 
     const mockLibrary = {
       "genshinimpact.exe": {

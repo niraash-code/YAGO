@@ -16,6 +16,14 @@ pub struct GamePaths {
     pub prefix: PathBuf,
 }
 
+pub struct LibrarianConfig {
+    pub base_path: PathBuf,
+    pub mods_path: Option<PathBuf>,
+    pub runners_path: Option<PathBuf>,
+    pub prefixes_path: Option<PathBuf>,
+    pub cache_path: Option<PathBuf>,
+}
+
 pub struct Librarian {
     pub base_path: PathBuf,
     pub games_root: PathBuf,
@@ -25,33 +33,54 @@ pub struct Librarian {
     pub loaders_root: PathBuf,
     pub prefixes_root: PathBuf,
     pub cache_root: PathBuf,
+    pub mods_root: PathBuf,
 }
 
 impl Librarian {
-    pub fn new(base_path: PathBuf) -> Self {
+    pub fn new(config: LibrarianConfig) -> Self {
         let mut s = Self {
-            base_path: base_path.clone(),
-            games_root: base_path.join("games"),
-            assets_root: base_path.join("assets"),
-            templates_root: base_path.join("templates"),
-            runners_root: base_path.join("runners"),
-            loaders_root: base_path.join("loaders"),
-            prefixes_root: base_path.join("prefixes"),
-            cache_root: base_path.join("cache"),
+            base_path: config.base_path.clone(),
+            games_root: config.base_path.join("games"),
+            assets_root: config.base_path.join("assets"),
+            templates_root: config.base_path.join("templates"),
+            runners_root: config
+                .runners_path
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| config.base_path.join("runners")),
+            loaders_root: config.base_path.join("loaders"),
+            prefixes_root: config
+                .prefixes_path
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| config.base_path.join("prefixes")),
+            cache_root: config
+                .cache_path
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| config.base_path.join("cache")),
+            mods_root: config
+                .mods_path
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| config.base_path.join("mods")),
         };
-        s.update_roots(base_path);
+        s.update_roots(config);
         s
     }
 
-    pub fn update_roots(&mut self, base_path: PathBuf) {
-        self.base_path = base_path.clone();
-        self.games_root = base_path.join("games");
-        self.assets_root = base_path.join("assets");
-        self.templates_root = base_path.join("templates");
-        self.runners_root = base_path.join("runners");
-        self.loaders_root = base_path.join("loaders");
-        self.prefixes_root = base_path.join("prefixes");
-        self.cache_root = base_path.join("cache");
+    pub fn update_roots(&mut self, config: LibrarianConfig) {
+        let base = config.base_path;
+        self.base_path = base.clone();
+        self.games_root = base.join("games");
+        self.assets_root = base.join("assets");
+        self.templates_root = base.join("templates");
+        self.loaders_root = base.join("loaders");
+
+        self.runners_root = config.runners_path.unwrap_or_else(|| base.join("runners"));
+        self.prefixes_root = config.prefixes_path.unwrap_or_else(|| base.join("prefixes"));
+        self.cache_root = config.cache_path.unwrap_or_else(|| base.join("cache"));
+        self.mods_root = config.mods_path.unwrap_or_else(|| base.join("mods"));
     }
 
     pub fn ensure_core_dirs(&self) -> Result<()> {
@@ -63,9 +92,10 @@ impl Librarian {
             &self.loaders_root,
             &self.prefixes_root,
             &self.cache_root,
+            &self.mods_root,
         ];
         for dir in dirs {
-            if !dir.exists() {
+            if !dir.exists() && !dir.as_os_str().is_empty() {
                 std::fs::create_dir_all(dir)?;
             }
         }
@@ -76,7 +106,7 @@ impl Librarian {
         let root = self.games_root.join(game_id);
         GamePaths {
             root: root.clone(),
-            mods: root.join("mods"),
+            mods: self.mods_root.join(game_id),
             db: root.join("game.json"),
             profiles: root.join("profiles.json"),
             loader: self.loaders_root.join(game_id),

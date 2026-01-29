@@ -197,6 +197,10 @@ export interface GlobalSettings {
   steam_compat_tools_path: string; // PathBuf string
   wine_prefix_path: string;
   yago_storage_path: string;
+  mods_path: string;
+  runners_path: string;
+  prefixes_path: string;
+  cache_path: string;
   default_runner_id: string | null;
   stream_safe: boolean;
   nsfw_behavior: "blur" | "hide";

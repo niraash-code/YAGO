@@ -8,6 +8,10 @@ pub struct GlobalSettings {
     pub steam_compat_tools_path: PathBuf,
     pub wine_prefix_path: PathBuf,
     pub yago_storage_path: PathBuf,
+    pub mods_path: PathBuf,
+    pub runners_path: PathBuf,
+    pub prefixes_path: PathBuf,
+    pub cache_path: PathBuf,
     pub default_runner_id: Option<String>,
     pub language: String,
     pub stream_safe: bool,
@@ -20,7 +24,11 @@ impl Default for GlobalSettings {
         Self {
             steam_compat_tools_path: PathBuf::from(""),
             wine_prefix_path: PathBuf::from(""),
-            yago_storage_path: PathBuf::from(""), // Defaults to app_data_dir if empty
+            yago_storage_path: PathBuf::from(""),
+            mods_path: PathBuf::from(""),
+            runners_path: PathBuf::from(""),
+            prefixes_path: PathBuf::from(""),
+            cache_path: PathBuf::from(""),
             default_runner_id: None,
             language: "en-US".to_string(),
             stream_safe: true,

@@ -41,7 +41,6 @@ pub async fn update_settings(
     settings: GlobalSettings,
 ) -> Result<(), String> {
     let mut current_settings = state.global_settings.lock().await;
-    let old_storage_path = current_settings.yago_storage_path.clone();
 
     state
         .settings_manager
@@ -52,17 +51,23 @@ pub async fn update_settings(
     *current_settings = settings.clone();
 
     // If storage path changed, update Librarian
-    if settings.yago_storage_path != old_storage_path {
-        let base = if settings.yago_storage_path.as_os_str().is_empty() {
-            state.app_data_dir.clone()
-        } else {
-            settings.yago_storage_path.clone()
-        };
+    let base = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
 
-        let mut librarian = state.librarian.lock().await;
-        librarian.update_roots(base);
-        librarian.ensure_core_dirs().map_err(|e| e.to_string())?;
-    }
+    let lib_config = librarian::storage::LibrarianConfig {
+        base_path: base,
+        mods_path: if settings.mods_path.as_os_str().is_empty() { None } else { Some(settings.mods_path.clone()) },
+        runners_path: if settings.runners_path.as_os_str().is_empty() { None } else { Some(settings.runners_path.clone()) },
+        prefixes_path: if settings.prefixes_path.as_os_str().is_empty() { None } else { Some(settings.prefixes_path.clone()) },
+        cache_path: if settings.cache_path.as_os_str().is_empty() { None } else { Some(settings.cache_path.clone()) },
+    };
+
+    let mut librarian = state.librarian.lock().await;
+    librarian.update_roots(lib_config);
+    librarian.ensure_core_dirs().map_err(|e| e.to_string())?;
 
     let _ = app.emit("settings-updated", settings);
     Ok(())
