@@ -35,7 +35,13 @@ export const SetupWizard: React.FC = () => {
   } = useAppStore();
   const { showAlert } = useUiStore();
 
-  const isLinux = window.navigator.userAgent.includes("Linux");
+  const [isLinux, setIsLinux] = useState(false);
+
+  useEffect(() => {
+    const platform = window.navigator.userAgent.toLowerCase();
+    setIsLinux(platform.includes("linux"));
+  }, []);
+
   // Steps: 0: Storage, 1: Library, 2: Discovery, 3: Advanced, 4: Runners, 5: Loaders, 6: Done
   const [step, setStep] = useState<number>(0);
   const [detectedPath, setDetectedPath] = useState<string | null>(

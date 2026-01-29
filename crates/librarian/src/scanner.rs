@@ -123,12 +123,12 @@ pub fn scan_roots(
 
 #[cfg(target_os = "linux")]
 fn scan_linux(templates: &[GameTemplate]) -> Vec<DiscoveredGame> {
-    let home = std::env::var("HOME").unwrap_or_default();
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/home"));
     let candidates = vec![
-        PathBuf::from(&home).join("Games"),
-        PathBuf::from(&home).join(".steam/steam/steamapps/common"),
-        PathBuf::from(&home).join(".local/share/steam/steamapps/common"),
-        PathBuf::from(&home).join(".local/share/lutris/runners/wine"),
+        home.join("Games"),
+        home.join(".steam/steam/steamapps/common"),
+        home.join(".local/share/steam/steamapps/common"),
+        home.join(".local/share/lutris/runners/wine"),
     ];
 
     scan_roots(templates, candidates, 5)
@@ -139,12 +139,26 @@ pub fn check_path(path: &Path, templates: &[GameTemplate], results: &mut Vec<Dis
     for t in templates {
         for exe in &t.executables {
             let exe_path = path.join(exe);
-            if exe_path.exists() {
+            if exe_path.exists() && exe_path.is_file() {
                 results.push(DiscoveredGame {
                     template_id: t.id.clone(),
                     path: exe_path,
                 });
                 break;
+            }
+
+            // Linux fallback: try without .exe if not present
+            #[cfg(target_os = "linux")]
+            if exe.to_lowercase().ends_with(".exe") {
+                let stem = exe.trim_end_matches(".exe");
+                let stem_path = path.join(stem);
+                if stem_path.exists() && stem_path.is_file() {
+                    results.push(DiscoveredGame {
+                        template_id: t.id.clone(),
+                        path: stem_path,
+                    });
+                    break;
+                }
             }
         }
     }
