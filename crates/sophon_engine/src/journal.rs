@@ -1,5 +1,5 @@
 use crate::error::Result;
-use librarian::models::{PatchJournal, PatchStatus, PatchEntry};
+use librarian::models::{PatchJournal, PatchStatus};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 

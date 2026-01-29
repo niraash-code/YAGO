@@ -1,4 +1,4 @@
-use sophon_engine::orchestrator::{ChunkOrchestrator, ChunkWork, OrchestratorEvent};
+use sophon_engine::orchestrator::ChunkOrchestrator;
 use sophon_engine::protocol::{
     FileChunkReference, ManifestCategory, ManifestFile, ManifestStats, SophonManifest,
 };

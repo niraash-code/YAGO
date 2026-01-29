@@ -24,7 +24,6 @@ pub struct DownloadTask {
 
 pub struct Downloader {
     client: reqwest::Client,
-    max_concurrent_downloads: usize,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -39,7 +38,6 @@ impl Default for Downloader {
     fn default() -> Self {
         Self {
             client: reqwest::Client::new(),
-            max_concurrent_downloads: 4,
         }
     }
 }
