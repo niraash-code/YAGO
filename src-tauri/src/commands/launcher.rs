@@ -15,6 +15,12 @@ pub async fn resolve_runner_path(
 ) -> (PathBuf, RunnerType) {
     println!("Marshal: Resolving runner for ID: {:?}", rid_opt);
 
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        app_data_dir.to_path_buf()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+
     let find_proton = |dir: PathBuf| -> Option<PathBuf> {
         let possible = ["proton", "proton.sh", "files/bin/proton"];
         for p in possible {
@@ -27,7 +33,7 @@ pub async fn resolve_runner_path(
     };
 
     if let Some(rid) = rid_opt {
-        let local_dir = app_data_dir.join("runners").join(&rid);
+        let local_dir = base_storage.join("runners").join(&rid);
         let settings_dir = settings.steam_compat_tools_path.join(&rid);
 
         if let Some(p) = find_proton(local_dir.clone()) {
@@ -151,7 +157,16 @@ pub async fn deploy_mods(
     }
     let (plan, report) =
         logic_weaver::generate_deployment_plan(profiles_for_weaver).map_err(|e| e.to_string())?;
-    let loaders_root = state.app_data_dir.join("loaders").join(&game_id);
+
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let loaders_root = base_storage.join("loaders").join(&game_id);
     fs_engine::execute_deployment(&loaders_root, &plan, Some("Mods")).map_err(|e| e.to_string())?;
     let game_mods_dir = game_root.join("Mods");
     let virtual_mods_dir = loaders_root.join("Mods");
@@ -282,9 +297,11 @@ pub async fn update_game_config(
             }
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -319,6 +336,7 @@ pub async fn launch_game(
             profile_data_dir,
             enable_linux_shield,
             modloader_enabled,
+            base_storage,
         ) = {
             let dbs = state.game_dbs.lock().await;
             let db = dbs.get(&game_id).ok_or("Game not found")?;
@@ -326,7 +344,16 @@ pub async fn launch_game(
             let p_uuid = Uuid::parse_str(&config.active_profile_id).map_err(|e| e.to_string())?;
             let profile = db.profiles.get(&p_uuid).ok_or("Profile missing")?.clone();
             let settings = state.global_settings.lock().await.clone();
-            let profile_data_dir = state.librarian.get_profile_data_dir(&game_id, &p_uuid);
+            let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+                state.app_data_dir.clone()
+            } else {
+                settings.yago_storage_path.clone()
+            };
+            let profile_data_dir = state
+                .librarian
+                .lock()
+                .await
+                .get_profile_data_dir(&game_id, &p_uuid);
             (
                 config.exe_path.clone(),
                 config.exe_name.clone(),
@@ -340,6 +367,7 @@ pub async fn launch_game(
                 profile_data_dir,
                 config.enable_linux_shield,
                 config.modloader_enabled,
+                base_storage,
             )
         };
         let method = if modloader_enabled {
@@ -359,7 +387,7 @@ pub async fn launch_game(
             if !settings.wine_prefix_path.as_os_str().is_empty() {
                 settings.wine_prefix_path.clone()
             } else {
-                state.app_data_dir.join("prefixes").join(&game_id)
+                base_storage.join("prefixes").join(&game_id)
             }
         });
 
@@ -397,7 +425,7 @@ pub async fn launch_game(
             use_gamemode: profile.use_gamemode,
             use_mangohud: profile.use_mangohud,
             injection_method: method,
-            loader_path: Some(state.app_data_dir.join("loaders").join(&game_id)),
+            loader_path: Some(base_storage.join("loaders").join(&game_id)),
             injected_dlls: vec![],
             resolution: profile.resolution.unwrap_or((1920, 1080)),
             fps_target: None,
@@ -426,7 +454,7 @@ pub async fn launch_game(
                 .await
                 .map_err(|e| e.to_string())?;
         }
-        let loaders_root = state.app_data_dir.join("loaders");
+        let loaders_root = base_storage.join("loaders");
         if method == proc_marshal::InjectionMethod::Proxy {
             LoaderContext::install_loader(
                 &game_dir,

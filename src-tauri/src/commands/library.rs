@@ -38,7 +38,7 @@ pub async fn initialize_remote_game(
         .ok_or_else(|| format!("Template {} not found", template_id))?;
 
     let game_id = template_id.clone();
-    let game_dir = state.librarian.games_root.join(&game_id);
+    let game_dir = state.librarian.lock().await.games_root.join(&game_id);
     let db_path = game_dir.join("game.json");
 
     if !game_dir.exists() {
@@ -100,9 +100,11 @@ pub async fn initialize_remote_game(
 
         state
             .librarian
+            .lock()
+            .await
             .save_game_db(&game_id, &db)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e: librarian::LibrarianError| e.to_string())?;
 
         let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
             state.game_dbs.lock().await;
@@ -355,7 +357,7 @@ pub async fn identify_game(
     let mut version = "Unknown".to_string();
     if exe_path.exists() {
         let path_clone = exe_path.clone();
-        if let Ok(Ok(v)) =
+        if let Ok(Ok(v)) = 
             tauri::async_runtime::spawn_blocking(move || ExeInspector::get_version(&path_clone))
                 .await
         {
@@ -462,12 +464,14 @@ pub async fn sync_game_assets(
 
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
 
             let _ = app.emit("library-updated", dbs.clone());
-            return Ok(());
+            return Ok(())
         }
     }
 
@@ -483,14 +487,27 @@ pub async fn add_game(
     let path_buf = PathBuf::from(&path);
     let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, librarian::GameTemplate>> =
         state.game_templates.lock().await;
-    let game_id = Discovery::add_game_by_path(&state.librarian, path_buf, &templates_guard)
-        .await
-        .map_err(|e| e.to_string())?;
+    
+    let game_id = {
+        let librarian = state.librarian.lock().await;
+        Discovery::add_game_by_path(&librarian, path_buf, &templates_guard)
+            .await
+            .map_err(|e| e.to_string())?
+    };
     drop(templates_guard);
     #[cfg(target_os = "linux")]
     {
         let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-        let prefix_path = app_data_dir.join("prefixes").join(&game_id);
+        
+        let settings = state.global_settings.lock().await;
+        let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+            app_data_dir.clone()
+        } else {
+            settings.yago_storage_path.clone()
+        };
+        drop(settings);
+
+        let prefix_path = base_storage.join("prefixes").join(&game_id);
         if !prefix_path.exists() {
             std::fs::create_dir_all(prefix_path.join("pfx")).map_err(|e| e.to_string())?;
         }
@@ -501,13 +518,21 @@ pub async fn add_game(
                 config.prefix_path = Some(prefix_path);
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: librarian::LibrarianError| e.to_string())?;
             }
         }
     }
-    if let Ok(db) = state.librarian.load_game_db(&game_id).await {
+    
+    let db_res = {
+        let librarian = state.librarian.lock().await;
+        librarian.load_game_db(&game_id).await
+    };
+
+    if let Ok(db) = db_res {
         let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
             state.game_dbs.lock().await;
         dbs.insert(game_id.clone(), db);
@@ -525,9 +550,11 @@ pub async fn remove_game(
     let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
         state.game_dbs.lock().await;
     if let Some(db) = dbs.remove(&game_id) {
-        let game_dir = state.librarian.games_root.join(&game_id);
-        if game_dir.exists() {
-            std::fs::remove_dir_all(game_dir).map_err(|e| e.to_string())?;
+        let librarian = state.librarian.lock().await;
+        let game_paths = librarian.game_paths(&game_id);
+        
+        if game_paths.root.exists() {
+            std::fs::remove_dir_all(game_paths.root).map_err(|e| e.to_string())?;
         }
         #[cfg(target_os = "linux")]
         {
@@ -540,14 +567,15 @@ pub async fn remove_game(
             }
         }
         let _ = app.emit("library-updated", dbs.clone());
-        return Ok(());
+        return Ok(())
     }
     Err("Game not found".to_string())
 }
 
 #[tauri::command]
 pub async fn scan_for_games(state: State<'_, AppState>) -> Result<Vec<DiscoveredGame>, String> {
-    let templates_root = state.app_data_dir.join("templates");
+    let librarian = state.librarian.lock().await;
+    let templates_root = &librarian.templates_root;
     if !templates_root.exists() {
         return Ok(vec![]);
     }
@@ -563,7 +591,10 @@ pub async fn sync_templates(
     _app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let templates_root = state.app_data_dir.join("templates");
+    let librarian = state.librarian.lock().await;
+    let templates_root = librarian.templates_root.clone();
+    drop(librarian);
+
     if !templates_root.exists() {
         std::fs::create_dir_all(&templates_root).map_err(|e| e.to_string())?;
     }
@@ -578,7 +609,8 @@ pub async fn sync_templates(
 #[tauri::command]
 pub async fn list_runners(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     let mut runners = std::collections::HashSet::new();
-    let runners_dir = state.app_data_dir.join("runners");
+    let librarian = state.librarian.lock().await;
+    let runners_dir = &librarian.runners_root;
     if runners_dir.exists() {
         if let Ok(entries) = std::fs::read_dir(runners_dir) {
             for entry in entries.filter_map(|e| e.ok()) {
@@ -588,6 +620,8 @@ pub async fn list_runners(state: State<'_, AppState>) -> Result<Vec<String>, Str
             }
         }
     }
+    drop(librarian);
+
     let settings = state.global_settings.lock().await;
     if !settings.steam_compat_tools_path.as_os_str().is_empty()
         && settings.steam_compat_tools_path.exists()
@@ -607,7 +641,8 @@ pub async fn list_runners(state: State<'_, AppState>) -> Result<Vec<String>, Str
 
 #[tauri::command]
 pub async fn remove_runner(state: State<'_, AppState>, runner_id: String) -> Result<(), String> {
-    let runners_dir = state.app_data_dir.join("runners").join(&runner_id);
+    let librarian = state.librarian.lock().await;
+    let runners_dir = librarian.runners_root.join(&runner_id);
     if !runners_dir.exists() {
         return Err("Runner not found".to_string());
     }

@@ -33,31 +33,43 @@ export const SetupWizard: React.FC = () => {
   const { showAlert } = useUiStore();
 
   const isLinux = window.navigator.userAgent.includes("Linux");
-  const [step, setStep] = useState<1 | 2 | 3>(isLinux ? 1 : 2);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [detectedPath, setDetectedPath] = useState<string | null>(
     setupStatus?.detected_steam_path || null
   );
+  const [storagePath, setStoragePath] = useState<string>("");
 
-  // Auto-progress logic disabled - let user click continue for better UX and state stability
-  /*
   useEffect(() => {
-    if (step === 1 && setupStatus?.has_runners && !detectedPath) {
-        setStep(2);
+    if (globalSettings) {
+      setStoragePath(globalSettings.yago_storage_path || "");
     }
-    if (step === 2 && setupStatus?.has_common_loaders) {
-        setStep(3);
-    }
-  }, [step, setupStatus, detectedPath]);
-  */
+  }, [globalSettings]);
 
-  // Refresh status on complete disabled here - we do it manually on handleComplete
-  /*
-  useEffect(() => {
-    if (protonState.status === 'done' || loaderState.status === 'done') {
-        refreshSetupStatus();
+  const handleSelectStoragePath = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Select YAGO Storage Directory",
+      });
+
+      if (selected && typeof selected === "string") {
+        setStoragePath(selected);
+      }
+    } catch (e) {
+      console.error("Failed to select directory:", e);
     }
-  }, [protonState.status, loaderState.status, refreshSetupStatus]);
-  */
+  };
+
+  const handleConfirmStorage = async () => {
+    if (globalSettings) {
+      await updateGlobalSettings({
+        ...globalSettings,
+        yago_storage_path: storagePath,
+      });
+      setStep(isLinux ? 1 : 2);
+    }
+  };
 
   const handleSelectExistingProton = async () => {
     try {
@@ -137,7 +149,7 @@ export const SetupWizard: React.FC = () => {
         {/* Steps Progress */}
         <div className="px-10 mb-8">
           <div className="flex items-center justify-center gap-3">
-            {[1, 2, 3].map(s => {
+            {[0, 1, 2, 3].map(s => {
               if (s === 1 && !isLinux) return null;
               return (
                 <div
@@ -159,6 +171,63 @@ export const SetupWizard: React.FC = () => {
         {/* Step Content */}
         <div className="flex-1 px-10 pb-10 flex flex-col justify-center min-h-[300px]">
           <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div
+                key="step0"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div className="bg-white/5 rounded-3xl p-8 border border-white/5 flex flex-col items-center text-center gap-6 group hover:bg-white/[0.07] transition-colors">
+                  <div className="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <FolderOpen size={40} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white mb-2">
+                      Storage Location
+                    </h2>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Choose where YAGO will store your game library, mods, and
+                      cached assets. You can use your internal drive or an
+                      external SSD.
+                    </p>
+                  </div>
+
+                  <div className="w-full space-y-4">
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={storagePath}
+                        onChange={e => setStoragePath(e.target.value)}
+                        placeholder="Default (App Data)"
+                        className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                      />
+                      <button
+                        onClick={handleSelectStoragePath}
+                        className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
+                      >
+                        <FolderOpen size={20} />
+                      </button>
+                    </div>
+                    {!storagePath && (
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 p-3 rounded-xl border border-amber-400/10">
+                        <AlertCircle size={14} /> Recommended: Choose a path
+                        with at least 100GB free space.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleConfirmStorage}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                >
+                  Continue to Components <ArrowRight size={20} />
+                </button>
+              </motion.div>
+            )}
+
             {step === 1 && (
               <motion.div
                 key="step1"

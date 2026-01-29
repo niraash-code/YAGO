@@ -26,7 +26,7 @@ use safety::Emergency;
 // State Container - Public so commands can access it
 pub struct AppState {
     pub app_data_dir: PathBuf,
-    pub librarian: Arc<Librarian>,
+    pub librarian: Arc<Mutex<Librarian>>,
     pub game_templates: Arc<Mutex<HashMap<String, GameTemplate>>>,
     pub game_dbs: Arc<Mutex<HashMap<String, LibraryDatabase>>>,
     pub running_game_name: Arc<Mutex<Option<String>>>,
@@ -113,7 +113,6 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            // ...
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -121,9 +120,6 @@ pub fn run() {
                         .build(),
                 )?;
             }
-
-            // Register Panic Switch (F12)
-            // Handled in Builder
 
             // Paths
             let app_handle = app.handle();
@@ -138,21 +134,16 @@ pub fn run() {
                 settings_manager.load().await.unwrap_or_default()
             });
 
-            // Initialize Librarian
-            let games_root = app_data_dir.join("games");
-            let assets_root = app_data_dir.join("assets");
-            let templates_root = app_data_dir.join("templates");
+            // Determine Roots
+            let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+                app_data_dir.clone()
+            } else {
+                settings.yago_storage_path.clone()
+            };
 
-            if !games_root.exists() {
-                std::fs::create_dir_all(&games_root).expect("failed to create games directory");
-            }
-            if !assets_root.exists() {
-                std::fs::create_dir_all(&assets_root).expect("failed to create assets directory");
-            }
-            if !templates_root.exists() {
-                std::fs::create_dir_all(&templates_root)
-                    .expect("failed to create templates directory");
-            }
+            // Initialize Librarian
+            let librarian = Librarian::new(base_storage);
+            librarian.ensure_core_dirs().expect("failed to ensure core directories");
 
             // EXTRACT BUNDLED ASSETS
             // 1. App Config (to root)
@@ -164,7 +155,7 @@ pub fn run() {
             }
 
             // 2. Hashes (to assets/)
-            let hashes_path = assets_root.join("hashes.json");
+            let hashes_path = librarian.assets_root.join("hashes.json");
             if !hashes_path.exists() {
                 if let Some(file) = ASSETS_DIR.get_file("hashes.json") {
                     let _ = std::fs::write(&hashes_path, file.contents());
@@ -175,7 +166,7 @@ pub fn run() {
             if let Some(dir) = ASSETS_DIR.get_dir("templates") {
                 println!("Extracting {} templates and assets...", dir.entries().len());
                 for file in dir.files() {
-                    let dest = templates_root.join(file.path().file_name().unwrap());
+                    let dest = librarian.templates_root.join(file.path().file_name().unwrap());
                     if let Err(e) = std::fs::write(&dest, file.contents()) {
                         eprintln!("Failed to extract {:?}: {}", dest, e);
                     }
@@ -185,21 +176,15 @@ pub fn run() {
             // Load Config
             let app_config = Arc::new(Mutex::new(AppConfig::load(config_path)));
 
-            let librarian = Arc::new(Librarian::new(games_root, assets_root));
-
-            let registry = TemplateRegistry::new(templates_root.clone());
+            let registry = TemplateRegistry::new(librarian.templates_root.clone());
             let templates: HashMap<String, GameTemplate> = tauri::async_runtime::block_on(async {
                 registry.load_all().await.unwrap_or_default()
             });
             println!(
                 "Loaded {} game templates from {:?}.",
                 templates.len(),
-                templates_root
+                librarian.templates_root
             );
-
-            if let Some(t) = templates.get("genshin") {
-                println!("Genshin cover: {}", t.cover_image);
-            }
 
             // Load all game DBs
             let game_dbs = tauri::async_runtime::block_on(async {
@@ -216,7 +201,7 @@ pub fn run() {
 
             app.manage(AppState {
                 app_data_dir: app_data_dir.clone(),
-                librarian,
+                librarian: Arc::new(Mutex::new(librarian)),
                 game_templates: Arc::new(Mutex::new(templates)),
                 game_dbs: Arc::new(Mutex::new(game_dbs)),
                 running_game_name: Arc::new(Mutex::new(None)),

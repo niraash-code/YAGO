@@ -18,9 +18,11 @@ pub async fn switch_profile(
                 config.active_profile_id = profile_id;
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: librarian::LibrarianError| e.to_string())?;
                 let _ = app.emit("library-updated", dbs.clone());
                 return Ok(());
             }
@@ -38,9 +40,11 @@ pub async fn create_profile(
 ) -> Result<Profile, String> {
     let profile = state
         .librarian
+        .lock()
+        .await
         .create_profile(&game_id, name)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: librarian::LibrarianError| e.to_string())?;
     let mut dbs = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         db.profiles.insert(profile.id, profile.clone());
@@ -59,9 +63,11 @@ pub async fn duplicate_profile(
 ) -> Result<Profile, String> {
     let profile = state
         .librarian
+        .lock()
+        .await
         .duplicate_profile(&game_id, profile_id, name)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: librarian::LibrarianError| e.to_string())?;
     let mut dbs = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         db.profiles.insert(profile.id, profile.clone());
@@ -117,9 +123,11 @@ pub async fn update_profile(
             }
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -148,9 +156,11 @@ pub async fn delete_profile(
         if db.profiles.remove(&p_uuid).is_some() {
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -173,9 +183,11 @@ pub async fn rename_profile(
             profile.name = new_name;
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -198,9 +210,11 @@ pub async fn set_load_order(
                 profile.load_order = order;
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: librarian::LibrarianError| e.to_string())?;
                 let _ = app.emit("library-updated", dbs.clone());
                 return Ok(());
             }

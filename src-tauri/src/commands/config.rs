@@ -40,13 +40,30 @@ pub async fn update_settings(
     state: State<'_, AppState>,
     settings: GlobalSettings,
 ) -> Result<(), String> {
+    let mut current_settings = state.global_settings.lock().await;
+    let old_storage_path = current_settings.yago_storage_path.clone();
+
     state
         .settings_manager
         .save(&settings)
         .await
         .map_err(|e| e.to_string())?;
-    let mut current = state.global_settings.lock().await;
-    *current = settings.clone();
+
+    *current_settings = settings.clone();
+
+    // If storage path changed, update Librarian
+    if settings.yago_storage_path != old_storage_path {
+        let base = if settings.yago_storage_path.as_os_str().is_empty() {
+            state.app_data_dir.clone()
+        } else {
+            settings.yago_storage_path.clone()
+        };
+
+        let mut librarian = state.librarian.lock().await;
+        librarian.update_roots(base);
+        librarian.ensure_core_dirs().map_err(|e| e.to_string())?;
+    }
+
     let _ = app.emit("settings-updated", settings);
     Ok(())
 }

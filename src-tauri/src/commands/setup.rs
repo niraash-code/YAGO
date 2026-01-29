@@ -4,32 +4,47 @@ use tauri::State;
 
 #[tauri::command]
 pub async fn check_setup(state: State<'_, AppState>) -> Result<bool, String> {
-    let runners_dir = state.app_data_dir.join("runners");
-    if !runners_dir.exists() {
+    // 1. Check if settings.json exists
+    let settings_path = state.app_data_dir.join("settings.json");
+    if !settings_path.exists() {
         return Ok(false);
     }
-    let entries = std::fs::read_dir(runners_dir).map_err(|e| e.to_string())?;
-    Ok(entries.count() > 0)
+
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    // 2. Check for common loaders
+    let common_loaders = base_storage.join("loaders").join("common");
+    if !common_loaders.exists() || !common_loaders.join("d3d11.dll").exists() {
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 #[tauri::command]
-pub async fn get_setup_status(
-    state: State<'_, AppState>,
-) -> Result<super::library::SetupStatus, String> {
-    let runners_dir = state.app_data_dir.join("runners");
-    let has_runners = runners_dir.exists()
-        && std::fs::read_dir(runners_dir)
-            .map(|e| e.count() > 0)
-            .unwrap_or(false);
+pub async fn get_setup_status(state: State<'_, AppState>) -> Result<super::library::SetupStatus, String> {
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
 
-    let common_loaders = state.app_data_dir.join("loaders").join("common");
+    let runners_dir = base_storage.join("runners");
+    let has_runners = runners_dir.exists() && std::fs::read_dir(runners_dir).map(|e| e.count() > 0).unwrap_or(false);
+
+    let common_loaders = base_storage.join("loaders").join("common");
     let has_common_loaders = common_loaders.exists()
-        && common_loaders.join("d3d11.dll").exists()
-        && common_loaders.join("3dmloader.dll").exists();
+        && common_loaders.join("d3d11.dll").exists();
 
-    let detected_steam = crate::commands::library::detect_steam_proton_path_internal()
-        .await
-        .unwrap_or(None);
+    let detected_steam = crate::commands::library::detect_steam_proton_path_internal().await.unwrap_or(None);
 
     Ok(super::library::SetupStatus {
         has_runners,
@@ -60,12 +75,25 @@ pub async fn install_common_libs(
     _app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let common_path = base_storage.join("loaders").join("common");
+    if !common_path.exists() {
+        std::fs::create_dir_all(&common_path).map_err(|e| e.to_string())?;
+    }
+
     let repo = {
         let config = state.app_config.lock().await;
         config.common_loader_repo.clone()
     };
 
-    println!("Installing common libs from {}", repo);
+    println!("Installing common libs from {} to {:?}", repo, common_path);
     // Logic to download from GitHub
     Ok(())
 }
@@ -76,8 +104,16 @@ pub async fn download_loader(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<(), String> {
-    let path = state.app_data_dir.join("loaders").join(&game_id);
-    let common_path = state.app_data_dir.join("loaders").join("common");
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let path = base_storage.join("loaders").join(&game_id);
+    let common_path = base_storage.join("loaders").join("common");
 
     if let Some(repo) = {
         let guard = state.game_templates.lock().await;
@@ -87,7 +123,7 @@ pub async fn download_loader(
             std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
             // Mock download
             println!("Downloading loader for {} from {}", game_id, repo);
-
+            
             // XXMI: Handle potential INI renaming (main.ini -> d3dx.ini)
             let main_ini = path.join("main.ini");
             let d3dx_ini = path.join("d3dx.ini");
@@ -125,13 +161,19 @@ pub async fn ensure_game_resources(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<(), String> {
-    let _path = state.app_data_dir.join("loaders").join(&game_id);
-    let common_path = state.app_data_dir.join("loaders").join("common");
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let common_path = base_storage.join("loaders").join("common");
 
     // 1. Check Common Libs
     let common_exists = common_path.exists()
-        && common_path.join("d3d11.dll").exists()
-        && common_path.join("3dmloader.dll").exists();
+        && common_path.join("d3d11.dll").exists();
 
     if !common_exists {
         println!("EnsureResources: Common libs missing. Installing...");
@@ -149,10 +191,18 @@ pub async fn download_proton(
     _app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    let settings = state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
     let repo = {
         let config = state.app_config.lock().await;
         config.proton_repo.clone()
     };
-    println!("Downloading Proton from {}", repo);
+    println!("Downloading Proton from {} to {:?}", repo, base_storage.join("runners"));
     Ok(())
 }

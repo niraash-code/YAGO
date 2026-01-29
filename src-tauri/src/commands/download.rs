@@ -160,6 +160,8 @@ async fn update_game_status(
             config.install_status = status;
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(game_id, db)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -181,6 +183,8 @@ async fn update_game_status_internal(
             config.install_status = status;
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(game_id, db)
                 .await
                 .map_err(|e| e.to_string())?;

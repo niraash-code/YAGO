@@ -12,10 +12,12 @@ pub async fn import_mod(
     path: String,
 ) -> Result<ModRecord, String> {
     let path_buf = PathBuf::from(path);
-    let record =
-        librarian::import::Importer::import_mod(&state.librarian, path_buf, game_id.clone())
+    let record = {
+        let librarian = state.librarian.lock().await;
+        librarian::import::Importer::import_mod(&librarian, path_buf, game_id.clone())
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())?
+    };
 
     let mut dbs = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
@@ -65,9 +67,11 @@ pub async fn delete_mod(
 
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -102,9 +106,11 @@ pub async fn toggle_mod(
 
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: librarian::LibrarianError| e.to_string())?;
                 let _ = app.emit("library-updated", dbs.clone());
                 return Ok(());
             }
@@ -130,9 +136,11 @@ pub async fn update_mod_tags(
             record.config.tags = tags;
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: librarian::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }

@@ -7,88 +7,97 @@ use std::path::PathBuf;
 use tokio::fs;
 use uuid::Uuid;
 
+pub struct GamePaths {
+    pub root: PathBuf,
+    pub mods: PathBuf,
+    pub db: PathBuf,
+    pub profiles: PathBuf,
+    pub loader: PathBuf,
+    pub prefix: PathBuf,
+}
+
 pub struct Librarian {
+    pub base_path: PathBuf,
     pub games_root: PathBuf,
     pub assets_root: PathBuf,
-}
-
-pub struct TemplateRegistry {
     pub templates_root: PathBuf,
-}
-
-impl TemplateRegistry {
-    pub fn new(templates_root: PathBuf) -> Self {
-        Self { templates_root }
-    }
-
-    /// Loads all templates from the templates directory
-    pub async fn load_all(&self) -> Result<HashMap<String, GameTemplate>> {
-        let mut templates = HashMap::new();
-        if !self.templates_root.exists() {
-            return Ok(templates);
-        }
-
-        let template_vec = crate::template::load_templates(&self.templates_root)?;
-
-        for template in template_vec {
-            // Index by executables
-            if !template.executables.is_empty() {
-                for exe in &template.executables {
-                    templates.insert(exe.to_lowercase(), template.clone());
-                }
-            }
-
-            // Also index by normalized template ID (usually the filename stem)
-            templates.insert(template.id.to_lowercase(), template);
-        }
-
-        Ok(templates)
-    }
+    pub runners_root: PathBuf,
+    pub loaders_root: PathBuf,
+    pub prefixes_root: PathBuf,
+    pub cache_root: PathBuf,
 }
 
 impl Librarian {
-    pub fn new(games_root: PathBuf, assets_root: PathBuf) -> Self {
-        Self {
-            games_root,
-            assets_root,
+    pub fn new(base_path: PathBuf) -> Self {
+        let mut s = Self {
+            base_path: base_path.clone(),
+            games_root: base_path.join("games"),
+            assets_root: base_path.join("assets"),
+            templates_root: base_path.join("templates"),
+            runners_root: base_path.join("runners"),
+            loaders_root: base_path.join("loaders"),
+            prefixes_root: base_path.join("prefixes"),
+            cache_root: base_path.join("cache"),
+        };
+        s.update_roots(base_path);
+        s
+    }
+
+    pub fn update_roots(&mut self, base_path: PathBuf) {
+        self.base_path = base_path.clone();
+        self.games_root = base_path.join("games");
+        self.assets_root = base_path.join("assets");
+        self.templates_root = base_path.join("templates");
+        self.runners_root = base_path.join("runners");
+        self.loaders_root = base_path.join("loaders");
+        self.prefixes_root = base_path.join("prefixes");
+        self.cache_root = base_path.join("cache");
+    }
+
+    pub fn ensure_core_dirs(&self) -> Result<()> {
+        let dirs = [
+            &self.games_root,
+            &self.assets_root,
+            &self.templates_root,
+            &self.runners_root,
+            &self.loaders_root,
+            &self.prefixes_root,
+            &self.cache_root,
+        ];
+        for dir in dirs {
+            if !dir.exists() {
+                std::fs::create_dir_all(dir)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn game_paths(&self, game_id: &str) -> GamePaths {
+        let root = self.games_root.join(game_id);
+        GamePaths {
+            root: root.clone(),
+            mods: root.join("mods"),
+            db: root.join("game.json"),
+            profiles: root.join("profiles.json"),
+            loader: self.loaders_root.join(game_id),
+            prefix: self.prefixes_root.join(game_id),
         }
     }
 
-    /// Resolves the path to a specific game's directory
-    pub fn get_game_dir(&self, game_id: &str) -> PathBuf {
-        self.games_root.join(game_id)
-    }
-
-    /// Resolves the path to a specific game's JSON database
-    pub fn get_db_path(&self, game_id: &str) -> PathBuf {
-        self.get_game_dir(game_id).join("game.json")
-    }
-
-    /// Resolves the path to a specific game's mods directory
-    pub fn get_mods_dir(&self, game_id: &str) -> PathBuf {
-        self.get_game_dir(game_id).join("mods")
-    }
-
-    /// Resolves the path to a specific game's profiles JSON
-    pub fn get_profiles_path(&self, game_id: &str) -> PathBuf {
-        self.get_game_dir(game_id).join("profiles.json")
-    }
-
-    /// Resolves the path to a specific profile's data directory (for sandboxing)
     pub fn get_profile_data_dir(&self, game_id: &str, profile_id: &Uuid) -> PathBuf {
-        self.get_game_dir(game_id)
+        self.games_root
+            .join(game_id)
             .join("profiles")
             .join(profile_id.to_string())
     }
 
     pub async fn load_game_db(&self, game_id: &str) -> Result<LibraryDatabase> {
-        let path = self.get_db_path(game_id);
-        let profiles_path = self.get_profiles_path(game_id);
+        let paths = self.game_paths(game_id);
 
         println!("Librarian: Loading database for {}", game_id);
 
-        let mut db = if path.exists() {
-            let content = fs::read_to_string(&path).await?;
+        let mut db = if paths.db.exists() {
+            let content = fs::read_to_string(&paths.db).await?;
             serde_json::from_str::<LibraryDatabase>(&content).map_err(|e| {
                 eprintln!(
                     "Librarian ERROR: Failed to parse game.json for {}: {}",
@@ -109,8 +118,8 @@ impl Librarian {
         let mut needs_save = false;
 
         // Load Profiles separately
-        if profiles_path.exists() {
-            let content = fs::read_to_string(&profiles_path).await?;
+        if paths.profiles.exists() {
+            let content = fs::read_to_string(&paths.profiles).await?;
             if let Ok(profiles) =
                 serde_json::from_str::<HashMap<uuid::Uuid, crate::models::Profile>>(&content)
             {
@@ -145,24 +154,22 @@ impl Librarian {
     }
 
     pub async fn save_game_db(&self, game_id: &str, db: &LibraryDatabase) -> Result<()> {
-        let game_dir = self.get_game_dir(game_id);
-        if !game_dir.exists() {
-            fs::create_dir_all(&game_dir).await?;
+        let paths = self.game_paths(game_id);
+        if !paths.root.exists() {
+            fs::create_dir_all(&paths.root).await?;
         }
 
         // 1. Save game.json (Games + Mods)
-        let path = self.get_db_path(game_id);
         let mut db_clone = db.clone();
         db_clone.profiles = HashMap::new(); // Don't save profiles in game.json
 
         let content = serde_json::to_string_pretty(&db_clone)?;
-        fs::write(&path, content).await?;
+        fs::write(&paths.db, content).await?;
 
         // 2. Save profiles.json
         if !db.profiles.is_empty() {
-            let profiles_path = self.get_profiles_path(game_id);
             let p_content = serde_json::to_string_pretty(&db.profiles)?;
-            fs::write(&profiles_path, p_content).await?;
+            fs::write(&paths.profiles, p_content).await?;
         }
 
         Ok(())
@@ -226,5 +233,39 @@ impl Librarian {
         db.profiles.insert(new_profile.id, new_profile.clone());
         self.save_game_db(game_id, &db).await?;
         Ok(new_profile)
+    }
+}
+
+pub struct TemplateRegistry {
+    pub templates_root: PathBuf,
+}
+
+impl TemplateRegistry {
+    pub fn new(templates_root: PathBuf) -> Self {
+        Self { templates_root }
+    }
+
+    /// Loads all templates from the templates directory
+    pub async fn load_all(&self) -> Result<HashMap<String, GameTemplate>> {
+        let mut templates = HashMap::new();
+        if !self.templates_root.exists() {
+            return Ok(templates);
+        }
+
+        let template_vec = crate::template::load_templates(&self.templates_root)?;
+
+        for template in template_vec {
+            // Index by executables
+            if !template.executables.is_empty() {
+                for exe in &template.executables {
+                    templates.insert(exe.to_lowercase(), template.clone());
+                }
+            }
+
+            // Also index by normalized template ID (usually the filename stem)
+            templates.insert(template.id.to_lowercase(), template);
+        }
+
+        Ok(templates)
     }
 }

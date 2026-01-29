@@ -61,8 +61,8 @@ impl Importer {
 
         if let Some(preset_path) = potential_preset {
             // It's a preset!
-            let game_dir = librarian.get_game_dir(&game_id);
-            let presets_dir = game_dir.join("reshade_presets");
+            let game_paths = librarian.game_paths(&game_id);
+            let presets_dir = game_paths.root.join("reshade_presets");
             if !presets_dir.exists() {
                 std::fs::create_dir_all(&presets_dir)?;
             }
@@ -118,7 +118,8 @@ impl Importer {
         // If we want nested root stripping, we'd do it here, but let's stick to the prompt's logic.
 
         let mod_id = Uuid::new_v4();
-        let game_mods_dir = librarian.get_mods_dir(&game_id);
+        let game_paths = librarian.game_paths(&game_id);
+        let game_mods_dir = game_paths.mods;
         if !game_mods_dir.exists() {
             std::fs::create_dir_all(&game_mods_dir)?;
         }
