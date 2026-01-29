@@ -90,6 +90,20 @@ pub async fn update_settings(
     librarian.update_roots(lib_config);
     librarian.ensure_core_dirs().map_err(|e| e.to_string())?;
 
+    // Re-extract templates to the new path
+    if let Some(dir) = crate::ASSETS_DIR.get_dir("templates") {
+        println!(
+            "Re-extracting {} templates to new storage path...",
+            dir.entries().len()
+        );
+        for file in dir.files() {
+            let dest = librarian.templates_root.join(file.path().file_name().unwrap());
+            if let Err(e) = std::fs::write(&dest, file.contents()) {
+                eprintln!("Failed to extract {:?}: {}", dest, e);
+            }
+        }
+    }
+
     let _ = app.emit("settings-updated", settings);
     Ok(())
 }

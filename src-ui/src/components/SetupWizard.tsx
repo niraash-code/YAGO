@@ -55,6 +55,7 @@ export const SetupWizard: React.FC = () => {
   const [defaultGamesPath, setDefaultGamesPath] = useState("");
   const [discoveredGames, setFoundGames] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (globalSettings) {

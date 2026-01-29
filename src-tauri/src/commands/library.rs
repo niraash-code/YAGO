@@ -381,6 +381,17 @@ pub async fn identify_game(
     if let Some(t) = template {
         let t_cloned = t.clone();
         drop(templates_guard);
+
+        let resolve_asset = |name: &str| -> String {
+            if name.is_empty() {
+                return "".to_string();
+            }
+            let librarian_guard = tauri::async_runtime::block_on(async { state.librarian.lock().await });
+            let path = librarian_guard.templates_root.join(name);
+            let path_str = path.to_string_lossy().to_string();
+            format!("yago-asset://{}", urlencoding::encode(&path_str))
+        };
+
         Ok(IdentifiedGame {
             id: game_id,
             name: t_cloned.name,
@@ -392,8 +403,8 @@ pub async fn identify_game(
             regions: t_cloned.regions,
             color: t_cloned.color,
             accent_color: t_cloned.accent_color,
-            cover_image: t_cloned.cover_image,
-            icon: t_cloned.icon,
+            cover_image: resolve_asset(&t_cloned.cover_image),
+            icon: resolve_asset(&t_cloned.icon),
             logo_initial: t_cloned.logo_initial,
             install_path: install_path.to_string_lossy().to_string(),
             exe_name,
@@ -470,8 +481,19 @@ pub async fn sync_game_assets(
     if let (Some(db), Some(template)) = (dbs.get_mut(&game_id), templates.get(&game_id)) {
         if let Some(config) = db.games.get_mut(&game_id) {
             println!("Syncing assets for {}: using local templates", game_id);
-            config.cover_image = template.cover_image.clone();
-            config.icon = template.icon.clone();
+
+            let librarian = state.librarian.lock().await;
+            let resolve_asset = |name: &str| -> String {
+                if name.is_empty() {
+                    return "".to_string();
+                }
+                let path = librarian.templates_root.join(name);
+                let path_str = path.to_string_lossy().to_string();
+                format!("yago-asset://{}", urlencoding::encode(&path_str))
+            };
+
+            config.cover_image = resolve_asset(&template.cover_image);
+            config.icon = resolve_asset(&template.icon);
             config.accent_color = template.accent_color.clone();
             config.color = template.color.clone();
             config.logo_initial = template.logo_initial.clone();
