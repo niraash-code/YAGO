@@ -293,7 +293,7 @@ const App: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onUninstall={uninstallGame}
-        game={selectedGame}
+        game={selectedGame as any}
       />
       <AddGameModal
         isOpen={isAddGameOpen}

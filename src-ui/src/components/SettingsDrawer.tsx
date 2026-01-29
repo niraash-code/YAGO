@@ -39,6 +39,10 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const { showAlert, showConfirm } = useUiStore();
 
   const isLinux = window.navigator.userAgent.includes("Linux");
+
+  // Early return if game is null to prevent initialization errors
+  if (!game) return null;
+
   const activeProfile =
     game.profiles.find(p => p.id === game.activeProfileId) || game.profiles[0];
 
@@ -65,9 +69,9 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const [localSavePath, setLocalSavePath] = useState(
     activeProfile?.saveDataPath || ""
   );
-  const [localProfileName, setLocalProfileName] = useState(activeProfile.name);
+  const [localProfileName, setLocalProfileName] = useState(activeProfile?.name || "");
   const [localProfileDescription, setLocalProfileDescription] = useState(
-    activeProfile.description
+    activeProfile?.description || ""
   );
   const [localFpsPattern, setLocalFpsPattern] = useState(
     game.fpsConfig?.search_pattern || ""
@@ -77,6 +81,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   );
 
   useEffect(() => {
+    if (!game) return;
     setLocalName(game.name);
     setLocalDeveloper(game.developer);
     setLocalDescription(game.description);
@@ -88,8 +93,8 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     setLocalGlobalLaunchArgs(game.launchArgs?.join(" ") || "");
     setLocalLaunchArgs(activeProfile?.launchArgs?.join(" ") || "");
     setLocalSavePath(activeProfile?.saveDataPath || "");
-    setLocalProfileName(activeProfile.name);
-    setLocalProfileDescription(activeProfile.description);
+    setLocalProfileName(activeProfile?.name || "");
+    setLocalProfileDescription(activeProfile?.description || "");
     setLocalFpsPattern(game.fpsConfig?.search_pattern || "");
     setLocalFpsOffset(game.fpsConfig?.offset || 0);
   }, [game, activeProfile]);

@@ -28,13 +28,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <div className="absolute inset-0 z-0 rounded-xl overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
-            key={selectedGameId || "none"}
+            key={selectedGameId || "empty-library"}
             initial={{ opacity: 0, scale: 1.05 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.7, ease: "easeInOut" }}
             className="absolute inset-0"
-            style={backgroundStyle}
+            style={selectedGameId ? backgroundStyle : { backgroundColor: '#020617' }}
           />
         </AnimatePresence>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/70 to-transparent" />

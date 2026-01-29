@@ -112,129 +112,138 @@ const Sidebar: React.FC<SidebarProps> = ({
           ref={parentRef}
           className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar"
         >
-          <div
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative",
-            }}
-          >
-            <LayoutGroup>
-              {rowVirtualizer.getVirtualItems().map(virtualItem => {
-                const game = games[virtualItem.index];
-                const isSelected = selectedGameId === game.id;
+          {games.length > 0 ? (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              <LayoutGroup>
+                {rowVirtualizer.getVirtualItems().map(virtualItem => {
+                  const game = games[virtualItem.index];
+                  const isSelected = selectedGameId === game.id;
 
-                return (
-                  <div
-                    key={game.id}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                      paddingBottom: "8px",
-                    }}
-                  >
-                    <button
-                      onClick={() => selectGame(game.id)}
-                      className={cn(
-                        "w-full h-full group relative flex items-center px-4 rounded-2xl transition-all duration-300 outline-none overflow-hidden",
-                        isSelected
-                          ? "bg-indigo-500/10 ring-1 ring-white/10 shadow-lg"
-                          : "hover:bg-white/5"
-                      )}
+                  return (
+                    <div
+                      key={game.id}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: `${virtualItem.size}px`,
+                        transform: `translateY(${virtualItem.start}px)`,
+                        paddingBottom: "8px",
+                      }}
                     >
-                      <div className="relative z-10 flex items-center gap-4 w-full">
-                        {/* Game Icon */}
-                        <div
-                          className={cn(
-                            "relative w-20 h-10 rounded-lg overflow-hidden bg-slate-950/40 border transition-all duration-500 shrink-0 flex items-center justify-center p-1",
-                            isSelected
-                              ? "border-white/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]"
-                              : "border-white/5 group-hover:border-white/10"
-                          )}
-                        >
-                          {game.icon ? (
-                            <img
-                              src={game.icon}
-                              alt={game.name}
-                              className={cn(
-                                "w-full h-full object-contain transition-all duration-500",
-                                isSelected
-                                  ? "opacity-100 scale-105"
-                                  : "opacity-40 grayscale group-hover:opacity-80 group-hover:grayscale-0 group-hover:scale-110"
-                              )}
-                            />
-                          ) : (
-                            <div
-                              className="w-full h-full flex items-center justify-center font-black text-sm text-white/40 italic"
-                              style={{ color: game.accentColor }}
-                            >
-                              {game.logoInitial}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Text Info */}
-                        <div className="flex-1 text-left min-w-0">
+                      <button
+                        onClick={() => selectGame(game.id)}
+                        className={cn(
+                          "w-full h-full group relative flex items-center px-4 rounded-2xl transition-all duration-300 outline-none overflow-hidden",
+                          isSelected
+                            ? "bg-indigo-500/10 ring-1 ring-white/10 shadow-lg"
+                            : "hover:bg-white/5"
+                        )}
+                      >
+                        <div className="relative z-10 flex items-center gap-4 w-full">
+                          {/* Game Icon */}
                           <div
                             className={cn(
-                              "font-black text-[13px] truncate transition-colors uppercase tracking-tight",
+                              "relative w-20 h-10 rounded-lg overflow-hidden bg-slate-950/40 border transition-all duration-500 shrink-0 flex items-center justify-center p-1",
                               isSelected
-                                ? "text-white"
-                                : "text-slate-500 group-hover:text-slate-300"
+                                ? "border-white/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]"
+                                : "border-white/5 group-hover:border-white/10"
                             )}
                           >
-                            {game.name}
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-1">
-                            {game.status === InstallStatus.PLAYING ? (
-                              <span className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-black uppercase tracking-tighter">
-                                <Play size={10} fill="currentColor" /> Live
-                              </span>
-                            ) : game.status === InstallStatus.UPDATING ||
-                              game.status === InstallStatus.DOWNLOADING ? (
-                              <span className="flex items-center gap-1.5 text-[10px] text-yellow-500 font-black uppercase tracking-tighter animate-pulse">
-                                <RefreshCw size={10} className="animate-spin" />{" "}
-                                Sync
-                              </span>
-                            ) : game.status === InstallStatus.REMOTE ? (
-                              <span className="flex items-center gap-1.5 text-[10px] text-slate-500 font-black uppercase tracking-tighter">
-                                <Cloud size={10} /> Cloud
-                              </span>
-                            ) : (
-                              <span
+                            {game.icon ? (
+                              <img
+                                src={game.icon}
+                                alt={game.name}
                                 className={cn(
-                                  "text-[10px] font-black uppercase tracking-tighter",
+                                  "w-full h-full object-contain transition-all duration-500",
                                   isSelected
-                                    ? "text-slate-400"
-                                    : "text-slate-600"
+                                    ? "opacity-100 scale-105"
+                                    : "opacity-40 grayscale group-hover:opacity-80 group-hover:grayscale-0 group-hover:scale-110"
                                 )}
+                              />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center font-black text-sm text-white/40 italic"
+                                style={{ color: game.accentColor }}
                               >
-                                {game.regions} Regions
-                              </span>
+                                {game.logoInitial}
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Active Indicator Bar */}
-                      {isSelected && (
-                        <motion.div
-                          layoutId="activeBar"
-                          className="absolute right-0 top-4 bottom-4 w-1 rounded-l-full shadow-[0_0_15px_currentColor]"
-                          style={{ backgroundColor: game.accentColor }}
-                        />
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </LayoutGroup>
-          </div>
+                          {/* Text Info */}
+                          <div className="flex-1 text-left min-w-0">
+                            <div
+                              className={cn(
+                                "font-black text-[13px] truncate transition-colors uppercase tracking-tight",
+                                isSelected
+                                  ? "text-white"
+                                  : "text-slate-500 group-hover:text-slate-300"
+                              )}
+                            >
+                              {game.name}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1">
+                              {game.status === InstallStatus.PLAYING ? (
+                                <span className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-black uppercase tracking-tighter">
+                                  <Play size={10} fill="currentColor" /> Live
+                                </span>
+                              ) : game.status === InstallStatus.UPDATING ||
+                                game.status === InstallStatus.DOWNLOADING ? (
+                                <span className="flex items-center gap-1.5 text-[10px] text-yellow-500 font-black uppercase tracking-tighter animate-pulse">
+                                  <RefreshCw size={10} className="animate-spin" />{" "}
+                                  Sync
+                                </span>
+                              ) : game.status === InstallStatus.REMOTE ? (
+                                <span className="flex items-center gap-1.5 text-[10px] text-slate-500 font-black uppercase tracking-tighter">
+                                  <Cloud size={10} /> Cloud
+                                </span>
+                              ) : (
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-black uppercase tracking-tighter",
+                                    isSelected
+                                      ? "text-slate-400"
+                                      : "text-slate-600"
+                                  )}
+                                >
+                                  {game.regions} Regions
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Active Indicator Bar */}
+                        {isSelected && (
+                          <motion.div
+                            layoutId="activeBar"
+                            className="absolute right-0 top-4 bottom-4 w-1 rounded-l-full shadow-[0_0_15px_currentColor]"
+                            style={{ backgroundColor: game.accentColor }}
+                          />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </LayoutGroup>
+            </div>
+          ) : (
+            <div className="h-32 flex flex-col items-center justify-center gap-3 text-slate-600 border border-dashed border-white/5 rounded-2xl bg-white/5 p-4 text-center">
+              <Ghost size={24} className="opacity-20" />
+              <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                Vault is Empty
+              </p>
+            </div>
+          )}
 
           {/* Add Game Button - Restored & Enlarged */}
           <div className="pt-2">
