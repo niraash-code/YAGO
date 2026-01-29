@@ -5,7 +5,7 @@ pub mod safety;
 pub mod transcoder;
 pub mod vfs;
 
-pub use archive::{extract_and_sanitize, ExtractionReport};
+pub use archive::{extract_and_sanitize, extract_targz, ExtractionReport};
 pub use error::{FsError, Result};
 pub use inspector::ExeInspector;
 pub use safety::Safety;
