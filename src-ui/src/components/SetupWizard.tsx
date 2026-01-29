@@ -80,10 +80,12 @@ export const SetupWizard: React.FC = () => {
   };
 
   const handleConfirmStorage = async () => {
+    await saveAllPaths();
     setStep(1);
   };
 
   const handleConfirmLibrary = async () => {
+    await saveAllPaths();
     if (defaultGamesPath) {
       setStep(2);
       startAutoDiscovery();
@@ -141,7 +143,16 @@ export const SetupWizard: React.FC = () => {
         }
       });
       const resolved = (await Promise.all(gamePromises)).filter(g => g !== null);
-      setFoundGames(resolved);
+      
+      // Deduplicate by ID
+      const uniqueMap = new Map();
+      resolved.forEach(g => {
+        if (g && !uniqueMap.has(g.id)) {
+          uniqueMap.set(g.id, g);
+        }
+      });
+      
+      setFoundGames(Array.from(uniqueMap.values()));
     } catch (e) {
       console.error("Discovery failed:", e);
     } finally {
@@ -220,10 +231,24 @@ export const SetupWizard: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    // Final save of all storage paths just in case
-    await saveAllPaths();
-    // Refresh the global setup state to transition to the main app
-    await refreshSetupStatus();
+    setIsLoading(true);
+    try {
+      // Final save of all storage paths just in case
+      await saveAllPaths();
+      // Refresh the global setup state to transition to the main app
+      await refreshSetupStatus();
+      
+      // Small delay to let store update
+      setTimeout(() => {
+        if (useAppStore.getState().isSetupRequired) {
+          showAlert("The system still requires initialization. Please ensure all components are downloaded.", "Setup Incomplete");
+          setIsLoading(false);
+        }
+      }, 500);
+    } catch (e) {
+      showAlert("Initialization failed: " + e, "Error");
+      setIsLoading(false);
+    }
   };
 
   const prevStep = () => {
@@ -430,7 +455,7 @@ export const SetupWizard: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar border-y border-white/5 py-4">
                   {isScanning ? (
                     <div className="h-32 flex items-center justify-center">
                       <Loader2 size={40} className="text-indigo-500 animate-spin" />
@@ -439,9 +464,9 @@ export const SetupWizard: React.FC = () => {
                     discoveredGames.map(game => (
                       <div
                         key={game.id}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group hover:bg-white/10 transition-all"
+                        className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5 group hover:bg-white/10 transition-all"
                       >
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-inner">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-inner shrink-0">
                           {game.logoInitial}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -454,7 +479,7 @@ export const SetupWizard: React.FC = () => {
                         </div>
                         <button
                           onClick={() => addDiscoveredGame(game)}
-                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shrink-0"
                         >
                           Add
                         </button>
@@ -769,9 +794,17 @@ export const SetupWizard: React.FC = () => {
 
                 <button
                   onClick={handleComplete}
-                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2rem] font-black text-lg transition-all shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95"
+                  disabled={isLoading}
+                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2rem] font-black text-lg transition-all shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-wait flex items-center justify-center gap-3"
                 >
-                  Enter Library
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={24} className="animate-spin" />
+                      Syncing State...
+                    </>
+                  ) : (
+                    "Enter Library"
+                  )}
                 </button>
               </motion.div>
             )}

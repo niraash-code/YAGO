@@ -187,6 +187,20 @@ pub struct FileNode {
     pub children: Option<Vec<FileNode>>,
 }
 
+#[derive(serde::Serialize, Clone)]
+pub struct LoaderProgress {
+    pub game_id: String,
+    pub status: String,
+    pub progress: f64,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct ProtonProgress {
+    pub version: String,
+    pub status: String,
+    pub progress: f64,
+}
+
 #[derive(serde::Serialize)]
 pub struct SetupStatus {
     pub has_runners: bool,
