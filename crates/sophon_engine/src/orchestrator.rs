@@ -110,6 +110,9 @@ impl ChunkOrchestrator {
             .await
             .map_err(|_| SophonError::Interrupted)?;
 
+        // Pre-allocate files
+        self.allocate_files().await?;
+
         let (tx_work, rx_work) = async_channel::bounded::<ChunkWork>(self.worker_count * 2);
         let rx_work = Arc::new(rx_work);
         let client = Arc::new(self.client.clone());
@@ -154,6 +157,33 @@ impl ChunkOrchestrator {
             .send(OrchestratorEvent::Completed)
             .await
             .map_err(|_| SophonError::Interrupted)?;
+
+        Ok(())
+    }
+
+    async fn allocate_files(&self) -> Result<()> {
+        let files = self.manifest.files.clone();
+        let target_dir = self.target_dir.clone();
+
+        task::spawn_blocking(move || -> Result<()> {
+            for file_entry in files {
+                let full_path = target_dir.join(&file_entry.name);
+                if let Some(parent) = full_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                
+                // Open for write/create and set length
+                let file = fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .open(&full_path)?;
+                
+                file.set_len(file_entry.size)?;
+            }
+            Ok(())
+        })
+        .await
+        .map_err(|e| SophonError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))??;
 
         Ok(())
     }
