@@ -21,6 +21,13 @@ pub struct ChunkWork {
     pub chunk_id: String,
     pub size: u64,
     pub targets: Vec<TargetLocation>,
+    pub patch_source: Option<PatchSource>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PatchSource {
+    pub old_chunk_id: String,
+    pub diff_url: String,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +90,7 @@ impl ChunkOrchestrator {
                         chunk_id: chunk_ref.chunk_id.clone(),
                         size: chunk_ref.size,
                         targets: Vec::new(),
+                        patch_source: None,
                     });
 
                 entry.targets.push(TargetLocation {
@@ -237,14 +245,16 @@ impl ChunkOrchestrator {
         target_dir: &Path,
         base_url: &str,
     ) -> Result<()> {
-        let url = format!("{}/{}", base_url.trim_end_matches('/'), work.chunk_id);
-        
         let max_attempts = 2;
         let mut last_error = None;
 
         for attempt in 1..=max_attempts {
-            // 1. Download with internal network retry
-            let data_res = Self::download_with_retry(client, &url).await;
+            let data_res = if let Some(patch) = &work.patch_source {
+                Self::process_patch(client, work, patch, target_dir).await
+            } else {
+                let url = format!("{}/{}", base_url.trim_end_matches('/'), work.chunk_id);
+                Self::download_with_retry(client, &url).await
+            };
             
             match data_res {
                 Ok(data) => {
@@ -293,7 +303,7 @@ impl ChunkOrchestrator {
                 }
                 Err(e) => {
                      let err = e;
-                     eprintln!("Chunk {} download failed: {} (Attempt {}/{})", work.chunk_id, err, attempt, max_attempts);
+                     eprintln!("Chunk {} processing failed: {} (Attempt {}/{})", work.chunk_id, err, attempt, max_attempts);
                      last_error = Some(err);
                 }
             }
@@ -304,6 +314,39 @@ impl ChunkOrchestrator {
         }
 
         Err(last_error.unwrap_or_else(|| SophonError::Interrupted))
+    }
+
+    async fn process_patch(
+        client: &SophonClient,
+        _work: &ChunkWork,
+        patch: &PatchSource,
+        _target_dir: &Path,
+    ) -> Result<Vec<u8>> {
+        // 1. Download Diff
+        let diff_data = client.download_raw(&patch.diff_url).await?;
+
+        // 2. Get Old Data
+        // For Sophon, chunks might be inside existing files or in a chunk cache.
+        // If it's a "Repair" or "Delta", we assume the old chunk is on disk somewhere.
+        // For MVP, we'll try to find any target that already exists and has the old chunk.
+        // Actually, Sophon patching usually happens at the chunk level.
+        
+        let mut old_chunk_data = Vec::new();
+        // Search targets for the old chunk? This is tricky because chunk boundaries might change.
+        // Usually Sophon patch manifests provide the exact location of the source data.
+        
+        // Mocking source data retrieval for now
+        old_chunk_data.push(0); 
+
+        // 3. Apply Patch
+        let mut new_chunk_data = Vec::new();
+        crate::patcher::Patcher::apply_patch(
+            &mut std::io::Cursor::new(old_chunk_data),
+            &mut std::io::Cursor::new(diff_data),
+            &mut std::io::Cursor::new(&mut new_chunk_data),
+        )?;
+
+        Ok(new_chunk_data)
     }
 
     async fn download_with_retry(client: &SophonClient, url: &str) -> Result<Vec<u8>> {

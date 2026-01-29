@@ -8,6 +8,15 @@ pub struct SophonManifest {
     pub categories: Vec<ManifestCategory>,
     pub files: Vec<ManifestFile>,
     pub stats: ManifestStats,
+    #[serde(default)]
+    pub diff_packages: Vec<DiffPackage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiffPackage {
+    pub from_version: String,
+    pub manifest_url: String,
+    pub patch_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

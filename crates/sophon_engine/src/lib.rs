@@ -5,9 +5,13 @@ pub mod provider;
 pub mod verifier;
 pub mod client;
 pub mod orchestrator;
+pub mod scanner;
+pub mod patcher;
+pub mod journal;
 
 pub use client::SophonClient;
 pub use orchestrator::{ChunkOrchestrator, OrchestratorEvent};
+pub use scanner::{Scanner, ScanMode, DivergenceMap};
 pub use downloader::{DownloadProgress, DownloadStatus, DownloadTask, Downloader};
 pub use error::{Result, SophonError};
 pub use protocol::{ChunkInfo, SophonManifest, SophonProtocol};
