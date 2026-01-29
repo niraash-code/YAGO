@@ -2666,6 +2666,7 @@ name = "librarian"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dirs",
  "fs_engine",
  "reqwest 0.12.28",
  "serde",
