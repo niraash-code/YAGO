@@ -242,28 +242,48 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                   <Gamepad2 className="text-indigo-400" />
                   Hub Discovery
                 </h2>
-                <div className="flex items-center gap-4 mt-1">
+                <div className="flex items-center gap-6 mt-2">
                   <button
                     onClick={() => setStep("initial")}
                     className={cn(
-                      "text-xs font-bold uppercase tracking-widest",
-                      step === "initial"
+                      "text-sm font-black uppercase tracking-[0.2em] transition-all relative pb-1",
+                      step === "initial" ||
+                        step === "scanning" ||
+                        step === "results" ||
+                        step === "manual" ||
+                        step === "duplicate"
                         ? "text-indigo-400"
                         : "text-slate-500 hover:text-slate-300"
                     )}
                   >
                     Local
+                    {(step === "initial" ||
+                      step === "scanning" ||
+                      step === "results" ||
+                      step === "manual" ||
+                      step === "duplicate") && (
+                      <motion.div
+                        layoutId="activeTab"
+                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-indigo-500"
+                      />
+                    )}
                   </button>
                   <button
                     onClick={fetchCatalog}
                     className={cn(
-                      "text-xs font-bold uppercase tracking-widest",
+                      "text-sm font-black uppercase tracking-[0.2em] transition-all relative pb-1",
                       step === "discover"
                         ? "text-indigo-400"
                         : "text-slate-500 hover:text-slate-300"
                     )}
                   >
                     Cloud
+                    {step === "discover" && (
+                      <motion.div
+                        layoutId="activeTab"
+                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-indigo-500"
+                      />
+                    )}
                   </button>
                 </div>
               </div>

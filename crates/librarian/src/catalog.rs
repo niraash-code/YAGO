@@ -19,10 +19,16 @@ impl CatalogManager {
     ) -> Result<Vec<RemoteCatalogEntry>> {
         let client = SophonClient::new();
         let mut entries = Vec::new();
+        let mut processed_template_ids = std::collections::HashSet::new();
 
         for (id, template) in templates {
+            // Deduplicate: If we already processed this template ID, skip
+            if !processed_template_ids.insert(template.id.clone()) {
+                continue;
+            }
+
             // Filter out already installed games
-            if installed_ids.contains(id) {
+            if installed_ids.contains(id) || installed_ids.contains(&template.id) {
                 continue;
             }
 
