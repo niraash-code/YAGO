@@ -5,13 +5,15 @@ import {
   CheckCircle2,
   Shield,
   Zap,
-  Box,
   ArrowRight,
   Loader2,
   Monitor,
-  AlertCircle,
   FolderOpen,
   Search,
+  HelpCircle,
+  Database,
+  Library,
+  ChevronLeft,
 } from "lucide-react";
 import { useAssetInstaller } from "../hooks/useAssetInstaller";
 import { useAppStore } from "../store/gameStore";
@@ -19,12 +21,12 @@ import { useUiStore } from "../store/uiStore";
 import { api } from "../lib/api";
 import { cn } from "../lib/utils";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Tooltip } from "./ui/Tooltip";
 
 export const SetupWizard: React.FC = () => {
   const { installState: protonState, installProton } = useAssetInstaller();
   const { installState: loaderState, installGameLoader } = useAssetInstaller();
   const {
-    isSetupRequired,
     globalSettings,
     updateGlobalSettings,
     setupStatus,
@@ -34,12 +36,12 @@ export const SetupWizard: React.FC = () => {
   const { showAlert } = useUiStore();
 
   const isLinux = window.navigator.userAgent.includes("Linux");
-  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+  // Steps: 0: Storage, 1: Library, 2: Discovery, 3: Advanced, 4: Runners, 5: Loaders, 6: Done
+  const [step, setStep] = useState<number>(0);
   const [detectedPath, setDetectedPath] = useState<string | null>(
     setupStatus?.detected_steam_path || null
   );
   const [storagePath, setStoragePath] = useState<string>("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [modsPath, setModsPath] = useState("");
   const [runnersPath, setRunnersPath] = useState("");
   const [prefixesPath, setPrefixesPath] = useState("");
@@ -78,6 +80,19 @@ export const SetupWizard: React.FC = () => {
   };
 
   const handleConfirmStorage = async () => {
+    setStep(1);
+  };
+
+  const handleConfirmLibrary = async () => {
+    if (defaultGamesPath) {
+      setStep(2);
+      startAutoDiscovery();
+    } else {
+      setStep(isLinux ? 4 : 5); // Skip discovery if no path
+    }
+  };
+
+  const saveAllPaths = async () => {
     if (globalSettings) {
       await updateGlobalSettings({
         ...globalSettings,
@@ -88,13 +103,6 @@ export const SetupWizard: React.FC = () => {
         prefixes_path: prefixesPath,
         cache_path: cachePath,
       });
-
-      if (defaultGamesPath) {
-        setStep(0.5 as any);
-        startAutoDiscovery();
-      } else {
-        setStep(isLinux ? 1 : 2);
-      }
     }
   };
 
@@ -132,9 +140,7 @@ export const SetupWizard: React.FC = () => {
           return null;
         }
       });
-      const resolved = (await Promise.all(gamePromises)).filter(
-        g => g !== null
-      );
+      const resolved = (await Promise.all(gamePromises)).filter(g => g !== null);
       setFoundGames(resolved);
     } catch (e) {
       console.error("Discovery failed:", e);
@@ -203,19 +209,27 @@ export const SetupWizard: React.FC = () => {
     }
   };
 
-  const handleConfirmPath = async () => {
+  const handleConfirmProtonPath = async () => {
     if (detectedPath && globalSettings) {
       await updateGlobalSettings({
         ...globalSettings,
         steam_compat_tools_path: detectedPath,
       });
-      setStep(2);
+      setStep(5);
     }
   };
 
   const handleComplete = async () => {
+    // Final save of all storage paths just in case
+    await saveAllPaths();
     // Refresh the global setup state to transition to the main app
     await refreshSetupStatus();
+  };
+
+  const prevStep = () => {
+    if (step === 4 && !isLinux) setStep(2);
+    else if (step === 0.5) setStep(0);
+    else setStep(s => s - 1);
   };
 
   return (
@@ -229,37 +243,42 @@ export const SetupWizard: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-slate-900/50 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden"
+        className="w-full max-w-xl bg-slate-900/50 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="p-10 pb-6 text-center">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-indigo-600/20">
-            <Shield size={32} />
+        <div className="p-8 pb-4 text-center relative">
+          {step > 0 && step < 6 && (
+            <button
+              onClick={prevStep}
+              className="absolute left-8 top-10 p-2 text-slate-500 hover:text-white transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
+          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-indigo-600/20">
+            <Shield size={24} />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight mb-2">
-            Initialize YAGO
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            {step === 0 ? "Storage Home" : step === 1 ? "Game Library" : step === 2 ? "Identify Titles" : step === 3 ? "Advanced Paths" : step === 4 ? "Compat Tools" : step === 5 ? "Mod Assets" : "Everything Ready"}
           </h1>
-          <p className="text-slate-400 font-medium max-w-md mx-auto">
-            We need to download core components to ensure your games run
-            smoothly with mods.
-          </p>
         </div>
 
         {/* Steps Progress */}
-        <div className="px-10 mb-8">
-          <div className="flex items-center justify-center gap-3">
-            {[0, 0.5, 1, 2, 3].map(s => {
-              if (s === 1 && !isLinux) return null;
+        <div className="px-10 mb-6">
+          <div className="flex items-center justify-center gap-2">
+            {[0, 1, 2, 3, 4, 5, 6].map(s => {
+              if (s === 4 && !isLinux) return null;
+              if (s === 3 && step !== 3) return null; // Only show advanced if we are in it
               return (
                 <div
                   key={s}
                   className={cn(
-                    "h-1.5 rounded-full transition-all duration-500",
+                    "h-1 rounded-full transition-all duration-500",
                     step === s
-                      ? "w-12 bg-indigo-500"
-                      : s < (step as number)
-                        ? "w-6 bg-emerald-500"
-                        : "w-6 bg-white/10"
+                      ? "w-8 bg-indigo-500"
+                      : s < step
+                        ? "w-4 bg-emerald-500"
+                        : "w-4 bg-white/10"
                   )}
                 />
               );
@@ -268,7 +287,7 @@ export const SetupWizard: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <div className="flex-1 px-10 pb-10 flex flex-col justify-center min-h-[300px]">
+        <div className="flex-1 px-10 pb-10 flex flex-col justify-center min-h-[320px]">
           <AnimatePresence mode="wait">
             {step === 0 && (
               <motion.div
@@ -276,156 +295,123 @@ export const SetupWizard: React.FC = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
+                className="space-y-6"
               >
-                <div className="bg-white/5 rounded-3xl p-8 border border-white/5 flex flex-col items-center text-center gap-6 group hover:bg-white/[0.07] transition-colors">
-                  <div className="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FolderOpen size={40} />
+                <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex flex-col items-center text-center gap-4 group hover:bg-white/[0.07] transition-colors">
+                  <div className="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Database size={32} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white mb-2">
-                      Storage & Library
-                    </h2>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                      Choose your storage and installation directories. We'll
-                      automatically scan your Games Root for supported titles.
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <h2 className="text-lg font-bold text-white">YAGO Storage</h2>
+                      <Tooltip content="Where YAGO stores internal data, mod files, and prefixes. High speed SSD recommended.">
+                        <HelpCircle size={14} className="text-slate-500 hover:text-indigo-400 cursor-help" />
+                      </Tooltip>
+                    </div>
+                    <p className="text-slate-400 text-xs leading-relaxed max-w-xs mx-auto">
+                      Choose a central location for your mods and environment data.
                     </p>
                   </div>
 
-                  <div className="w-full space-y-4">
-                    <div className="space-y-1.5 text-left">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-1">
-                        YAGO Storage (Mods, Prefixes, Runners)
-                      </label>
-                      <div className="flex gap-3">
-                        <input
-                          type="text"
-                          value={storagePath}
-                          onChange={e => setStoragePath(e.target.value)}
-                          placeholder="Default (App Data)"
-                          className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
-                        />
-                        <button
-                          onClick={() =>
-                            handleSelectGranularPath(
-                              setStoragePath,
-                              "Select YAGO Storage Directory"
-                            )
-                          }
-                          className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
-                        >
-                          <FolderOpen size={20} />
-                        </button>
-                      </div>
+                  <div className="w-full">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={storagePath}
+                        onChange={e => setStoragePath(e.target.value)}
+                        placeholder="Default (App Data)"
+                        className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                      />
+                      <button
+                        onClick={() =>
+                          handleSelectGranularPath(
+                            setStoragePath,
+                            "Select YAGO Storage Directory"
+                          )
+                        }
+                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-slate-400 transition-all"
+                      >
+                        <FolderOpen size={18} />
+                      </button>
                     </div>
+                  </div>
+                </div>
 
-                    <div className="space-y-1.5 text-left">
-                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-1">
-                        Games Root (Where games are installed)
-                      </label>
-                      <div className="flex gap-3">
-                        <input
-                          type="text"
-                          value={defaultGamesPath}
-                          onChange={e => setDefaultGamesPath(e.target.value)}
-                          placeholder="e.g., /home/user/Games"
-                          className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
-                        />
-                        <button
-                          onClick={() =>
-                            handleSelectGranularPath(
-                              setDefaultGamesPath,
-                              "Select Games Directory"
-                            )
-                          }
-                          className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
-                        >
-                          <FolderOpen size={20} />
-                        </button>
-                      </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleConfirmStorage}
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                  >
+                    Next Step <ArrowRight size={18} />
+                  </button>
+                  <button
+                    onClick={() => setStep(3)}
+                    className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-indigo-400 transition-colors"
+                  >
+                    Advanced Path Overrides
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex flex-col items-center text-center gap-4 group hover:bg-white/[0.07] transition-colors">
+                  <div className="w-16 h-16 bg-purple-500/10 text-purple-400 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Library size={32} />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <h2 className="text-lg font-bold text-white">Games Root</h2>
+                      <Tooltip content="The directory where your games are installed. YAGO will scan this to build your library.">
+                        <HelpCircle size={14} className="text-slate-500 hover:text-indigo-400 cursor-help" />
+                      </Tooltip>
                     </div>
+                    <p className="text-slate-400 text-xs leading-relaxed max-w-xs mx-auto">
+                      Point to your primary games directory for automatic discovery.
+                    </p>
+                  </div>
 
-                    <button
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-colors flex items-center gap-2 px-1"
-                    >
-                      {showAdvanced ? "Hide" : "Show"} Advanced Path Overrides
-                    </button>
-
-                    <AnimatePresence>
-                      {showAdvanced && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="space-y-4 overflow-hidden"
-                        >
-                          <div className="grid grid-cols-1 gap-4">
-                            {[
-                              {
-                                label: "Mods Path",
-                                value: modsPath,
-                                setter: setModsPath,
-                              },
-                              {
-                                label: "Runners Path",
-                                value: runnersPath,
-                                setter: setRunnersPath,
-                              },
-                              {
-                                label: "Prefixes Path",
-                                value: prefixesPath,
-                                setter: setPrefixesPath,
-                              },
-                              {
-                                label: "Cache Path",
-                                value: cachePath,
-                                setter: setCachePath,
-                              },
-                            ].map(item => (
-                              <div key={item.label} className="space-y-1.5">
-                                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-1">
-                                  {item.label}
-                                </label>
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={item.value}
-                                    onChange={e => item.setter(e.target.value)}
-                                    placeholder="Use Storage Default"
-                                    className="flex-1 bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-all"
-                                  />
-                                  <button
-                                    onClick={() =>
-                                      handleSelectGranularPath(
-                                        item.setter,
-                                        `Select ${item.label}`
-                                      )
-                                    }
-                                    className="px-3 bg-white/5 border border-white/5 rounded-xl text-slate-500 hover:text-slate-300"
-                                  >
-                                    <FolderOpen size={14} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  <div className="w-full">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={defaultGamesPath}
+                        onChange={e => setDefaultGamesPath(e.target.value)}
+                        placeholder="e.g., /home/user/Games"
+                        className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
+                      />
+                      <button
+                        onClick={() =>
+                          handleSelectGranularPath(
+                            setDefaultGamesPath,
+                            "Select Games Directory"
+                          )
+                        }
+                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-slate-400 transition-all"
+                      >
+                        <FolderOpen size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 <button
-                  onClick={handleConfirmStorage}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                  onClick={handleConfirmLibrary}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
                 >
-                  Continue <ArrowRight size={20} />
+                  Start Discovery <ArrowRight size={18} />
                 </button>
               </motion.div>
             )}
 
-            {step === (0.5 as any) && (
+            {step === 2 && (
               <motion.div
                 key="stepDiscovery"
                 initial={{ opacity: 0, x: 20 }}
@@ -433,45 +419,42 @@ export const SetupWizard: React.FC = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
-                <div className="text-center mb-4">
+                <div className="text-center">
                   <h2 className="text-xl font-bold text-white mb-1 uppercase tracking-tighter italic">
                     {isScanning ? "Scanning Library..." : "Games Identified"}
                   </h2>
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
                     {isScanning
-                      ? "Looking for supported titles 3 levels deep..."
-                      : `${discoveredGames.length} titles found in your games root.`}
+                      ? "Looking for supported titles 4 levels deep..."
+                      : `${discoveredGames.length} titles found in your root.`}
                   </p>
                 </div>
 
-                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                   {isScanning ? (
-                    <div className="h-40 flex items-center justify-center">
-                      <Loader2
-                        size={48}
-                        className="text-indigo-500 animate-spin"
-                      />
+                    <div className="h-32 flex items-center justify-center">
+                      <Loader2 size={40} className="text-indigo-500 animate-spin" />
                     </div>
                   ) : discoveredGames.length > 0 ? (
                     discoveredGames.map(game => (
                       <div
                         key={game.id}
-                        className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 group hover:bg-white/10 transition-all"
+                        className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group hover:bg-white/10 transition-all"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-inner">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-inner">
                           {game.logoInitial}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-white truncate">
+                          <h4 className="font-bold text-xs text-white truncate">
                             {game.name}
                           </h4>
-                          <p className="text-[10px] text-slate-500 truncate font-mono">
+                          <p className="text-[9px] text-slate-500 truncate font-mono">
                             {game.installPath}
                           </p>
                         </div>
                         <button
                           onClick={() => addDiscoveredGame(game)}
-                          className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
                         >
                           Add
                         </button>
@@ -479,25 +462,80 @@ export const SetupWizard: React.FC = () => {
                     ))
                   ) : (
                     <div className="text-center py-10 opacity-50 italic">
-                      <p className="text-sm text-slate-400">
-                        No supported games found in this directory.
-                      </p>
+                      <p className="text-xs text-slate-400">No supported games found.</p>
                     </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => setStep(isLinux ? 1 : 2)}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                  onClick={() => setStep(isLinux ? 4 : 5)}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
                 >
-                  Continue to Components <ArrowRight size={20} />
+                  Continue to Components <ArrowRight size={18} />
                 </button>
               </motion.div>
             )}
 
-            {step === 1 && (
+            {step === 3 && (
               <motion.div
-                key="step1"
+                key="stepAdvanced"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {[
+                    { label: "Mods Path", value: modsPath, setter: setModsPath, tooltip: "Global storage for all mod files." },
+                    { label: "Runners Path", value: runnersPath, setter: setRunnersPath, tooltip: "Where Proton/WINE binaries are stored." },
+                    { label: "Prefixes Path", value: prefixesPath, setter: setPrefixesPath, tooltip: "Where game-specific WINE environments are kept." },
+                    { label: "Cache Path", value: cachePath, setter: setCachePath, tooltip: "Internal cache for textures and assets." },
+                  ].map(item => (
+                    <div key={item.label} className="space-y-1.5">
+                      <div className="flex items-center gap-2 ml-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                          {item.label}
+                        </label>
+                        <Tooltip content={item.tooltip}>
+                          <HelpCircle size={10} className="text-slate-600 hover:text-indigo-400" />
+                        </Tooltip>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={item.value}
+                          onChange={e => item.setter(e.target.value)}
+                          placeholder="Use Storage Default"
+                          className="flex-1 bg-black/20 border border-white/5 rounded-xl px-4 py-2.5 text-[11px] text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                        />
+                        <button
+                          onClick={() =>
+                            handleSelectGranularPath(
+                              item.setter,
+                              `Select ${item.label}`
+                            )
+                          }
+                          className="px-3 bg-white/5 border border-white/5 rounded-xl text-slate-500 hover:text-slate-300"
+                        >
+                          <FolderOpen size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setStep(0)}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20"
+                >
+                  Save Overrides
+                </button>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -509,11 +547,10 @@ export const SetupWizard: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white mb-2">
-                      Compatibility Runner
+                      Runner Components
                     </h2>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                      Proton GE is required to run Windows games on Linux with
-                      optimal performance and compatibility.
+                    <p className="text-slate-400 text-xs leading-relaxed max-w-xs">
+                      Proton GE is required to run Windows titles on Linux. YAGO can download it or link your existing Steam install.
                     </p>
                   </div>
 
@@ -521,24 +558,24 @@ export const SetupWizard: React.FC = () => {
                     <div className="w-full space-y-3">
                       <button
                         onClick={() => installProton()}
-                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
                       >
-                        <Download size={20} />
+                        <Download size={18} />
                         Download Proton GE
                       </button>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           onClick={handleAutoDetectProton}
-                          className="py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          className="py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-2"
                         >
-                          <Search size={16} />
+                          <Search size={14} />
                           Auto Detect
                         </button>
                         <button
                           onClick={handleSelectExistingProton}
-                          className="py-3 border border-white/10 hover:bg-white/5 text-slate-300 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          className="py-3 border border-white/10 hover:bg-white/5 text-slate-300 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-2"
                         >
-                          <FolderOpen size={16} />
+                          <FolderOpen size={14} />
                           Manual
                         </button>
                       </div>
@@ -548,10 +585,10 @@ export const SetupWizard: React.FC = () => {
                   {detectedPath && protonState.status === "idle" && (
                     <div className="w-full space-y-6 animate-in fade-in zoom-in-95 duration-300">
                       <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
-                        <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 text-center">
-                          Detected Path
+                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 text-center">
+                          Linked Path
                         </div>
-                        <div className="text-xs text-slate-300 font-mono break-all text-center leading-relaxed">
+                        <div className="text-[10px] text-slate-300 font-mono break-all text-center leading-relaxed">
                           {detectedPath}
                         </div>
                       </div>
@@ -559,15 +596,15 @@ export const SetupWizard: React.FC = () => {
                       <div className="flex gap-3">
                         <button
                           onClick={() => setDetectedPath(null)}
-                          className="flex-1 py-3 border border-white/10 hover:bg-white/5 text-slate-400 rounded-xl text-sm font-bold transition-colors"
+                          className="flex-1 py-3 border border-white/10 hover:bg-white/5 text-slate-400 rounded-xl text-xs font-bold transition-colors"
                         >
                           Reset
                         </button>
                         <button
-                          onClick={handleConfirmPath}
-                          className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+                          onClick={handleConfirmProtonPath}
+                          className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
                         >
-                          Confirm & Continue <ArrowRight size={16} />
+                          Confirm & Continue <ArrowRight size={14} />
                         </button>
                       </div>
                     </div>
@@ -575,14 +612,14 @@ export const SetupWizard: React.FC = () => {
 
                   {protonState.status === "working" && (
                     <div className="w-full space-y-4">
-                      <div className="flex items-center justify-between text-sm font-bold text-slate-400 uppercase tracking-wider">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
                         <span className="flex items-center gap-2">
-                          <Loader2 size={14} className="animate-spin" />{" "}
+                          <Loader2 size={12} className="animate-spin" />{" "}
                           Downloading...
                         </span>
                         <span>{Math.round(protonState.progress * 100)}%</span>
                       </div>
-                      <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full bg-indigo-500"
                           initial={{ width: 0 }}
@@ -593,22 +630,15 @@ export const SetupWizard: React.FC = () => {
                   )}
 
                   {protonState.status === "error" && (
-                    <div className="w-full space-y-4 animate-in fade-in slide-in-from-top-2">
-                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400">
-                        <AlertCircle size={20} className="mt-0.5 shrink-0" />
-                        <div className="space-y-1">
-                          <p className="font-bold text-sm">Download Failed</p>
-                          <p className="text-xs opacity-80 break-all">
-                            {protonState.error || "An unknown error occurred."}
-                          </p>
-                        </div>
+                    <div className="w-full space-y-4">
+                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs">
+                        <p className="font-bold">Download Failed</p>
+                        <p className="opacity-80 mt-1">{protonState.error}</p>
                       </div>
-
                       <button
                         onClick={() => installProton()}
-                        className="w-full py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-bold"
                       >
-                        <Download size={20} />
                         Retry Download
                       </button>
                     </div>
@@ -624,7 +654,7 @@ export const SetupWizard: React.FC = () => {
 
                 <button
                   disabled={protonState.status !== "done"}
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(5)}
                   className="w-full py-4 rounded-2xl border border-white/10 text-white font-bold disabled:opacity-30 flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
                 >
                   Continue <ArrowRight size={18} />
@@ -632,9 +662,9 @@ export const SetupWizard: React.FC = () => {
               </motion.div>
             )}
 
-            {step === 2 && (
+            {step === 5 && (
               <motion.div
-                key="step2"
+                key="step5"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -646,64 +676,39 @@ export const SetupWizard: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white mb-2">
-                      Core Mod Loaders
+                      Modding Assets
                     </h2>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                      Download common modding libraries like ReShade and the
-                      global asset proxy.
+                    <p className="text-slate-400 text-xs leading-relaxed max-w-xs">
+                      Install common modding libraries like ReShade and the global asset proxy to enable full mod support.
                     </p>
                   </div>
 
                   {loaderState.status === "idle" && (
                     <button
                       onClick={() => installGameLoader("common")}
-                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
+                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
                     >
-                      <Download size={20} />
+                      <Download size={18} />
                       Setup Common Assets
                     </button>
                   )}
 
                   {loaderState.status === "working" && (
                     <div className="w-full space-y-4">
-                      <div className="flex items-center justify-between text-sm font-bold text-slate-400 uppercase tracking-wider">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
                         <span className="flex items-center gap-2">
-                          <Loader2 size={14} className="animate-spin" />{" "}
+                          <Loader2 size={12} className="animate-spin" />{" "}
                           Installing...
                         </span>
                         <span>{Math.round(loaderState.progress * 100)}%</span>
                       </div>
-                      <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full bg-indigo-500"
                           initial={{ width: 0 }}
                           animate={{ width: `${loaderState.progress * 100}%` }}
                         />
                       </div>
-                    </div>
-                  )}
-
-                  {loaderState.status === "error" && (
-                    <div className="w-full space-y-4 animate-in fade-in slide-in-from-top-2">
-                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400">
-                        <AlertCircle size={20} className="mt-0.5 shrink-0" />
-                        <div className="space-y-1">
-                          <p className="font-bold text-sm">
-                            Installation Failed
-                          </p>
-                          <p className="text-xs opacity-80 break-all">
-                            {loaderState.error || "An unknown error occurred."}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => installGameLoader("common")}
-                        className="w-full py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3"
-                      >
-                        <Download size={20} />
-                        Retry Installation
-                      </button>
                     </div>
                   )}
 
@@ -715,27 +720,19 @@ export const SetupWizard: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="flex-1 py-4 rounded-2xl border border-white/10 text-slate-400 font-bold hover:bg-white/5 transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    disabled={loaderState.status !== "done"}
-                    onClick={() => setStep(3)}
-                    className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-30"
-                  >
-                    Continue <ArrowRight size={18} />
-                  </button>
-                </div>
+                <button
+                  disabled={loaderState.status !== "done"}
+                  onClick={() => setStep(6)}
+                  className="w-full py-4 rounded-2xl border border-white/10 text-white font-bold disabled:opacity-30 flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                >
+                  Finalize Setup <ArrowRight size={18} />
+                </button>
               </motion.div>
             )}
 
-            {step === 3 && (
+            {step === 6 && (
               <motion.div
-                key="step3"
+                key="step6"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center space-y-10"
@@ -750,9 +747,9 @@ export const SetupWizard: React.FC = () => {
                       stiffness: 200,
                       delay: 0.2,
                     }}
-                    className="w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-2xl shadow-emerald-500/20"
+                    className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-2xl shadow-emerald-500/20"
                   >
-                    <CheckCircle2 size={64} />
+                    <CheckCircle2 size={48} />
                   </motion.div>
                   <motion.div
                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
@@ -762,18 +759,17 @@ export const SetupWizard: React.FC = () => {
                 </div>
 
                 <div>
-                  <h2 className="text-3xl font-black text-white mb-4 tracking-tight">
-                    Everything Ready!
+                  <h2 className="text-2xl font-black text-white mb-2 tracking-tight">
+                    Initialization Complete
                   </h2>
-                  <p className="text-slate-400 font-medium">
-                    YAGO has been successfully initialized. You can now start
-                    adding your games.
+                  <p className="text-slate-400 text-sm font-medium">
+                    YAGO is ready. Your library and tools are synced.
                   </p>
                 </div>
 
                 <button
                   onClick={handleComplete}
-                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2rem] font-black text-xl transition-all shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95"
+                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2rem] font-black text-lg transition-all shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95"
                 >
                   Enter Library
                 </button>
