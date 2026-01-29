@@ -25,6 +25,7 @@ pub struct LibrarianConfig {
     pub cache_path: Option<PathBuf>,
 }
 
+#[derive(Clone)]
 pub struct Librarian {
     pub base_path: PathBuf,
     pub games_root: PathBuf,

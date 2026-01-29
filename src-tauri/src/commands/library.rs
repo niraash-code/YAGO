@@ -382,12 +382,13 @@ pub async fn identify_game(
         let t_cloned = t.clone();
         drop(templates_guard);
 
-        let resolve_asset = |name: &str| -> String {
+        // Resolve assets async
+        let librarian = state.librarian.lock().await;
+        let resolve_asset = |name: &str, lib: &librarian::Librarian| -> String {
             if name.is_empty() {
                 return "".to_string();
             }
-            let librarian_guard = tauri::async_runtime::block_on(async { state.librarian.lock().await });
-            let path = librarian_guard.templates_root.join(name);
+            let path = lib.templates_root.join(name);
             let path_str = path.to_string_lossy().to_string();
             format!("yago-asset://{}", urlencoding::encode(&path_str))
         };
@@ -403,8 +404,8 @@ pub async fn identify_game(
             regions: t_cloned.regions,
             color: t_cloned.color,
             accent_color: t_cloned.accent_color,
-            cover_image: resolve_asset(&t_cloned.cover_image),
-            icon: resolve_asset(&t_cloned.icon),
+            cover_image: resolve_asset(&t_cloned.cover_image, &librarian),
+            icon: resolve_asset(&t_cloned.icon, &librarian),
             logo_initial: t_cloned.logo_initial,
             install_path: install_path.to_string_lossy().to_string(),
             exe_name,

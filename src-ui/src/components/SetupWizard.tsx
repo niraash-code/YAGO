@@ -48,6 +48,7 @@ export const SetupWizard: React.FC = () => {
     setupStatus?.detected_steam_path || null
   );
   const [storagePath, setStoragePath] = useState<string>("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [modsPath, setModsPath] = useState("");
   const [runnersPath, setRunnersPath] = useState("");
   const [prefixesPath, setPrefixesPath] = useState("");
@@ -86,21 +87,6 @@ export const SetupWizard: React.FC = () => {
     }
   };
 
-  const handleConfirmStorage = async () => {
-    await saveAllPaths();
-    setStep(1);
-  };
-
-  const handleConfirmLibrary = async () => {
-    await saveAllPaths();
-    if (defaultGamesPath) {
-      setStep(2);
-      startAutoDiscovery();
-    } else {
-      setStep(isLinux ? 4 : 5); // Skip discovery if no path
-    }
-  };
-
   const saveAllPaths = async () => {
     if (globalSettings) {
       await updateGlobalSettings({
@@ -112,6 +98,32 @@ export const SetupWizard: React.FC = () => {
         prefixes_path: prefixesPath,
         cache_path: cachePath,
       });
+      await refreshSetupStatus(); // Refresh status after saving
+    }
+  };
+
+  const handleConfirmStorage = async () => {
+    await saveAllPaths();
+    setStep(1);
+  };
+
+  const handleContinueAfterDiscovery = () => {
+    // Re-check setup status from store
+    const status = useAppStore.getState().setupStatus;
+    if (isLinux && !status?.has_runners) {
+      setStep(4);
+    } else {
+      setStep(5);
+    }
+  };
+
+  const handleConfirmLibrary = async () => {
+    await saveAllPaths();
+    if (defaultGamesPath) {
+      setStep(2);
+      startAutoDiscovery();
+    } else {
+      handleContinueAfterDiscovery();
     }
   };
 
@@ -233,6 +245,7 @@ export const SetupWizard: React.FC = () => {
         ...globalSettings,
         steam_compat_tools_path: detectedPath,
       });
+      await refreshSetupStatus();
       setStep(5);
     }
   };
@@ -500,7 +513,7 @@ export const SetupWizard: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => setStep(isLinux ? 4 : 5)}
+                  onClick={handleContinueAfterDiscovery}
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-3"
                 >
                   Continue to Components <ArrowRight size={18} />
