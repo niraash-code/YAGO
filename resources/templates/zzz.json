@@ -31,5 +31,9 @@
     "offset": 0
   },
   "auto_update": true,
-  "community_folder": "nap_global"
+  "community_folder": "nap_global",
+  "sophon_branch": "main",
+  "sophon_package_id": "os_nap",
+  "sophon_password": "",
+  "sophon_plat_app": "nap_global"
 }

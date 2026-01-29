@@ -33,5 +33,9 @@
     "offset": 0
   },
   "auto_update": true,
-  "community_folder": "hkrpg_global"
+  "community_folder": "hkrpg_global",
+  "sophon_branch": "main",
+  "sophon_package_id": "os_hkrpg",
+  "sophon_password": "",
+  "sophon_plat_app": "hkrpg_global"
 }

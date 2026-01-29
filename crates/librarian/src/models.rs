@@ -28,9 +28,33 @@ pub struct SandboxConfig {
     pub files: Vec<String>,         // Relative paths to backup (e.g., "GameUserSettings.ini")
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, Default)]
+pub enum InstallStatus {
+    #[default]
+    Remote, // Not installed, only exists in catalog
+    Queued, // Waiting for download slot
+    Downloading,
+    Updating,
+    Installed,
+    Corrupted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemoteInfo {
+    pub manifest_url: String,
+    pub chunk_base_url: String,
+    pub total_size: u64,
+    pub version: String,
+    // Sophon-specific IDs for re-fetching
+    pub branch: String,
+    pub package_id: String,
+    pub password: String,
+    pub plat_app: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameConfig {
-    pub id: String, // The exe_name
+    pub id: String, // The exe_name or normalized template ID
     pub name: String,
     pub short_name: String,
     pub developer: String,
@@ -54,6 +78,8 @@ pub struct GameConfig {
     #[serde(default)]
     pub injection_method: InjectionMethod,
     #[serde(default)]
+    pub install_status: InstallStatus,
+    #[serde(default)]
     pub auto_update: bool,
     pub active_runner_id: Option<String>,
     pub prefix_path: Option<PathBuf>,
@@ -69,6 +95,7 @@ pub struct GameConfig {
     pub enable_linux_shield: bool,
     #[serde(default)]
     pub supported_injection_methods: Vec<InjectionMethod>,
+    pub remote_info: Option<RemoteInfo>,
 }
 
 fn default_true() -> bool {
@@ -164,35 +191,4 @@ pub struct LibraryDatabase {
     pub mods: HashMap<Uuid, ModRecord>,
     pub profiles: HashMap<Uuid, Profile>,
     pub last_sync: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum PatchStatus {
-    Pending,
-    Downloaded,
-    Applied,
-    Verified,
-    Failed(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatchTarget {
-    pub relative_path: PathBuf,
-    pub offset: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatchEntry {
-    pub chunk_id: String,
-    pub status: PatchStatus,
-    pub targets: Vec<PatchTarget>,
-    pub retry_count: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatchJournal {
-    pub game_id: String,
-    pub target_version: String,
-    pub entries: Vec<PatchEntry>,
-    pub started_at: DateTime<Utc>,
 }

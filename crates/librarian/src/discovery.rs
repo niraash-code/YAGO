@@ -1,7 +1,7 @@
 use crate::error::{LibrarianError, Result};
 use crate::models::{GameConfig, LibraryDatabase};
+use crate::storage::Librarian;
 use crate::template::GameTemplate;
-use crate::Librarian;
 use chrono::Utc;
 use fs_engine::ExeInspector;
 use std::collections::HashMap;
@@ -125,6 +125,7 @@ impl Discovery {
                         }
                     })
                     .unwrap_or(crate::models::InjectionMethod::None),
+                install_status: crate::models::InstallStatus::Installed,
                 auto_update: template.and_then(|t| t.auto_update).unwrap_or(true),
                 active_runner_id: None,
                 prefix_path: None,
@@ -137,6 +138,7 @@ impl Discovery {
                 supported_injection_methods: template
                     .and_then(|t| t.supported_injection_methods.clone())
                     .unwrap_or_default(),
+                remote_info: None,
             };
 
             let mut db = LibraryDatabase::default();

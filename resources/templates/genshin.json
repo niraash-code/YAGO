@@ -36,5 +36,9 @@
     "offset": 0
   },
   "auto_update": true,
-  "community_folder": "hk4e_global"
+  "community_folder": "hk4e_global",
+  "sophon_branch": "main",
+  "sophon_package_id": "os_hk4e",
+  "sophon_password": "",
+  "sophon_plat_app": "hk4e_global"
 }

@@ -270,11 +270,9 @@ pub fn run() {
             commands::setup::get_setup_status,
             commands::library::detect_steam_proton_path,
             commands::library::remove_runner,
-            commands::config::get_app_config,
-            commands::config::update_app_config,
-            commands::library::force_reset_state,
-            commands::assets::resolve_asset,
-            commands::assets::get_community_backgrounds,
+            commands::library::get_remote_catalog,
+            commands::library::initialize_remote_game,
+            commands::library::get_install_options,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

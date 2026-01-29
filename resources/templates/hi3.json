@@ -26,5 +26,9 @@
     "offset": 0
   },
   "auto_update": true,
-  "community_folder": "bh3_global"
+  "community_folder": "bh3_global",
+  "sophon_branch": "main",
+  "sophon_package_id": "os_bh3",
+  "sophon_password": "",
+  "sophon_plat_app": "bh3_global"
 }

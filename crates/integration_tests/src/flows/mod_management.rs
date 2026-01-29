@@ -103,6 +103,7 @@ async fn test_full_mod_import_flow() {
             active_profile_id: p_id.to_string(),
             fps_config: None,
             injection_method: librarian::InjectionMethod::None,
+            install_status: librarian::InstallStatus::Installed,
             auto_update: false,
             active_runner_id: None,
             prefix_path: None,
@@ -113,6 +114,7 @@ async fn test_full_mod_import_flow() {
             enable_linux_shield: true,
             supported_injection_methods: vec![],
             modloader_enabled: true,
+            remote_info: None,
         },
     );
 

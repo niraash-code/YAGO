@@ -1,7 +1,39 @@
 use crate::error::Result;
-use librarian::models::{PatchJournal, PatchStatus};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PatchStatus {
+    Pending,
+    Downloaded,
+    Applied,
+    Verified,
+    Failed(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatchTarget {
+    pub relative_path: PathBuf,
+    pub offset: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatchEntry {
+    pub chunk_id: String,
+    pub status: PatchStatus,
+    pub targets: Vec<PatchTarget>,
+    pub retry_count: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatchJournal {
+    pub game_id: String,
+    pub target_version: String,
+    pub entries: Vec<PatchEntry>,
+    pub started_at: DateTime<Utc>,
+}
 
 pub struct JournalManager {
     journal_path: PathBuf,

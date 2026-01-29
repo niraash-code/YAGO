@@ -60,6 +60,16 @@ pub struct GameTemplate {
     pub auto_update: Option<bool>,
     #[serde(default)]
     pub community_folder: Option<String>,
+
+    // Sophon Discovery Fields
+    #[serde(default)]
+    pub sophon_branch: String, // e.g., "main"
+    #[serde(default)]
+    pub sophon_package_id: String, // e.g., "genshin_impact_sophon"
+    #[serde(default)]
+    pub sophon_password: String,
+    #[serde(default)]
+    pub sophon_plat_app: String, // e.g., "hk4e_global"
 }
 
 pub fn load_templates(dir: &Path) -> Result<Vec<GameTemplate>> {

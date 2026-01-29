@@ -1,5 +1,4 @@
-use sophon_engine::journal::JournalManager;
-use librarian::models::{PatchJournal, PatchStatus, PatchEntry};
+use sophon_engine::journal::{JournalManager, PatchJournal, PatchStatus, PatchEntry};
 use chrono::Utc;
 use tempfile::tempdir;
 
@@ -37,8 +36,6 @@ async fn test_journal_persistence() {
     assert!(matches!(loaded.entries[0].status, PatchStatus::Applied));
 
     // 4. Update status helper (Need to update struct directly as JournalManager only has static update helper which takes &mut PatchJournal)
-    // Actually, JournalManager::update_entry_status is a static helper method that modifies the journal struct in memory.
-    // Let's test that.
     let mut journal_to_modify = loaded.clone();
     JournalManager::update_entry_status(&mut journal_to_modify, "chunk_a", PatchStatus::Verified);
     assert!(matches!(journal_to_modify.entries[0].status, PatchStatus::Verified));

@@ -1,3 +1,4 @@
+pub mod catalog;
 pub mod cloud;
 pub mod discovery;
 pub mod error;
@@ -10,11 +11,12 @@ pub mod settings;
 pub mod storage;
 pub mod template;
 
-pub use cloud::CloudSync;
+pub use catalog::{CatalogManager, RemoteCatalogEntry};
 pub use discovery::Discovery;
 pub use error::{LibrarianError, Result};
 pub use import::Importer;
-pub use models::*;
+pub use models::{FpsConfig, GameConfig, LibraryDatabase, ModRecord, Profile, InjectionMethod, ModCompatibility, ModConfig, ModMetadata, SandboxConfig, InstallStatus};
+pub use scanner::DiscoveredGame;
 pub use settings::{GlobalSettings, SettingsManager};
 pub use storage::{Librarian, TemplateRegistry};
 pub use template::GameTemplate;

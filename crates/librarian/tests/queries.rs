@@ -1,5 +1,6 @@
 use chrono::Utc;
 use librarian::queries::Queries;
+use librarian::models::{GameConfig, LibraryDatabase, Profile, InjectionMethod, SandboxConfig, ModRecord, ModCompatibility, ModMetadata, ModConfig, InstallStatus};
 use librarian::*;
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -48,6 +49,7 @@ async fn test_queries_filtering() {
             launch_args: vec![],
             fps_config: None,
             injection_method: InjectionMethod::None,
+            install_status: InstallStatus::Installed,
             auto_update: false,
             active_runner_id: None,
             prefix_path: None,
@@ -58,6 +60,7 @@ async fn test_queries_filtering() {
             enable_linux_shield: true,
             supported_injection_methods: vec![],
             modloader_enabled: true,
+            remote_info: None,
         },
     );
 

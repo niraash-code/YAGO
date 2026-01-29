@@ -15,6 +15,7 @@ reqwest = { version = "0.12", features = ["json"] }
 fs_engine = { path = "../fs_engine" }
 walkdir = "2"
 urlencoding = "2"
+sophon_engine = { path = "../sophon_engine" }
 
 [dev-dependencies]
 tempfile = "3.13"

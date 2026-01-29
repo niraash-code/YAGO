@@ -245,7 +245,7 @@ async fn test_sim_chaos_monkey() {
             owner_game_id: game_id.clone(),
             path: PathBuf::from("/tmp/gone"),
             size: "0".into(),
-            meta: librarian::ModMetadata {
+            meta: librarian::models::ModMetadata {
                 name: "Ghost".into(),
                 version: "1".into(),
                 author: "".into(),
@@ -253,13 +253,13 @@ async fn test_sim_chaos_monkey() {
                 preview_image: None,
                 description: None,
             },
-            compatibility: librarian::ModCompatibility {
+            compatibility: librarian::models::ModCompatibility {
                 game: "".into(),
                 character: "".into(),
                 hashes: vec![],
                 fingerprint: "".into(),
             },
-            config: librarian::ModConfig {
+            config: librarian::models::ModConfig {
                 tags: vec![],
                 keybinds: std::collections::HashMap::new(),
             },

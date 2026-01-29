@@ -9,6 +9,7 @@ pub mod scanner;
 pub mod patcher;
 pub mod journal;
 
+pub use journal::{PatchJournal, PatchEntry, PatchStatus, PatchTarget, JournalManager};
 pub use client::SophonClient;
 pub use orchestrator::{ChunkOrchestrator, OrchestratorEvent};
 pub use scanner::{Scanner, ScanMode, DivergenceMap};
