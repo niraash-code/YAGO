@@ -12,6 +12,7 @@ import { InjectionMethod } from "../lib/api";
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { InstallationSettings } from "./settings/InstallationSettings";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
+import { ManagementSettings } from "./settings/ManagementSettings";
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   game,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    "general" | "installation" | "advanced"
+    "general" | "installation" | "advanced" | "management"
   >("general");
   const {
     updateProfile,
@@ -39,9 +40,6 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const { showAlert, showConfirm } = useUiStore();
 
   const isLinux = window.navigator.userAgent.includes("Linux");
-
-  // Early return if game is null to prevent initialization errors
-  if (!game) return null;
 
   const activeProfile =
     game.profiles.find(p => p.id === game.activeProfileId) || game.profiles[0];
@@ -69,9 +67,9 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const [localSavePath, setLocalSavePath] = useState(
     activeProfile?.saveDataPath || ""
   );
-  const [localProfileName, setLocalProfileName] = useState(activeProfile?.name || "");
+  const [localProfileName, setLocalProfileName] = useState(activeProfile.name);
   const [localProfileDescription, setLocalProfileDescription] = useState(
-    activeProfile?.description || ""
+    activeProfile.description
   );
   const [localFpsPattern, setLocalFpsPattern] = useState(
     game.fpsConfig?.search_pattern || ""
@@ -81,7 +79,6 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   );
 
   useEffect(() => {
-    if (!game) return;
     setLocalName(game.name);
     setLocalDeveloper(game.developer);
     setLocalDescription(game.description);
@@ -93,8 +90,8 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     setLocalGlobalLaunchArgs(game.launchArgs?.join(" ") || "");
     setLocalLaunchArgs(activeProfile?.launchArgs?.join(" ") || "");
     setLocalSavePath(activeProfile?.saveDataPath || "");
-    setLocalProfileName(activeProfile?.name || "");
-    setLocalProfileDescription(activeProfile?.description || "");
+    setLocalProfileName(activeProfile.name);
+    setLocalProfileDescription(activeProfile.description);
     setLocalFpsPattern(game.fpsConfig?.search_pattern || "");
     setLocalFpsOffset(game.fpsConfig?.offset || 0);
   }, [game, activeProfile]);
@@ -256,7 +253,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
 
             <div className="flex px-6 border-b border-white/5 gap-2 bg-black/20 p-2">
-              {["general", "installation", "advanced"].map(tab => (
+              {["general", "installation", "advanced", "management"].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
@@ -358,17 +355,13 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     )
                       await deleteProfile(game.id, activeProfile.id);
                   }}
-                  handleDeleteGame={async () => {
-                    if (
-                      await showConfirm(
-                        `Uninstall ${game.name}?`,
-                        "Uninstall Game"
-                      )
-                    ) {
-                      onUninstall(game.id);
-                      onClose();
-                    }
-                  }}
+                />
+              )}
+              {activeTab === "management" && (
+                <ManagementSettings 
+                  game={game}
+                  onClose={onClose}
+                  onUninstall={onUninstall}
                 />
               )}
             </div>

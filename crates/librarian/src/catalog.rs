@@ -48,28 +48,24 @@ impl CatalogManager {
                     &template.sophon_package_id,
                     &template.sophon_password,
                     &template.sophon_plat_app,
+                    &template.sophon_game_biz,
+                    &template.sophon_launcher_id,
+                    &template.sophon_channel_id,
+                    &template.sophon_sub_channel_id,
                 )
                 .await
             {
-                Ok(build) => {
-                    // We also need version and total_size which getBuild might not return directly in its basic form
-                    // Actually, SophonClient::get_build returns manifest_url.
-                    // We might need to fetch the manifest to get the version and size.
-
-                    match client.fetch_manifest(&build.manifest_url).await {
-                        Ok(manifest) => Some(RemoteInfo {
-                            manifest_url: build.manifest_url,
-                            chunk_base_url: build.chunk_base_url,
-                            total_size: manifest.stats.total_size,
-                            version: manifest.version,
-                            branch: template.sophon_branch.clone(),
-                            package_id: template.sophon_package_id.clone(),
-                            password: template.sophon_password.clone(),
-                            plat_app: template.sophon_plat_app.clone(),
-                        }),
-                        Err(_) => None,
-                    }
-                }
+                Ok(build) => Some(RemoteInfo {
+                    manifest_url: build.manifest_url,
+                    chunk_base_url: build.chunk_base_url,
+                    total_size: build.total_size,
+                    version: build.version,
+                    branch: template.sophon_branch.clone(),
+                    package_id: template.sophon_package_id.clone(),
+                    password: template.sophon_password.clone(),
+                    plat_app: template.sophon_plat_app.clone(),
+                    game_biz: template.sophon_game_biz.clone(),
+                }),
                 Err(_) => None,
             };
 

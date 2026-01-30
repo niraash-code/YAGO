@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
+import { useUiStore } from "./uiStore";
 import {
   Game,
   InstallStatus,
@@ -85,6 +86,7 @@ interface AppState {
   ) => Promise<void>;
   pauseDownload: (gameId: string) => Promise<void>;
   resumeDownload: (gameId: string) => Promise<void>;
+  repairGame: (gameId: string) => Promise<void>;
 }
 
 export interface ProgressDetailed {
@@ -112,7 +114,7 @@ const mapBackendGameToFrontend = (
     description: bg.description || "No description provided.",
     status: bg.install_status as unknown as InstallStatus,
     version: bg.version,
-    regions: bg.regions,
+    remoteVersion: bg.remote_version,
     color: bg.color || "slate-400",
     accentColor: bg.accent_color || "#94a3b8",
     coverImage: bg.cover_image || "",
@@ -138,6 +140,11 @@ const mapBackendGameToFrontend = (
           chunkBaseUrl: bg.remote_info.chunk_base_url,
           totalSize: bg.remote_info.total_size,
           version: bg.remote_info.version,
+          branch: bg.remote_info.branch,
+          packageId: bg.remote_info.package_id,
+          password: bg.remote_info.password,
+          platApp: bg.remote_info.plat_app,
+          gameBiz: bg.remote_info.game_biz,
         }
       : undefined,
     // Get settings from active profile
@@ -334,6 +341,17 @@ export const useAppStore = create<AppState>()(
           await api.resumeGameDownload(gameId);
         } catch (e) {
           console.error("Failed to resume download:", e);
+        }
+      },
+
+      repairGame: async gameId => {
+        try {
+          await api.repairGame(gameId);
+          set({ isDownloading: true, selectedGameId: gameId });
+        } catch (e) {
+          console.error("Failed to start repair:", e);
+          useUiStore.getState().showAlert("Repair failed: " + e, "Error");
+          throw e;
         }
       },
 
@@ -543,6 +561,19 @@ export const useAppStore = create<AppState>()(
           "download-progress",
           event => {
             const p = event.payload;
+            
+            const formatEta = (secs: number) => {
+              if (secs < 60) return `${secs}s`;
+              if (secs < 3600) return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+              const h = Math.floor(secs / 3600);
+              const m = Math.floor((secs % 3600) / 60);
+              return `${h}h ${m}m`;
+            };
+
+            const statusText = p.speed_bps === 0 && p.percentage < 100 
+              ? `Verifying (${Math.round(p.percentage)}%)` 
+              : `${(p.speed_bps / (1024 * 1024)).toFixed(1)} MB/s • ${formatEta(p.eta_secs)} remaining`;
+
             set(state => ({
               downloadProgress: p.percentage,
               statsMap: {
@@ -554,7 +585,7 @@ export const useAppStore = create<AppState>()(
                     runner: "Standard",
                   }),
                   downloadProgress: p.percentage,
-                  statusText: `${(p.speed_bps / (1024 * 1024)).toFixed(1)} MB/s • ${Math.floor(p.eta_secs / 60)}m remaining`,
+                  statusText,
                 },
               },
             }));
@@ -668,11 +699,17 @@ export const useAppStore = create<AppState>()(
           try { runners = await api.listRunners(); } catch(e) { console.error("List runners failed", e); }
 
           const allLoadedGames: Game[] = [];
+          let activeDownload = false;
+          let activeProgress = 0;
 
           for (const [gameId, db] of Object.entries(dbs)) {
             if (db.games[gameId]) {
               const bg = db.games[gameId];
               const backendMods = Object.values(db.mods || {});
+
+              if (bg.install_status === "Downloading" || bg.install_status === "Updating") {
+                activeDownload = true;
+              }
 
               const profiles =
                 db.profiles && Object.keys(db.profiles).length > 0
@@ -725,6 +762,8 @@ export const useAppStore = create<AppState>()(
             closeOnLaunch: settings?.close_on_launch || false,
             isInitialized: true,
             isSetupRequired: !isSetupDone,
+            isDownloading: activeDownload,
+            downloadProgress: activeProgress,
             availableRunners: runners,
             appConfig,
             isRunning: false,

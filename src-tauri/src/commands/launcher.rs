@@ -252,9 +252,6 @@ pub async fn update_game_config(
             if let Some(sn) = update.short_name {
                 config.short_name = sn;
             }
-            if let Some(r) = update.regions {
-                config.regions = r;
-            }
             if let Some(c) = update.color {
                 config.color = c;
             }

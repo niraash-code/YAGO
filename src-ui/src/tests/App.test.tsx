@@ -51,6 +51,6 @@ describe("App", () => {
 
   it("renders loading state initially", () => {
     render(<App />);
-    expect(screen.getByText(/Synchronizing Library.../i)).toBeInTheDocument();
+    expect(screen.getByText(/Synchronizing/i)).toBeInTheDocument();
   });
 });

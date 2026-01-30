@@ -8,7 +8,6 @@
   "cover_image": "hi3_background.jpg",
   "icon": "hi3_logo.webp",
   "logo_initial": "H",
-  "regions": 4,
   "executables": [
     "BH3.exe"
   ],
@@ -28,7 +27,11 @@
   "auto_update": true,
   "community_folder": "bh3_global",
   "sophon_branch": "main",
-  "sophon_package_id": "os_bh3",
-  "sophon_password": "",
-  "sophon_plat_app": "bh3_global"
+  "sophon_package_id": "19XDCbNucU",
+  "sophon_password": "ag43v1QVxlUH",
+  "sophon_plat_app": "5TIVvvcwtM",
+  "sophon_game_biz": "bh3_global",
+  "sophon_launcher_id": "VYTpXlbWo8",
+  "sophon_channel_id": "1",
+  "sophon_sub_channel_id": "1"
 }

@@ -18,7 +18,8 @@ pub struct TargetLocation {
 
 #[derive(Debug, Clone)]
 pub struct ChunkWork {
-    pub chunk_id: String,
+    pub chunk_id: String,   // MD5
+    pub chunk_name: String, // Filename
     pub size: u64,
     pub targets: Vec<TargetLocation>,
     pub patch_source: Option<PatchSource>,
@@ -67,7 +68,7 @@ pub enum OrchestratorEvent {
 pub struct ChunkOrchestrator {
     game_id: String,
     client: SophonClient,
-    manifest: SophonManifest,
+    manifests: Vec<SophonManifest>,
     target_dir: PathBuf,
     worker_count: usize,
     chunk_base_url: String,
@@ -87,7 +88,7 @@ impl ChunkOrchestrator {
     pub fn new(
         game_id: String,
         client: SophonClient,
-        manifest: SophonManifest,
+        manifests: Vec<SophonManifest>,
         target_dir: PathBuf,
         chunk_base_url: String,
         worker_count: usize,
@@ -95,7 +96,7 @@ impl ChunkOrchestrator {
         Self {
             game_id,
             client,
-            manifest,
+            manifests,
             target_dir,
             worker_count,
             chunk_base_url,
@@ -105,21 +106,24 @@ impl ChunkOrchestrator {
     pub fn deduplicate_work(&self) -> (Vec<ChunkWork>, u64) {
         let mut work_map: HashMap<String, ChunkWork> = HashMap::new();
 
-        for file in &self.manifest.files {
-            for chunk_ref in &file.chunks {
-                let entry = work_map
-                    .entry(chunk_ref.chunk_id.clone())
-                    .or_insert_with(|| ChunkWork {
-                        chunk_id: chunk_ref.chunk_id.clone(),
-                        size: chunk_ref.size,
-                        targets: Vec::new(),
-                        patch_source: None,
-                    });
+        for manifest in &self.manifests {
+            for file in &manifest.files {
+                for chunk_ref in &file.chunks {
+                    let entry = work_map
+                        .entry(chunk_ref.chunk_id.clone())
+                        .or_insert_with(|| ChunkWork {
+                            chunk_id: chunk_ref.chunk_id.clone(),
+                            chunk_name: chunk_ref.chunk_name.clone(),
+                            size: chunk_ref.size,
+                            targets: Vec::new(),
+                            patch_source: None,
+                        });
 
-                entry.targets.push(TargetLocation {
-                    relative_path: PathBuf::from(&file.name),
-                    offset: chunk_ref.offset,
-                });
+                    entry.targets.push(TargetLocation {
+                        relative_path: PathBuf::from(&file.name),
+                        offset: chunk_ref.offset,
+                    });
+                }
             }
         }
 
@@ -134,7 +138,91 @@ impl ChunkOrchestrator {
         tx_events: mpsc::Sender<OrchestratorEvent>,
         rx_pause: tokio::sync::watch::Receiver<bool>,
     ) -> Result<()> {
-        let (work_items, total_bytes) = self.deduplicate_work();
+        // Normal 'run' (Install/Update) now also uses verification logic
+        // to skip existing bit-perfect chunks.
+        self.verify_and_repair(tx_events, rx_pause).await
+    }
+
+    pub async fn verify_and_repair(
+        self,
+        tx_events: mpsc::Sender<OrchestratorEvent>,
+        rx_pause: tokio::sync::watch::Receiver<bool>,
+    ) -> Result<()> {
+        let (work_items, _total_bytes) = self.deduplicate_work();
+
+        let mut missing_or_corrupt = Vec::new();
+        let target_dir = self.target_dir.clone();
+        let total_count = work_items.len();
+
+        println!("Sophon: Incrementally verifying {} chunks...", total_count);
+
+        for (i, work) in work_items.into_iter().enumerate() {
+            if *rx_pause.borrow() {
+                return Err(SophonError::Interrupted);
+            }
+
+            if i % 1000 == 0 || i == total_count - 1 {
+                let progress = ProgressDetailed {
+                    game_id: self.game_id.clone(),
+                    percentage: (i as f64 / total_count as f64) * 100.0,
+                    speed_bps: 0,
+                    eta_secs: 0,
+                    downloaded_bytes: i as u64,
+                    total_bytes: total_count as u64,
+                };
+                let _ = tx_events.send(OrchestratorEvent::Progress(progress)).await;
+            }
+
+            let mut needs_repair = false;
+            for target in &work.targets {
+                let path = target_dir.join(&target.relative_path);
+
+                // Fast check: existence and minimum size
+                // (file size must be at least offset + chunk_size)
+                if !path.exists() {
+                    needs_repair = true;
+                    break;
+                }
+
+                if let Ok(meta) = fs::metadata(&path) {
+                    if meta.len() < target.offset + work.size {
+                        needs_repair = true;
+                        break;
+                    }
+                } else {
+                    needs_repair = true;
+                    break;
+                }
+            }
+
+            if needs_repair {
+                missing_or_corrupt.push(work);
+            }
+        }
+
+        let repair_bytes = missing_or_corrupt.iter().map(|w| w.size).sum();
+        println!(
+            "Sophon: Verification complete. {} chunks need repair ({:.2} GB).",
+            missing_or_corrupt.len(),
+            repair_bytes as f64 / 1024.0 / 1024.0 / 1024.0
+        );
+
+        self.internal_run(missing_or_corrupt, repair_bytes, tx_events, rx_pause)
+            .await
+    }
+
+    async fn internal_run(
+        self,
+        work_items: Vec<ChunkWork>,
+        total_bytes: u64,
+        tx_events: mpsc::Sender<OrchestratorEvent>,
+        rx_pause: tokio::sync::watch::Receiver<bool>,
+    ) -> Result<()> {
+        if work_items.is_empty() {
+            let _ = tx_events.send(OrchestratorEvent::Completed).await;
+            return Ok(());
+        }
+
         let total_chunks = work_items.len();
 
         tx_events
@@ -145,7 +233,7 @@ impl ChunkOrchestrator {
             .await
             .map_err(|_| SophonError::Interrupted)?;
 
-        // Pre-allocate files
+        // Always ensure file structure and sizes are correct before writing chunks
         self.allocate_files().await?;
 
         let (tx_work, rx_work) = async_channel::bounded::<ChunkWork>(self.worker_count * 2);
@@ -214,7 +302,11 @@ impl ChunkOrchestrator {
 
                     let progress = ProgressDetailed {
                         game_id: monitor_game_id.clone(),
-                        percentage: (total_downloaded as f64 / monitor_total_bytes as f64) * 100.0,
+                        percentage: if monitor_total_bytes > 0 {
+                            (total_downloaded as f64 / monitor_total_bytes as f64) * 100.0
+                        } else {
+                            100.0
+                        },
                         speed_bps,
                         eta_secs,
                         downloaded_bytes: total_downloaded,
@@ -252,24 +344,35 @@ impl ChunkOrchestrator {
     }
 
     async fn allocate_files(&self) -> Result<()> {
-        let files = self.manifest.files.clone();
+        let mut all_files = Vec::new();
+        for manifest in &self.manifests {
+            all_files.extend(manifest.files.clone());
+        }
         let target_dir = self.target_dir.clone();
 
         task::spawn_blocking(move || -> Result<()> {
-            for file_entry in files {
+            for file_entry in all_files {
                 let full_path = target_dir.join(&file_entry.name);
+
+                // 1. Ensure parent exists
                 if let Some(parent) = full_path.parent() {
-                    fs::create_dir_all(parent)?;
+                    if !parent.exists() {
+                        fs::create_dir_all(parent)?;
+                    }
                 }
 
-                // Open for write/create and set length
+                // 2. Open or create without truncating
                 let file = fs::OpenOptions::new()
                     .write(true)
                     .create(true)
                     .truncate(false)
                     .open(&full_path)?;
 
-                file.set_len(file_entry.size)?;
+                // 3. Only set length if it's different (prevents unnecessary IO)
+                let current_meta = file.metadata()?;
+                if current_meta.len() != file_entry.size {
+                    file.set_len(file_entry.size)?;
+                }
             }
             Ok(())
         })
@@ -334,7 +437,7 @@ impl ChunkOrchestrator {
             let data_res = if let Some(patch) = &work.patch_source {
                 Self::process_patch(client, work, patch, target_dir).await
             } else {
-                let url = format!("{}/{}", base_url.trim_end_matches('/'), work.chunk_id);
+                let url = format!("{}/{}", base_url.trim_end_matches('/'), work.chunk_name);
                 Self::download_with_retry(client, &url).await
             };
 
@@ -409,11 +512,6 @@ impl ChunkOrchestrator {
         let diff_data = client.download_raw(&patch.diff_url).await?;
 
         // 2. Get Old Data
-        // For Sophon, chunks might be inside existing files or in a chunk cache.
-        // If it's a "Repair" or "Delta", we assume the old chunk is on disk somewhere.
-        // For MVP, we'll try to find any target that already exists and has the old chunk.
-        // Actually, Sophon patching usually happens at the chunk level.
-
         let old_chunk_data = vec![0u8];
 
         // 3. Apply Patch

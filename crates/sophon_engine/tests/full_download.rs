@@ -16,6 +16,8 @@ fn create_test_manifest() -> SophonManifest {
         categories: vec![ManifestCategory {
             id: "core".to_string(),
             name: "Core".to_string(),
+            size: 10,
+            is_required: true,
         }],
         files: vec![ManifestFile {
             name: "output.txt".to_string(),
@@ -25,11 +27,13 @@ fn create_test_manifest() -> SophonManifest {
             chunks: vec![
                 FileChunkReference {
                     chunk_id: "chunk_1".to_string(),
+                    chunk_name: "chunk_1".to_string(),
                     offset: 0,
                     size: 5,
                 },
                 FileChunkReference {
                     chunk_id: "chunk_2".to_string(),
+                    chunk_name: "chunk_2".to_string(),
                     offset: 5,
                     size: 5,
                 },
@@ -79,7 +83,9 @@ async fn test_full_download_integration() {
     let mut manifest = create_test_manifest();
     // Update chunk IDs in manifest to match calculated hashes
     manifest.files[0].chunks[0].chunk_id = chunk1_hex.clone();
+    manifest.files[0].chunks[0].chunk_name = chunk1_hex.clone();
     manifest.files[0].chunks[1].chunk_id = chunk2_hex.clone();
+    manifest.files[0].chunks[1].chunk_name = chunk2_hex.clone();
 
     // 3. Setup Orchestrator
     let temp_dir = tempfile::tempdir().unwrap();
@@ -90,7 +96,7 @@ async fn test_full_download_integration() {
     let orchestrator = ChunkOrchestrator::new(
         "test".to_string(),
         client,
-        manifest,
+        vec![manifest],
         target_dir.clone(),
         base_url,
         2,
@@ -106,7 +112,7 @@ async fn test_full_download_integration() {
     let mut completed = false;
     let mut chunks_written = 0;
 
-    while let Some(event) = rx.recv().await {
+    while let Some(event) = rx_events_recv(&mut rx).await {
         match event {
             OrchestratorEvent::ChunkWritten { .. } => chunks_written += 1,
             OrchestratorEvent::Completed => completed = true,
@@ -125,4 +131,8 @@ async fn test_full_download_integration() {
     assert!(file_path.exists());
     let content = std::fs::read_to_string(file_path).unwrap();
     assert_eq!(content, "HELLOWORLD");
+}
+
+async fn rx_events_recv(rx: &mut mpsc::Receiver<OrchestratorEvent>) -> Option<OrchestratorEvent> {
+    rx.recv().await
 }

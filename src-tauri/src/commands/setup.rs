@@ -109,7 +109,10 @@ pub async fn install_common_libs(
     let owner = parts[0];
     let repo = parts[1];
 
-    println!("Installing common libs from {} to {:?}", repo_full, common_path);
+    println!(
+        "Installing common libs from {} to {:?}",
+        repo_full, common_path
+    );
 
     // 1. Get Latest Release
     let release = quartermaster::github::get_latest_release(owner, repo)
@@ -129,17 +132,21 @@ pub async fn install_common_libs(
     }
 
     let app_clone = app.clone();
-    quartermaster::download_file(&asset.browser_download_url, &temp_zip, move |current, total| {
-        let progress = current as f64 / total as f64;
-        let _ = app_clone.emit(
-            "loader-progress",
-            super::library::LoaderProgress {
-                game_id: "common".to_string(),
-                status: "Downloading...".to_string(),
-                progress,
-            },
-        );
-    })
+    quartermaster::download_file(
+        &asset.browser_download_url,
+        &temp_zip,
+        move |current, total| {
+            let progress = current as f64 / total as f64;
+            let _ = app_clone.emit(
+                "loader-progress",
+                super::library::LoaderProgress {
+                    game_id: "common".to_string(),
+                    status: "Downloading...".to_string(),
+                    progress,
+                },
+            );
+        },
+    )
     .await
     .map_err(|e| e.to_string())?;
 
@@ -218,21 +225,29 @@ pub async fn download_loader(
 
                 if let Ok(release) = quartermaster::github::get_latest_release(owner, repo).await {
                     if let Some(asset) = release.assets.iter().find(|a| a.name.ends_with(".zip")) {
-                        let temp_zip = state.app_data_dir.join("cache").join(format!("temp_{}.zip", game_id));
-                        
+                        let temp_zip = state
+                            .app_data_dir
+                            .join("cache")
+                            .join(format!("temp_{}.zip", game_id));
+
                         let app_clone = app.clone();
                         let gid_clone = game_id.clone();
-                        let _ = quartermaster::download_file(&asset.browser_download_url, &temp_zip, move |current, total| {
-                            let progress = current as f64 / total as f64;
-                            let _ = app_clone.emit(
-                                "loader-progress",
-                                super::library::LoaderProgress {
-                                    game_id: gid_clone.clone(),
-                                    status: "Downloading...".to_string(),
-                                    progress,
-                                },
-                            );
-                        }).await;
+                        let _ = quartermaster::download_file(
+                            &asset.browser_download_url,
+                            &temp_zip,
+                            move |current, total| {
+                                let progress = current as f64 / total as f64;
+                                let _ = app_clone.emit(
+                                    "loader-progress",
+                                    super::library::LoaderProgress {
+                                        game_id: gid_clone.clone(),
+                                        status: "Downloading...".to_string(),
+                                        progress,
+                                    },
+                                );
+                            },
+                        )
+                        .await;
 
                         if temp_zip.exists() {
                             let _ = fs_engine::extract_and_sanitize(&temp_zip, &path);
@@ -355,23 +370,28 @@ pub async fn download_proton(
     }
 
     let app_clone = app.clone();
-    quartermaster::download_file(&asset.browser_download_url, &temp_tar, move |current, total| {
-        let progress = current as f64 / total as f64;
-        let _ = app_clone.emit(
-            "proton-progress",
-            super::library::ProtonProgress {
-                version: "Latest".to_string(),
-                status: "Downloading...".to_string(),
-                progress,
-            },
-        );
-    })
+    quartermaster::download_file(
+        &asset.browser_download_url,
+        &temp_tar,
+        move |current, total| {
+            let progress = current as f64 / total as f64;
+            let _ = app_clone.emit(
+                "proton-progress",
+                super::library::ProtonProgress {
+                    version: "Latest".to_string(),
+                    status: "Downloading...".to_string(),
+                    progress,
+                },
+            );
+        },
+    )
     .await
     .map_err(|e| e.to_string())?;
 
     // 3. Extract
     // Note: fs_engine handles tar.gz via extract_targz
-    fs_engine::extract_targz(&temp_tar, &runners_dir).map_err(|e: fs_engine::FsError| e.to_string())?;
+    fs_engine::extract_targz(&temp_tar, &runners_dir)
+        .map_err(|e: fs_engine::FsError| e.to_string())?;
 
     // 4. Cleanup
     let _ = std::fs::remove_file(&temp_tar);

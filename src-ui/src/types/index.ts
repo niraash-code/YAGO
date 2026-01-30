@@ -72,7 +72,7 @@ export interface Game {
   description: string;
   status: InstallStatus;
   version: string;
-  regions: number;
+  remoteVersion?: string;
   color: string; // Tailwind color class snippet (e.g., 'cyan-400')
   accentColor: string; // Hex for inline styles
   coverImage: string; // Wide 16:9 Image URL
@@ -99,10 +99,15 @@ export interface Game {
   prefixPath?: string;
   enableLinuxShield?: boolean;
   remoteInfo?: {
-    manifestUrl: String;
-    chunkBaseUrl: String;
+    manifestUrl: string;
+    chunkBaseUrl: string;
     totalSize: number;
-    version: String;
+    version: string;
+    branch: string;
+    packageId: string;
+    password: string;
+    platApp: string;
+    gameBiz: string;
   };
 }
 

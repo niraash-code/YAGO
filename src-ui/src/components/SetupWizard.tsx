@@ -154,7 +154,6 @@ export const SetupWizard: React.FC = () => {
             icon: identified.icon,
             developer: identified.developer,
             description: identified.description,
-            regions: identified.regions,
             shortName: identified.short_name,
           };
         } catch (e) {

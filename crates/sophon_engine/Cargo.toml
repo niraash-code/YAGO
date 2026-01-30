@@ -17,6 +17,7 @@ anyhow = "1.0"
 async-channel = "2.2"
 hex = "0.4"
 libc = "0.2"
+zstd = "0.13"
 chrono = { version = "0.4", features = ["serde"] }
 
 [build-dependencies]

@@ -31,7 +31,6 @@ interface AdvancedSettingsProps {
   updateProfile: (gid: string, pid: string, update: any) => void;
   updateGameConfig: (gid: string, update: any) => void;
   handleDeleteProfile: () => void;
-  handleDeleteGame: () => void;
 }
 
 export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
@@ -59,7 +58,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
   updateProfile,
   updateGameConfig,
   handleDeleteProfile,
-  handleDeleteGame,
 }) => {
   return (
     <div className="space-y-12">
@@ -563,7 +561,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
         <h3 className="text-[10px] font-black text-red-500/80 uppercase tracking-[0.25em]">
           Danger Zone
         </h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1">
           <button
             onClick={handleDeleteProfile}
             className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-400/80 hover:text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
@@ -573,16 +571,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({
               className="group-hover:scale-110 transition-transform"
             />
             Delete Loadout
-          </button>
-          <button
-            onClick={handleDeleteGame}
-            className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-400/80 hover:text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
-          >
-            <Trash2
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            Uninstall Game
           </button>
         </div>
       </div>

@@ -50,6 +50,7 @@ pub struct RemoteInfo {
     pub package_id: String,
     pub password: String,
     pub plat_app: String,
+    pub game_biz: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,8 +64,10 @@ pub struct GameConfig {
     pub exe_path: PathBuf,
     pub exe_name: String,
     pub version: String,
+    pub remote_version: Option<String>,
+    #[serde(default)]
+    pub installed_components: Vec<String>,
     pub size: String,
-    pub regions: u32,
     pub color: String,
     pub accent_color: String,
     pub cover_image: String,

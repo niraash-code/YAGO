@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import SettingsDrawer from "../components/SettingsDrawer";
 import { useAppStore } from "../store/gameStore";
 import { useUiStore } from "../store/uiStore";
+import { api } from "../lib/api";
 import React from "react";
 
 // Mock Lucide icons
@@ -349,5 +350,37 @@ describe("SettingsDrawer", () => {
         activeRunnerId: "Proton-GE-1",
       })
     );
+  });
+
+  it("navigates to management tab and checks destructive buttons", async () => {
+    const mockShowConfirm = vi.fn().mockResolvedValue(true);
+    useUiStore.setState({ showConfirm: mockShowConfirm });
+
+    render(
+      <SettingsDrawer
+        isOpen={true}
+        onClose={() => {}}
+        onUninstall={() => {}}
+        game={mockGame as any}
+      />
+    );
+
+    fireEvent.click(screen.getByText("management"));
+
+    expect(screen.getByText("Critical Actions Zone")).toBeInTheDocument();
+    expect(screen.getByText("Delete Entry")).toBeInTheDocument();
+    expect(screen.getByText("Wipe Mods")).toBeInTheDocument();
+    expect(screen.getByText("Uninstall")).toBeInTheDocument();
+
+    // Mock API call
+    const wipeModsSpy = vi.spyOn(api, 'wipeGameMods').mockResolvedValue(undefined);
+    
+    const wipeButton = screen.getByText("Wipe Mods");
+    await act(async () => {
+      fireEvent.click(wipeButton);
+    });
+
+    expect(mockShowConfirm).toHaveBeenCalled();
+    expect(wipeModsSpy).toHaveBeenCalledWith("game-123");
   });
 });

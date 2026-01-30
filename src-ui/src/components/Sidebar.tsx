@@ -215,7 +215,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                                       : "text-slate-600"
                                   )}
                                 >
-                                  {game.regions} Regions
                                 </span>
                               )}
                             </div>

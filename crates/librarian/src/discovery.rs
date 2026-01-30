@@ -94,8 +94,9 @@ impl Discovery {
                 exe_path: path.clone(),
                 exe_name: exe_name.clone(),
                 version: "Unknown".to_string(),
+                remote_version: None,
+                installed_components: vec![],
                 size: size_str,
-                regions: template.map(|t| t.regions).unwrap_or(1),
                 color: template
                     .map(|t| t.color.clone())
                     .unwrap_or("slate-400".to_string()),

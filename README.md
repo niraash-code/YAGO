@@ -45,27 +45,36 @@ The core logic is distributed across 8 specialized Rust crates. For a deep archi
 | **`proc_marshal`** | Process execution, FPS Unlocking, Sandbox snapshots. | `sysinfo`, `tokio` |
 | **`loader_ctl`** | Mod loader installation & dual-proxy chaining. | (Pure Rust) |
 | **`quartermaster`** | High-perf asset caching and network fetching. | `reqwest`, `md5` |
-| **`sophon_engine`** | Maintenance Brain: Block-level parallel downloader and delta patcher. | `hpatchz`, `tokio`, `md5` |
+| **`sophon_engine`** | Maintenance Brain: Bit-perfect content delivery, Protobuf/Zstd binary protocol, and incremental repair. | `prost`, `zstd`, `tokio`, `md5` |
 
 ---
 
 ## 🏗️ Technical Innovations
 
-### Sophon Content Delivery
-YAGO features a native implementation of the Sophon protocol, allowing it to maintain games completely independently:
-- **Block-Level Deduplication**: Chunks shared between versions or language packs are downloaded only once.
-- **Bit-Perfect Patching**: Native FFI bridge to `HDiffZ` ensuring delta updates are identical to official patches.
-- **Selective Installation**: Install only the languages and audio packs you need to save bandwidth and disk space.
-- **Hybrid Integrity**: Tiered scanning (Fast/Metadata vs. Deep/MD5) ensures library health without the performance penalty of a full hash pass.
+### Sophon Content Delivery (Pillar 7)
+YAGO features a native, bit-perfect implementation of the Sophon binary protocol, allowing it to maintain games completely independently of official launchers:
+- **Binary Protocol Decoding**: Native handling of Zstandard-compressed Protobuf manifests used by the latest HoYoPlay unified launcher.
+- **Smart Incremental Updates**: Scans existing files up to 3 levels deep. If a chunk is already present and matches the official size/hash, it is skipped automatically—no more redownloading 100GB for a 2GB patch.
+- **Selective Component Installation**: A cloud-driven wizard lets you choose exactly which components to install (e.g., Core Assets + English Audio) to save bandwidth and disk space.
+- **High-Fidelity Orchestration**: Multi-threaded MPMC worker pool ensures 100% CPU and Network utilization with real-time ETA and speed tracking.
+- **Bit-Perfect Repair**: Performs block-level verification against official manifests and only redownloads the exact missing or corrupted chunks.
 
-### Decentralized Storage & Sharing
-YAGO gives you total control over your data footprint:
-- **Granular Overrides**: Store your 100GB+ Mod library on an external SSD while keeping the app configuration in `app_data`.
-- **Resource Sharing**: Point YAGO to existing Proton runners or WINE prefixes used by other launchers (Steam, Lutris) to save space.
-- **Portability**: If you wipe YAGO or move systems, your mods and prefixes remain intact and can be instantly re-linked.
+### Unified Game Lifecycle Management
+YAGO is no longer just a mod manager—it is a complete game lifecycle platform:
+- **Cloud Discovery**: Query the official HoYoPlay catalog to initialize game entries before a single byte is downloaded.
+- **Advanced Management Suite**: A dedicated management hub for administrative tasks:
+    - **Purge Prefix**: Delete Wine/Proton environments to fix "corrupt" launch states.
+    - **Wipe Mods**: Permanently purge the entire mod library for a specific title.
+    - **Delete Entry (Unlink)**: Remove a game from YAGO while keeping all files safe on your disk.
+    - **Full Uninstall**: A multi-step, destructive wipe that removes every byte of the game and mods.
+- **Recursive Auto-Discovery**: Point YAGO to your primary Games folder (e.g., `~/Games`), and it will perform a deep recursive scan to identify and import all supported titles automatically.
 
-### Recursive Auto-Discovery
-Point YAGO to your primary Games folder (e.g., `~/Games`), and it will perform a deep recursive scan (up to 4 levels) to automatically identify and import all supported titles into your library.
+### Sophisticated Version Detection
+YAGO identifies game versions with regional precision by combining multiple fallback strategies:
+1. **Config.ini Parsing**: A lenient, case-insensitive parser that traverses parent directories to find the definitive version string.
+2. **Pkg_version Scanning**: Regex-based extraction from internal language-specific manifest files.
+3. **PE Metadata Filtering**: Direct extraction from Windows executables with smart filters to ignore engine-specific versioning (e.g., Unity).
+4. **Launch Protection**: Strictly gates game execution—if an update is available or the version is unverified, YAGO replaces "Launch" with a mandatory "Update" or "Verify" action.
 
 ---
 

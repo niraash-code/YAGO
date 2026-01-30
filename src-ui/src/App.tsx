@@ -230,6 +230,7 @@ const App: React.FC = () => {
                     isDeploying={isDeploying}
                     isLaunching={isLaunching}
                     launchStatus={launchStatus}
+                    stats={stats}
                     handleLaunch={handleLaunch}
                     handleInstall={handleInstall}
                     onOpenSettings={() => setIsSettingsOpen(true)}
@@ -289,12 +290,21 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <SettingsDrawer
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onUninstall={uninstallGame}
-        game={selectedGame as any}
-      />
+      {selectedGame && (
+        <>
+          <SettingsDrawer
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            onUninstall={uninstallGame}
+            game={selectedGame}
+          />
+          <CoverManagerModal
+            isOpen={isCoverManagerOpen}
+            onClose={() => setIsCoverManagerOpen(false)}
+            game={selectedGame}
+          />
+        </>
+      )}
       <AddGameModal
         isOpen={isAddGameOpen}
         onClose={() => setIsAddGameOpen(false)}
@@ -310,11 +320,6 @@ const App: React.FC = () => {
         gameId={installWizardGame?.id || ""}
         gameName={installWizardGame?.name || ""}
         templateId={installWizardGame?.templateId || ""}
-      />
-      <CoverManagerModal
-        isOpen={isCoverManagerOpen}
-        onClose={() => setIsCoverManagerOpen(false)}
-        game={selectedGame}
       />
       <GlobalSettingsModal
         isOpen={isGlobalSettingsOpen}

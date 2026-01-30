@@ -18,6 +18,7 @@ async fn test_scanner_missing_file() {
             category_id: None,
             chunks: vec![FileChunkReference {
                 chunk_id: "chunk_1".into(),
+                chunk_name: "chunk_1_file".into(),
                 offset: 0,
                 size: 100,
             }],
@@ -61,6 +62,7 @@ async fn test_scanner_size_mismatch() {
             category_id: None,
             chunks: vec![FileChunkReference {
                 chunk_id: "chunk_corrupt".into(),
+                chunk_name: "chunk_corrupt_file".into(),
                 offset: 0,
                 size: 100,
             }],

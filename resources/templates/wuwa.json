@@ -8,7 +8,6 @@
   "cover_image": "wuwa_background.webp",
   "icon": "wuwa_logo.png",
   "logo_initial": "W",
-  "regions": 1,
   "executables": [
     "Wuthering Waves.exe",
     "Client-Win64-Shipping.exe"

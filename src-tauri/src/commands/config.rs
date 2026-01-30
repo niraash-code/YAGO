@@ -98,7 +98,9 @@ pub async fn update_settings(
                 dir.entries().len()
             );
             for file in dir.files() {
-                let dest = librarian.templates_root.join(file.path().file_name().unwrap());
+                let dest = librarian
+                    .templates_root
+                    .join(file.path().file_name().unwrap());
                 if let Err(e) = std::fs::write(&dest, file.contents()) {
                     eprintln!("Failed to extract {:?}: {}", dest, e);
                 }

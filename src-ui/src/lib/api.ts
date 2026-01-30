@@ -19,6 +19,8 @@ export interface GameConfig {
   exe_path: string;
   exe_name: string;
   version: string;
+  remote_version?: string;
+  installed_components: string[];
   size: string;
   regions: number;
   color: string;
@@ -44,6 +46,11 @@ export interface GameConfig {
     chunk_base_url: string;
     total_size: number;
     version: string;
+    branch: string;
+    package_id: string;
+    password: string;
+    plat_app: string;
+    game_biz: string;
   };
   // Advanced settings (legacy or flattened from profile in some views)
   use_gamescope?: boolean;
@@ -160,7 +167,6 @@ export interface IdentifiedGame {
   description: string;
   version: string;
   size: string;
-  regions: number;
   color: string;
   accent_color: string;
   cover_image: string;
@@ -176,6 +182,8 @@ export interface IdentifiedGame {
 export interface ManifestCategory {
   id: string;
   name: string;
+  size: number;
+  is_required: boolean;
 }
 
 export interface RemoteCatalogEntry {
@@ -380,6 +388,16 @@ export const api = {
     invoke("pause_game_download", { gameId }),
   resumeGameDownload: (gameId: string): Promise<void> =>
     invoke("resume_game_download", { gameId }),
+  repairGame: (gameId: string): Promise<void> =>
+    invoke("repair_game", { gameId }),
+  wipeGameMods: (gameId: string): Promise<void> =>
+    invoke("wipe_game_mods", { gameId }),
+  resetGameProfiles: (gameId: string): Promise<void> =>
+    invoke("reset_game_profiles", { gameId }),
+  removeGamePrefix: (gameId: string): Promise<void> =>
+    invoke("remove_game_prefix", { gameId }),
+  uninstallGameFiles: (gameId: string): Promise<void> =>
+    invoke("uninstall_game_files", { gameId }),
 };
 // Event Listeners
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";

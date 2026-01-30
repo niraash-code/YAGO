@@ -13,6 +13,8 @@ fn create_test_manifest() -> SophonManifest {
         categories: vec![ManifestCategory {
             id: "core".to_string(),
             name: "Core".to_string(),
+            size: 150,
+            is_required: true,
         }],
         files: vec![
             ManifestFile {
@@ -23,11 +25,13 @@ fn create_test_manifest() -> SophonManifest {
                 chunks: vec![
                     FileChunkReference {
                         chunk_id: "chunk_A".to_string(),
+                        chunk_name: "chunk_A_file".to_string(),
                         offset: 0,
                         size: 50,
                     },
                     FileChunkReference {
                         chunk_id: "chunk_B".to_string(),
+                        chunk_name: "chunk_B_file".to_string(),
                         offset: 50,
                         size: 50,
                     },
@@ -40,6 +44,7 @@ fn create_test_manifest() -> SophonManifest {
                 category_id: Some("core".to_string()),
                 chunks: vec![FileChunkReference {
                     chunk_id: "chunk_A".to_string(),
+                    chunk_name: "chunk_A_file".to_string(),
                     offset: 0,
                     size: 50,
                 }],
@@ -64,7 +69,7 @@ async fn test_deduplication_logic() {
     let orchestrator = ChunkOrchestrator::new(
         "test_game".to_string(),
         client,
-        manifest,
+        vec![manifest],
         target_dir,
         base_url,
         1,

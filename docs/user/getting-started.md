@@ -80,6 +80,9 @@ If you choose a game from the **Cloud Hub**, YAGO will launch the **Install Wiza
 3.  Drag and drop your mod folders or archives (`.zip`, `.7z`) directly onto the window.
 4.  YAGO will extract, sanitize, and import them into your library.
 
-### 3. Launching
-Click **"Launch Game"** to start playing with your enabled mods. YAGO will automatically handle mod deployment and injection.
+### 3. Launching & Maintenance
+- **Direct Launch**: Click **"Launch Game"** to start playing with your enabled mods. YAGO will automatically handle mod deployment and injection.
+- **Mandatory Updates**: If a newer game version is detected on the official servers, YAGO will strictly block execution. The "Launch" button will be replaced by an **"Update Available"** button to ensure your client remains compatible.
+- **Bit-Perfect Repair**: If your game is crashing or shows an "Unknown" version, click the **Fix (Wrench)** button to perform a bit-perfect verification and repair.
+
 [Next: Mod Management](mod-management.md) | [Documentation Home](../index.md)

@@ -16,6 +16,7 @@ import { useAppStore } from "../store/gameStore";
 import { useUiStore } from "../store/uiStore";
 import { api, ManifestCategory } from "../lib/api";
 import { cn } from "../lib/utils";
+import { open } from "@tauri-apps/plugin-dialog";
 
 interface InstallWizardProps {
   isOpen: boolean;
@@ -63,6 +64,21 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
     }
   }, [isOpen, globalSettings, gameName]);
 
+  const handleSelectInstallPath = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: `Select Installation Folder for ${gameName}`,
+      });
+      if (selected && typeof selected === "string") {
+        setInstallPath(selected);
+      }
+    } catch (e) {
+      console.error("Failed to select directory:", e);
+    }
+  };
+
   const handleNextToCategories = async () => {
     if (!installPath) {
       showAlert("Please specify an installation path.", "Error");
@@ -88,10 +104,20 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
     }
   };
 
-  const toggleCategory = (id: string) => {
+  const toggleCategory = (cat: ManifestCategory) => {
+    if (cat.is_required) return; // Cannot toggle required components
+    
     setSelectedCategoryIds(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+      prev.includes(cat.id) ? prev.filter(c => c !== cat.id) : [...prev, cat.id]
     );
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleFinish = async () => {
@@ -198,7 +224,10 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
                         placeholder="e.g., /home/user/Games/Genshin"
                         className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
                       />
-                      <button className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all">
+                      <button
+                        onClick={handleSelectInstallPath}
+                        className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
+                      >
                         <FolderOpen size={20} />
                       </button>
                     </div>
@@ -221,9 +250,10 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
                     {categories.map(cat => (
                       <div
                         key={cat.id}
-                        onClick={() => toggleCategory(cat.id)}
+                        onClick={() => toggleCategory(cat)}
                         className={cn(
-                          "group flex items-center justify-between p-5 rounded-2xl border transition-all cursor-pointer",
+                          "group flex items-center justify-between p-5 rounded-2xl border transition-all",
+                          cat.is_required ? "cursor-default" : "cursor-pointer",
                           selectedCategoryIds.includes(cat.id)
                             ? "bg-indigo-500/10 border-indigo-500/30"
                             : "bg-white/5 border-white/5 opacity-60 grayscale"
@@ -238,7 +268,7 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
                                 : "bg-slate-800 text-slate-500"
                             )}
                           >
-                            {cat.id.toLowerCase().includes("audio") ? (
+                            {cat.name.toLowerCase().includes("audio") ? (
                               <Music size={20} />
                             ) : (
                               <Globe size={20} />
@@ -248,22 +278,28 @@ export const InstallWizard: React.FC<InstallWizardProps> = ({
                             <p className="text-sm font-bold text-white uppercase tracking-tight">
                               {cat.name}
                             </p>
-                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-0.5">
-                              {cat.id.toLowerCase().includes("audio")
-                                ? "Optional Pack"
-                                : "Core Asset"}
-                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
+                                {cat.is_required ? "Required Core" : "Optional Pack"}
+                              </p>
+                              <div className="w-1 h-1 rounded-full bg-slate-700" />
+                              <p className="text-[10px] text-indigo-400/80 font-mono font-bold">
+                                {formatSize(cat.size)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                         <div
                           className={cn(
                             "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                            selectedCategoryIds.includes(cat.id)
-                              ? "border-indigo-500 bg-indigo-500 shadow-lg shadow-indigo-500/30"
-                              : "border-white/10"
+                            cat.is_required 
+                              ? "border-indigo-500/50 bg-indigo-500/20" 
+                              : selectedCategoryIds.includes(cat.id)
+                                ? "border-indigo-500 bg-indigo-500 shadow-lg shadow-indigo-500/30"
+                                : "border-white/10"
                           )}
                         >
-                          {selectedCategoryIds.includes(cat.id) && (
+                          {(selectedCategoryIds.includes(cat.id) || cat.is_required) && (
                             <CheckCircle size={14} className="text-white" />
                           )}
                         </div>

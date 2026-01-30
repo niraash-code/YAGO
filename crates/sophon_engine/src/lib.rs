@@ -22,7 +22,7 @@ pub use provider::{GameInfo, GamePackage, Provider};
 pub use scanner::{DivergenceMap, ScanMode, Scanner};
 pub use verifier::Verifier;
 
-// This is where Protobuf generated code will eventually live
-// pub mod proto {
-//     include!(concat!(env!("OUT_DIR"), "/sophon.rs"));
-// }
+// Protobuf generated code
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/_.rs"));
+}

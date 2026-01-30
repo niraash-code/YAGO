@@ -26,8 +26,6 @@ pub struct GameTemplate {
     #[serde(default)]
     pub logo_initial: String,
     #[serde(default)]
-    pub regions: u32,
-    #[serde(default)]
     pub executables: Vec<String>,
     #[serde(default)]
     pub logic_type: String,
@@ -69,7 +67,15 @@ pub struct GameTemplate {
     #[serde(default)]
     pub sophon_password: String,
     #[serde(default)]
-    pub sophon_plat_app: String, // e.g., "hk4e_global"
+    pub sophon_plat_app: String, // e.g., "hk4e_global" (The ID)
+    #[serde(default)]
+    pub sophon_game_biz: String, // e.g., "hk4e_global" (The BIZ name)
+    #[serde(default)]
+    pub sophon_launcher_id: String,
+    #[serde(default)]
+    pub sophon_channel_id: String,
+    #[serde(default)]
+    pub sophon_sub_channel_id: String,
 }
 
 pub fn load_templates(dir: &Path) -> Result<Vec<GameTemplate>> {

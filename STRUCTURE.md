@@ -58,13 +58,15 @@ Independent crates, each with their own `tests/` directory.
 
 #### 📂 Librarian Storage Architecture
 *   **`LibrarianConfig`**: Orchestrates base storage and individual path overrides for Mods, Runners, and Prefixes.
-*   **`GamePaths`**: Provides standardized path resolution for per-game resources (e.g., `/{GamesRoot}/Genshin/game.json`).
-*   **`scanner`**: Performs deep recursive identification of supported titles within a provided root.
+*   **`GamePaths`**: Provides standardized path resolution for per-game resources.
+*   **`scanner`**: Performs deep recursive identification of supported titles.
+*   **`discovery`**: Implements fuzzy template matching to link manual installations to official Sophon metadata.
 
 #### 📦 Sophon Engine Sub-modules
-*   **`orchestrator`**: MPMC worker pool managing parallel block downloads and deduplication.
+*   **`protocol`**: Binary manifest parser for Zstd+Protobuf Sophon files. Maps unified HoYoPlay identifiers to regional manifests.
+*   **`orchestrator`**: MPMC worker pool managing parallel block downloads and **Smart Incremental Repairs**.
+*   **`client`**: HoYoPlay API client for `getBuild` discovery and raw chunk fetching.
 *   **`patcher`**: Safe FFI wrapper for `HDiffZ` for high-performance delta-patching.
-*   **`scanner`**: Tiered integrity verifier (Metadata vs. Deep block MD5).
 *   **`journal`**: Crash-resilient tracker for chunk-level progress (Pending/Applied/Verified).
 
 ---

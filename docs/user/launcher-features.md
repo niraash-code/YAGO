@@ -25,6 +25,22 @@ YAGO supports multiple methods for 3DMigoto and ReShade injection:
 2.  **ReShade Only**: Installs ReShade as a local proxy without the mod loader.
 3.  **Loader (Memory Injection)**: Uses a dedicated loader executable for injection, often preferred for specific compatibility scenarios on Windows.
 
+## 🛠️ Maintenance & Integrity
+
+### Verify & Repair (Bit-Perfect)
+YAGO features a high-fidelity verification engine that ensures your game files match the official HoYoverse production manifests:
+- **Block-Level Scanning**: Performs a meticulous check of your game files against the official manifest hash tree.
+- **Incremental Repair**: Instead of redownloading the entire game, YAGO identifies the exact corrupted or missing blocks and only downloads those specific chunks.
+- **Visual Feedback**: Real-time progress percentage during the initial file-system scanning phase.
+
+### Advanced Management Hub
+Every game features a dedicated **Management** tab in the settings drawer for administrative tasks:
+- **Purge Prefix**: Permanently delete the Wine/Proton prefix. Useful for fixing environment-specific launch crashes. A fresh prefix will be automatically recreated on the next launch.
+- **Wipe Mod Library**: Instantly purge every mod file and configuration associated with the game from your disk.
+- **Reset Profiles**: Revert the game to a clean slate by removing all custom loadouts and enabled mod states.
+- **Delete Entry (Unlink)**: Safely remove the game from your YAGO library while keeping all game and mod files safe on your disk.
+- **Full Uninstall**: A multi-step, destructive wipe that removes every byte of the game installation and its associated mods.
+
 ## 💾 Customizable Storage (Decentralized)
 
 YAGO features a unique decentralized storage model designed for power users and library sharing:

@@ -20,6 +20,7 @@ import { useUiStore } from "../store/uiStore";
 import { api, InjectionMethod, RemoteCatalogEntry } from "../lib/api";
 import { cn } from "../lib/utils";
 import { InstallWizard } from "./InstallWizard";
+import { open } from "@tauri-apps/plugin-dialog";
 
 interface AddGameModalProps {
   isOpen: boolean;
@@ -70,6 +71,21 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
     }
   };
 
+  const handleSelectManualPath = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Select Game Installation Folder",
+      });
+      if (selected && typeof selected === "string") {
+        setManualPath(selected);
+      }
+    } catch (e) {
+      console.error("Failed to select directory:", e);
+    }
+  };
+
   const startScan = async () => {
     setStep("scanning");
     setScanProgress(0);
@@ -98,7 +114,6 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
             description: identified.description,
             status: InstallStatus.INSTALLED,
             version: identified.version,
-            regions: identified.regions,
             color: identified.color,
             accentColor: identified.accent_color,
             coverImage: identified.cover_image,
@@ -176,7 +191,6 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
           description: identified.description,
           status: InstallStatus.INSTALLED,
           version: identified.version,
-          regions: identified.regions,
           color: identified.color,
           accentColor: identified.accent_color,
           coverImage: identified.cover_image,
@@ -572,6 +586,13 @@ const AddGameModal: React.FC<AddGameModalProps> = ({
                         placeholder="e.g., C:\Games\Genshin Impact"
                         className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-medium"
                       />
+                      <button
+                        type="button"
+                        onClick={handleSelectManualPath}
+                        className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-slate-400 transition-all"
+                      >
+                        <FolderOpen size={20} />
+                      </button>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 pt-4">
