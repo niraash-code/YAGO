@@ -1,47 +1,39 @@
 # Launcher Features
 
-YAGO is more than just a mod manager; it is a high-performance game launcher.
+YAGO is a community-driven mod manager and game organizer designed to simplify the modding experience.
 
 ## 🐧 Linux Support
 
-YAGO is built with Linux in mind. It handles the complex command chain required for peak performance:
+YAGO is built with Linux users in mind, helping to manage the command chain required for a smooth experience:
 
-- **Proton/Wine**: Automatic environment variable management.
-- **Gamemode**: Optimizes CPU and I/O priorities.
-- **Gamescope**: Provides a high-quality micro-compositor.
-- **MangoHud**: Displays performance metrics.
+- **Proton/Wine**: Simple management of environment variables.
+- **Gamemode**: Integration with Feral GameMode for process priorities.
+- **Gamescope**: Compatibility with the Gamescope micro-compositor.
+- **MangoHud**: Support for displaying performance overlays.
 
-## 🚀 Performance Optimizations
+## 🚀 Environment Optimizations
 
-- **FPS Unlock**: Supports unlocking frame rates beyond the official 60 FPS limit (up to 120+ FPS).
-- **GPU Forcing**: Ensures your laptop uses its dedicated GPU (`GpuPreference=2`) for maximum performance.
-- **Unity Arguments**: Automatically applies borderless windowed mode and custom resolution flags.
+- **FPS Unlock**: Provides tools to adjust frame rate limits beyond the default 60 FPS.
+- **GPU Selection**: Helps ensure the system utilizes the appropriate GPU for rendering.
+- **Unity Arguments**: Automatically applies common flags like borderless windowed mode.
 
 ## 💉 Injection Methods
 
-YAGO supports multiple methods for 3DMigoto and ReShade injection:
+YAGO supports standard community methods for 3DMigoto and ReShade injection:
 
-1.  **Proxy DLL (Default)**: The standard and most stable method. It uses a "Dual Proxy" (side-by-side) strategy on Linux, loading both the mod loader (`d3d11.dll`) and ReShade (`dxgi.dll`) automatically.
-2.  **ReShade Only**: Installs ReShade as a local proxy without the mod loader.
-3.  **Loader (Memory Injection)**: Uses a dedicated loader executable for injection, often preferred for specific compatibility scenarios on Windows.
+1.  **Proxy DLL (Default)**: Follows the standard "Dual Proxy" strategy on Linux, loading mod loaders and ReShade automatically.
+2.  **ReShade Only**: Installs ReShade as a local proxy for users who only need post-processing.
+3.  **Loader (Memory Injection)**: Support for external loader executables where required for compatibility.
 
 ## 🛠️ Maintenance & Integrity
 
-### Verify & Repair (Bit-Perfect)
-YAGO features a high-fidelity verification engine that ensures your game files match the official HoYoverse production manifests:
-- **Block-Level Scanning**: Performs a meticulous check of your game files against the official manifest hash tree.
-- **Incremental Repair**: Instead of redownloading the entire game, YAGO identifies the exact corrupted or missing blocks and only downloads those specific chunks.
-- **Visual Feedback**: Real-time progress percentage during the initial file-system scanning phase.
+### Verify & Repair (Manifest-Based)
+YAGO includes verification logic that mimics the behavior of official recovery tools by checking game files against official manifests:
+- **Chunk-Level Checking**: Compares your local files against the manifest hash tree to find inconsistencies.
+- **Incremental Repair**: Only missing or corrupted data blocks are processed, helping to restore the installation efficiently.
+- **Visual Feedback**: Provides basic progress indicators during the file scanning phase.
 
-### Advanced Management Hub
-Every game features a dedicated **Management** tab in the settings drawer for administrative tasks:
-- **Purge Prefix**: Permanently delete the Wine/Proton prefix. Useful for fixing environment-specific launch crashes. A fresh prefix will be automatically recreated on the next launch.
-- **Wipe Mod Library**: Instantly purge every mod file and configuration associated with the game from your disk.
-- **Reset Profiles**: Revert the game to a clean slate by removing all custom loadouts and enabled mod states.
-- **Delete Entry (Unlink)**: Safely remove the game from your YAGO library while keeping all game and mod files safe on your disk.
-- **Full Uninstall**: A multi-step, destructive wipe that removes every byte of the game installation and its associated mods.
-
-## 💾 Customizable Storage (Decentralized)
+## 💾 Flexible Storage (Decentralized)
 
 YAGO features a unique decentralized storage model designed for power users and library sharing:
 

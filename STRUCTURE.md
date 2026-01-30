@@ -47,7 +47,7 @@ The backend is composed of a thin Tauri host and a collection of domain-specific
 *   **`commands/`**: Modular IPC command handlers (`library.rs`, `mods.rs`, `launcher.rs`, etc.).
 *   **`config.rs`**: Handles persistent application configuration.
 
-### 📂 `crates/` (The Engine Room)
+### 📂 crates/ (The Core Logic)
 Independent crates, each with their own `tests/` directory.
 
 | Crate | Responsibility |
@@ -64,7 +64,7 @@ Independent crates, each with their own `tests/` directory.
 
 #### 📦 Sophon Engine Sub-modules
 *   **`protocol`**: Binary manifest parser for Zstd+Protobuf Sophon files. Maps unified HoYoPlay identifiers to regional manifests.
-*   **`orchestrator`**: MPMC worker pool managing parallel block downloads and **Smart Incremental Repairs**.
+*   **`orchestrator`**: MPMC worker pool managing parallel block downloads and **Incremental Repairs**.
 *   **`client`**: HoYoPlay API client for `getBuild` discovery and raw chunk fetching.
 *   **`patcher`**: Safe FFI wrapper for `HDiffZ` for high-performance delta-patching.
 *   **`journal`**: Crash-resilient tracker for chunk-level progress (Pending/Applied/Verified).

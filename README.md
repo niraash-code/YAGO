@@ -5,30 +5,30 @@
 [![Tauri](https://img.shields.io/badge/tauri-2.0-24c8db)](https://tauri.app/)
 [![React](https://img.shields.io/badge/react-19.0-61dafb)](https://reactjs.org/)
 
-YAGO is a high-performance, next-generation modding platform that bridges the gap between a user-friendly Game Manager and a technical Integrated Development Environment (IDE) for modders.
+YAGO is a community-driven game organizer and modding companion designed to provide a streamlined experience for both players and modders. It focuses on maintaining a clean modding environment while integrating with official game delivery standards.
 
 - **Tier 1 (Native Logic Support):** Genshin Impact, Honkai: Star Rail, Zenless Zone Zero, Wuthering Waves (GIMI/SRMI/ZZZMI logic).
 - **Tier 2 (Legacy Support):** Dead or Alive 6, SoulCalibur VI.
 - **Tier 3 (Future Expansion):** Unreal Engine Gachas (Tower of Fantasy, Snowbreak) via `.pak` logic.
 
 > **⚠️ Project Status: ALPHA**  
-> YAGO is currently in active development. There are **no public builds available** at this time. We are focused on architectural stability and core feature completion before an initial public release.
+> YAGO is currently in active development. We are focused on architectural stability and core features before an initial public release.
 
 ---
 
-## 🌟 The Vision: The "Quad-Lemma" Solution
+## 🌟 The Vision: A Unified Companion
 
-YAGO solves four critical ecosystem failures simultaneously:
+YAGO aims to simplify several key aspects of the modding workflow:
 
-### 1. The Organizer (For Players) - Ease
-- **Virtual File System**: Mods stay clean in a Library. YAGO deploys them instantly using zero-copy Symlinks.
-- **Context-Aware**: Automatically switches logic based on the game (Genshin Regions vs. Star Rail Planets).
-- **Safety First**: Global "Streamer Mode" (NSFW Blur/Kill-switch) and non-destructive file handling.
+### 1. Simple Organization (For Players)
+- **Virtual File System**: Keeps your game directories clean by using zero-copy Symlinks to deploy mods from a centralized library.
+- **Context-Aware**: Switches logic automatically based on the selected game.
+- **Safety Features**: Includes "Streamer Mode" options (NSFW Blur) and non-destructive file handling to protect your installation.
 
-### 2. The IDE (For Modders) - Power
-- **Logic Compiler**: Automatically writes complex .ini logic for Toggles, Region Switching, and Sub-Mods.
-- **Static Analysis**: A "Fake Interpreter" that validates mod logic before deployment to prevent game crashes.
-- **Standardization**: Implements the `mod.json` manifest standard for cross-tool compatibility.
+### 2. Streamlined Tools (For Modders)
+- **Logic Handling**: Simplifies the management of complex .ini files for Toggles and Sub-Mods.
+- **Validation**: Provides basic validation of mod structures to help prevent common issues before deployment.
+- **Standardization**: Adheres to the `mod.json` manifest standard for better tool compatibility.
 
 ---
 
@@ -51,25 +51,25 @@ The core logic is distributed across 8 specialized Rust crates. For a deep archi
 
 ## 🏗️ Core Innovations
 
-### A "Native Citizen" of the Ecosystem
-YAGO isn't just a wrapper—it's a high-performance alternative to official game launchers. By natively implementing the **Sophon binary protocol**, YAGO talks directly to HoYoverse's global delivery network.
+### Mimicking Official Standards
+YAGO is designed to be a lightweight, community-driven organizer that respects the infrastructure of the games it supports. By implementing the **Sophon protocol**, YAGO follows the same delivery logic used by official game clients.
 
-- **Bit-Perfect Maintenance**: YAGO ensures your game files are exactly as they should be. It identifies corrupted or missing blocks and fixes them without redownloading the entire game.
-- **Smart Incremental Updates**: Like the official launcher, YAGO only downloads what has changed. Our "Smart Pass" scanning saves you time and bandwidth.
-- **Selective Installation**: Save up to 40% disk space by installing only the core game and the audio packs you actually use.
-- **Universal Discovery**: Point YAGO to any folder, and it will automatically identify, version-check, and link your games to the official update heartbeat.
+- **Integrated Maintenance**: YAGO helps keep your game files in a healthy state by verifying them against official manifests. It can identify and repair specific missing chunks, mimicking the behavior of official recovery tools.
+- **Incremental Updates**: Like the official launcher, YAGO supports incremental updates. Our implementation ensures that only changed data is processed, saving time and bandwidth for the user.
+- **Resource Efficiency**: Optionally install only the game core and specific audio packs to better manage your disk space.
+- **Seamless Discovery**: YAGO can scan your existing folders to identify and link your games to the official update cycle, ensuring you're always using the correct version.
 
-### Decentralized Storage & Freedom
-YAGO gives you total control over where your data lives:
-- **Granular Overrides**: Keep the app on your system drive, but move your massive 100GB+ mod library to a fast external SSD.
-- **Resource Sharing**: Share Proton versions and prefixes with Steam or Lutris to avoid redundant disk usage.
-- **Portability**: Your game settings are stored *with* your games. Reinstalling YAGO is as simple as pointing it back to your primary games folder.
+### Organized Storage & Flexibility
+YAGO provides simple tools to manage your modding environment:
+- **Flexible Paths**: Keep your app data light and store your large mod collections on the drive of your choice.
+- **Environment Sharing**: YAGO can be pointed to existing Proton or Wine environments to reduce redundant installations.
+- **Portable Settings**: Game-specific configurations are kept with your games, making it easier to maintain your setup across different installations.
 
-### Advanced Management Hub
-Every game entry features a dedicated administrative suite for power users:
-- **Environment Purge**: Instantly fix "corrupt" environments by nuking and recreating Wine/Proton prefixes.
-- **One-Click Cleanup**: Securely wipe mod libraries or perform a full, bit-perfect uninstallation from your disk.
-- **Launch Protection**: YAGO strictly monitors game versions and prevents launches if an update is required, keeping your account safe.
+### Management Hub
+A dedicated space for basic administrative tasks:
+- **Environment Reset**: Simple tools to purge and recreate Wine/Proton prefixes if an environment becomes unstable.
+- **Cleanup Tools**: Dedicated options to remove mod libraries or uninstall game entries from your local disk.
+- **Version Awareness**: YAGO monitors game versions to help ensure you are running a compatible client before launching with mods.
 
 ---
 

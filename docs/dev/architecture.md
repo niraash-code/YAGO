@@ -17,7 +17,7 @@ YAGO is built as a highly modular Cargo Workspace consisting of 8 specialized Ru
 
 ## 🏗️ The Sophon Maintenance System
 
-YAGO's maintenance engine is designed for bit-perfect reliability and bandwidth efficiency.
+YAGO's maintenance engine is designed for manifest-based reliability and bandwidth efficiency.
 
 ### 1. Block-Level Orchestration
 Unlike traditional file-based downloaders, YAGO breaks games into **Chunks (1-4MB)**. 
@@ -31,10 +31,10 @@ YAGO natively implements the Sophon binary protocol:
 - **HoYoPlay Integration**: Interacts with `getBuild` endpoints using unified identifiers and regional branch passwords.
 - **Fuzzy Identification**: Leverages alphanumeric normalization to link manual installs (e.g., `GenshinImpact.exe`) to official metadata templates.
 
-### 3. Smart Incremental Repair
+### 3. Incremental Repair Logic
 Integrity checks and updates use an incremental "Smart Pass":
 - **Size-Based Skipping**: Chunks residing within files that already match the manifest's offset/size requirements are skipped.
-- **Atomic Writing**: Chunks are written into pre-allocated files at exact offsets, allowing for bit-perfect repair of partially corrupted games.
+- **Atomic Writing**: Chunks are written into pre-allocated files at exact offsets, allowing for manifest-based repair of partially corrupted games.
 - **Interactive Verification**: Provides real-time percentage feedback during the heavy I/O scanning phase.
 
 ### 4. Resilience & Journaling
