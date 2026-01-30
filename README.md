@@ -49,32 +49,27 @@ The core logic is distributed across 8 specialized Rust crates. For a deep archi
 
 ---
 
-## 🏗️ Technical Innovations
+## 🏗️ Core Innovations
 
-### Sophon Content Delivery (Pillar 7)
-YAGO features a native, bit-perfect implementation of the Sophon binary protocol, allowing it to maintain games completely independently of official launchers:
-- **Binary Protocol Decoding**: Native handling of Zstandard-compressed Protobuf manifests used by the latest HoYoPlay unified launcher.
-- **Smart Incremental Updates**: Scans existing files up to 3 levels deep. If a chunk is already present and matches the official size/hash, it is skipped automatically—no more redownloading 100GB for a 2GB patch.
-- **Selective Component Installation**: A cloud-driven wizard lets you choose exactly which components to install (e.g., Core Assets + English Audio) to save bandwidth and disk space.
-- **High-Fidelity Orchestration**: Multi-threaded MPMC worker pool ensures 100% CPU and Network utilization with real-time ETA and speed tracking.
-- **Bit-Perfect Repair**: Performs block-level verification against official manifests and only redownloads the exact missing or corrupted chunks.
+### A "Native Citizen" of the Ecosystem
+YAGO isn't just a wrapper—it's a high-performance alternative to official game launchers. By natively implementing the **Sophon binary protocol**, YAGO talks directly to HoYoverse's global delivery network.
 
-### Unified Game Lifecycle Management
-YAGO is no longer just a mod manager—it is a complete game lifecycle platform:
-- **Cloud Discovery**: Query the official HoYoPlay catalog to initialize game entries before a single byte is downloaded.
-- **Advanced Management Suite**: A dedicated management hub for administrative tasks:
-    - **Purge Prefix**: Delete Wine/Proton environments to fix "corrupt" launch states.
-    - **Wipe Mods**: Permanently purge the entire mod library for a specific title.
-    - **Delete Entry (Unlink)**: Remove a game from YAGO while keeping all files safe on your disk.
-    - **Full Uninstall**: A multi-step, destructive wipe that removes every byte of the game and mods.
-- **Recursive Auto-Discovery**: Point YAGO to your primary Games folder (e.g., `~/Games`), and it will perform a deep recursive scan to identify and import all supported titles automatically.
+- **Bit-Perfect Maintenance**: YAGO ensures your game files are exactly as they should be. It identifies corrupted or missing blocks and fixes them without redownloading the entire game.
+- **Smart Incremental Updates**: Like the official launcher, YAGO only downloads what has changed. Our "Smart Pass" scanning saves you time and bandwidth.
+- **Selective Installation**: Save up to 40% disk space by installing only the core game and the audio packs you actually use.
+- **Universal Discovery**: Point YAGO to any folder, and it will automatically identify, version-check, and link your games to the official update heartbeat.
 
-### Sophisticated Version Detection
-YAGO identifies game versions with regional precision by combining multiple fallback strategies:
-1. **Config.ini Parsing**: A lenient, case-insensitive parser that traverses parent directories to find the definitive version string.
-2. **Pkg_version Scanning**: Regex-based extraction from internal language-specific manifest files.
-3. **PE Metadata Filtering**: Direct extraction from Windows executables with smart filters to ignore engine-specific versioning (e.g., Unity).
-4. **Launch Protection**: Strictly gates game execution—if an update is available or the version is unverified, YAGO replaces "Launch" with a mandatory "Update" or "Verify" action.
+### Decentralized Storage & Freedom
+YAGO gives you total control over where your data lives:
+- **Granular Overrides**: Keep the app on your system drive, but move your massive 100GB+ mod library to a fast external SSD.
+- **Resource Sharing**: Share Proton versions and prefixes with Steam or Lutris to avoid redundant disk usage.
+- **Portability**: Your game settings are stored *with* your games. Reinstalling YAGO is as simple as pointing it back to your primary games folder.
+
+### Advanced Management Hub
+Every game entry features a dedicated administrative suite for power users:
+- **Environment Purge**: Instantly fix "corrupt" environments by nuking and recreating Wine/Proton prefixes.
+- **One-Click Cleanup**: Securely wipe mod libraries or perform a full, bit-perfect uninstallation from your disk.
+- **Launch Protection**: YAGO strictly monitors game versions and prevents launches if an update is required, keeping your account safe.
 
 ---
 
