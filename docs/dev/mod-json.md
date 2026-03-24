@@ -34,20 +34,29 @@ The `mod.json` file is the manifest for YAGO-compatible mods.
 ## Fields
 
 ### meta
-- **name**: Display name of the mod
-- **version**: Semantic version string
-- **author**: Creator name
-- **url**: Link to mod page
-- **preview_image**: Path to cover image
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Display name of the mod |
+| `version` | string | Semantic version string |
+| `author` | string | Creator name |
+| `url` | string | Link to mod page (optional) |
+| `preview_image` | string | Path to cover image (optional) |
 
 ### compatibility
-- **game**: Game name (e.g., "Genshin Impact", "Wuthering Waves")
-- **character**: Character/feature name (optional)
-- **hashes**: Vertex buffer hashes this mod targets
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `game` | string | Game name (e.g., "Genshin Impact") |
+| `character` | string | Character/feature name (optional) |
+| `hashes` | string[] | Vertex buffer hashes this mod targets |
 
 ### config
-- **tags**: Categorization tags (NSFW, INA, BOSS, etc.)
-- **keybinds**: Configurable keybinds mapped to INI variables
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tags` | string[] | Categorization tags (NSFW, INA, BOSS, etc.) |
+| `keybinds` | object | Configurable keybinds mapped to INI variables |
 
 ## Example
 

@@ -6,7 +6,7 @@ YAGO uses a multi-tiered testing strategy.
 
 ```bash
 # All Rust tests
-cargo test
+cargo test --workspace
 
 # Specific crate
 cargo test -p ini
@@ -20,25 +20,40 @@ bun test
 
 ### Unit Tests
 
-Each crate has tests in `src/`:
+Each crate contains tests for its specific domain:
+
 - `ini`: Parser and compiler tests
 - `vfs`: Archive extraction and safety tests
 - `storage`: Database and discovery tests
 - `mod_patches`: Merger and validator tests
+- `launcher`: Launch configuration tests
 
 ### Snapshot Tests
 
-Uses `insta` for regression testing.
+Uses `insta` for regression testing:
+
+```bash
+cargo test --test '*snapshot*'
+```
 
 ## Code Quality
 
 ```bash
 # Format code
-cargo fmt
+cargo fmt --all
 
-# Lint
+# Lint Rust
 cargo clippy --workspace -- -D warnings
 
-# Frontend lint
-bun run lint
+# Lint frontend
+cd src-ui && bun run lint
+```
+
+## Common Commands
+
+```bash
+just cargo fmt    # Format code
+just cargo clippy # Lint
+just cargo test   # Run tests
+just bun lint     # Frontend lint
 ```

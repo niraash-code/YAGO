@@ -5,6 +5,7 @@ YAGO is both a mod manager and a game launcher.
 ## Linux Support
 
 Built for Linux with support for:
+
 - **Proton/Wine**: Automatic environment setup
 - **Gamescope**: High-quality micro-compositor
 - **Gamemode**: CPU and I/O optimization
@@ -12,11 +13,13 @@ Built for Linux with support for:
 
 ## Performance
 
-- **FPS Unlock**: Bypass 60 FPS cap (up to 120+ FPS)
+- **FPS Unlock**: Bypass the 60 FPS cap (up to 120+ FPS)
 - **GPU Selection**: Force dedicated GPU on laptops
 - **Borderless Window**: Optimal window mode for Unity games
 
 ## Injection Methods
+
+Choose the method that works best for your setup:
 
 1. **Proxy DLL (Default)**: Most stable option
    - Linux: Dual proxy (d3d11.dll + dxgi.dll)
@@ -29,6 +32,6 @@ Built for Linux with support for:
 ## Environment Variables
 
 YAGO automatically manages:
-- WINEPREFIX / STEAM_COMPAT_DATA_PATH
+- `WINEPREFIX` / `STEAM_COMPAT_DATA_PATH`
 - DXVK state cache
 - Library paths for mod loaders

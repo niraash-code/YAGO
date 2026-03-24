@@ -19,11 +19,13 @@ bun run tauri dev
 ## Code Standards
 
 ### Rust
-- Run `cargo fmt` before committing
-- Run `cargo clippy` to catch issues
+
+- Run `cargo fmt --all` before committing
+- Run `cargo clippy --workspace -- -D warnings` to catch issues
 - Add tests for new functionality
 
 ### Frontend
+
 - Follow existing component patterns
 - Use functional components with hooks
 - Run `bun run lint` before committing
@@ -31,23 +33,27 @@ bun run tauri dev
 ## Workflow
 
 1. **Fork** the repository
-2. **Branch**: Create a feature branch
+2. **Branch**: Create a feature branch (`git checkout -b feature/my-feature`)
 3. **Code**: Make your changes
-4. **Test**: Verify with tests and linters
+4. **Test**: Verify with `cargo test` and `bun run lint`
 5. **PR**: Open a pull request
 
 ## Project Structure
 
 ```
-crates/
-├── ini/          # INI parsing
-├── vfs/          # File system
-├── storage/      # Database
-├── mod_patches/  # Patching
-├── launcher/     # Game launching
-├── sync/         # Sync
-├── resources/    # Downloads
-└── loader/       # Mod loader
+yago/
+├── crates/           # Rust backend (8 crates)
+│   ├── ini/          # INI parsing
+│   ├── vfs/          # Virtual file system
+│   ├── storage/      # Database
+│   ├── mod_patches/  # INI patching
+│   ├── launcher/     # Game launching
+│   ├── sync/         # Asset sync
+│   ├── resources/   # Downloads
+│   └── loader/       # Mod loader
+├── src-tauri/        # Tauri backend entry
+├── src-ui/           # React frontend
+└── justfile          # Development commands
 ```
 
 ## Reporting Issues
