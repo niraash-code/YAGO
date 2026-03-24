@@ -1,0 +1,9 @@
+---
+source: crates/vfs/src/snapshots_test.rs
+expression: report
+---
+files_ignored:
+  - d3dx.ini
+  - malware.exe
+has_mod_json: true
+has_modinfo_json: false

@@ -104,6 +104,9 @@ test-loader:
 # === Setup ===
 
 setup:
+    mkdir -p release/latest release/older release/build/temp release/build/deb release/build/rpm release/build/windows release/build/appimage release/build/flatpak release/build/pkgbuild
+
+setup-full:
     cargo make setup
 
 clean:
@@ -142,45 +145,29 @@ tauri-icon:
 # === Release ===
 
 release-init:
-    cargo make init-release
+    mkdir -p release/latest release/older release/build/temp release/build/deb release/build/rpm release/build/appimage release/build/flatpak release/build/pkgbuild
 
 release-deb:
-    cargo make release-deb
+    cd src-tauri && cargo tauri build --bundles deb
+    cp src-tauri/target/release/bundle/deb/*.deb release/latest/
 
 release-rpm:
-    cargo make release-rpm
+    cd src-tauri && cargo tauri build --bundles rpm
+    cp src-tauri/target/release/bundle/rpm/*.rpm release/latest/
 
 release-appimage:
-    cargo make release-appimage
-
-release-flatpak:
-    cargo make release-flatpak
+    cd src-tauri && NO_STRIP=1 APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build --bundles appimage
+    cp src-tauri/target/release/bundle/appimage/*.AppImage release/latest/YAGO-x86_64.AppImage
 
 release-win:
-    cargo make release-windows
+    cd src-tauri && bun run tauri build --bundles nsis
+    cp src-tauri/target/release/yago.exe release/latest/yago-portable.exe
+    cp src-tauri/target/release/bundle/nsis/*.exe release/latest/yago-setup.exe
 
-release-pkgbuild:
-    cargo make release-pkgbuild
-
-release-all:
-    cargo make release-all
+release-all: release-deb release-rpm release-appimage release-win
 
 release-list:
     ls -la release/latest/ || echo "No releases found."
-
-# === Linux-specific ===
-
-setup-linux:
-    cargo make setup-linux
-
-setup-linux-deb:
-    cargo make setup-linux-deb
-
-setup-linux-rpm:
-    cargo make setup-linux-rpm
-
-setup-linux-arch:
-    cargo make setup-linux-arch
 
 # === Utilities ===
 
