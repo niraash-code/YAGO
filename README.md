@@ -13,10 +13,10 @@ A high-performance game mod manager built with Tauri, React, and Rust.
 
 ## Supported Games
 
-- Genshin Impact
-- Honkai: Star Rail
-- Zenless Zone Zero
-- (And other HoYoverse games)
+- **HoYoverse**: Genshin Impact, Honkai: Star Rail, Zenless Zone Zero
+- **Wuthering Waves**
+
+More games will be added in the future.
 
 ## Tech Stack
 
@@ -70,9 +70,9 @@ yago/
 └── scripts/          # Build and utility scripts
 ```
 
-## Contributing
+## Documentation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See the [docs/](docs/) directory for user and developer guides.
 
 ## License
 

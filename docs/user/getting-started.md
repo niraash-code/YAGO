@@ -54,13 +54,10 @@ Click "Launch Game" to start with your enabled mods. YAGO handles deployment and
 
 ## Supported Games
 
-YAGO supports any game using the 3DMigoto mod loader:
-- Genshin Impact
-- Honkai: Star Rail
-- Zenless Zone Zero
-- Wuthering Waves
-- Black Myth: Wukong
-- Any game with 3DMigoto support
+- **HoYoverse**: Genshin Impact, Honkai: Star Rail, Zenless Zone Zero
+- **Wuthering Waves**
+
+More games will be added in the future.
 
 ## Next Steps
 
