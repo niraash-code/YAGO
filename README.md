@@ -72,7 +72,7 @@ yago/
 
 ## Documentation
 
-See the [docs/](docs/) directory for user and developer guides.
+See [docs/index.md](docs/index.md) for user and developer guides.
 
 ## License
 

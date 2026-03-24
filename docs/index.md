@@ -13,7 +13,7 @@ Welcome! YAGO (Yet Another Game Organizer) is a high-performance mod manager for
 
 - [Architecture](dev/architecture.md) - System design overview
 - [Testing](dev/testing.md) - Testing protocols
-- [Contributing](contributing.md) - How to contribute
+- [Contributing](dev/contributing.md) - How to contribute
 - [mod.json Spec](dev/mod-json.md) - Mod manifest format
 
 ## Supported Games
