@@ -1,18 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Game } from "../types";
-import {
-  Archive,
-  FileBox,
-  CheckCircle2,
-  Filter,
-  ArrowUpDown,
-  HardDrive,
-  Calendar,
-  X,
-  Check,
-} from "lucide-react";
+import { Archive, ArrowUpDown, Filter } from "lucide-react";
 import { useAppStore } from "../store/gameStore";
 import { useUiStore } from "../store/uiStore";
 import { useFileDrop } from "../hooks/useFileDrop";
@@ -24,6 +14,8 @@ import { ModManagerHeader } from "./mod-manager/ModManagerHeader";
 import { ModInspector } from "./mod-manager/ModInspector";
 import { ModItem, CompactModItem, GridModItem } from "./mod-manager/ModItems";
 import { parseSize, isModNSFW } from "./mod-manager/types";
+import { ImportStagingModal } from "./mod-manager/ImportStagingModal";
+import { ImportCandidate } from "../lib/api";
 
 interface ModManagerProps {
   game: Game;
@@ -42,7 +34,6 @@ const ModManager: React.FC<ModManagerProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedModId, setSelectedModId] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | "All">("All");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [devMode, setDevMode] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -50,9 +41,14 @@ const ModManager: React.FC<ModManagerProps> = ({
   const [sortBy, setSortBy] = useState<"default" | "name" | "size" | "updated">(
     "default"
   );
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection] = useState<"asc" | "desc">("asc");
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isRedeploying, setIsRedeploying] = useState(false);
+  const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>(
+    []
+  );
+  const [isStagingOpen, setIsStagingOpen] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"info" | "files" | "editor">(
     "info"
   );
@@ -75,7 +71,32 @@ const ModManager: React.FC<ModManagerProps> = ({
     async (paths: string[]) => {
       setIsImporting(true);
       try {
-        for (const path of paths) await importMod(game.id, path);
+        const allCandidates: ImportCandidate[] = [];
+        const directImports: string[] = [];
+
+        for (const path of paths) {
+          try {
+            // Check if it's a directory with mods
+            const candidates = await api.scanModDirectory(path, game.id);
+            if (candidates && candidates.length > 0) {
+              allCandidates.push(...candidates);
+            } else {
+              // Might be a zip or a folder that scan_directory didn't like (but import_mod might)
+              directImports.push(path);
+            }
+          } catch {
+            directImports.push(path);
+          }
+        }
+
+        if (allCandidates.length > 0) {
+          setImportCandidates(prev => [...prev, ...allCandidates]);
+          setIsStagingOpen(true);
+        }
+
+        for (const path of directImports) {
+          await importMod(game.id, path);
+        }
       } catch (e) {
         showAlert("Failed to import dropped mod: " + e, "Import Error");
       } finally {
@@ -87,19 +108,12 @@ const ModManager: React.FC<ModManagerProps> = ({
 
   useFileDrop(handleNativeDrop, setIsDraggingFile);
 
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    game.mods.forEach(mod => mod.tags.forEach(t => tags.add(t)));
-    return ["All", ...Array.from(tags)];
-  }, [game.mods]);
-
   const processedMods = useMemo(() => {
     let mods = game.mods.filter(mod => {
       const matchesSearch =
         mod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mod.author.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTag =
-        selectedTag === "All" || mod.tags.includes(selectedTag);
+      const matchesTag = true;
       if (streamSafe && nsfwBehavior === "hide" && isModNSFW(mod)) return false;
       if (showEnabledOnly && !mod.enabled) return false;
       return matchesSearch && matchesTag;
@@ -130,7 +144,6 @@ const ModManager: React.FC<ModManagerProps> = ({
     game.mods,
     activeProfile,
     searchTerm,
-    selectedTag,
     streamSafe,
     nsfwBehavior,
     showEnabledOnly,
@@ -144,6 +157,68 @@ const ModManager: React.FC<ModManagerProps> = ({
     estimateSize: () => (viewMode === "list" ? (devMode ? 60 : 88) : 300),
     overscan: 5,
   });
+
+  const handleImportFromFolder = async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Select Mods Folder",
+    });
+    if (selected && typeof selected === "string") {
+      setIsImporting(true);
+      try {
+        const candidates = await api.scanModDirectory(selected, game.id);
+        if (candidates && candidates.length > 0) {
+          setImportCandidates(candidates);
+          setIsStagingOpen(true);
+        } else {
+          showAlert(
+            "No valid mods found in the selected folder.",
+            "Import Info"
+          );
+        }
+      } catch (e) {
+        showAlert("Failed to scan directory: " + e, "Scan Error");
+      } finally {
+        setIsImporting(false);
+      }
+    }
+  };
+
+  const handleCommitImport = async (finalCandidates: ImportCandidate[]) => {
+    setIsStagingOpen(false);
+    setIsImporting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    // Alchemy Fix: Deduplicate candidates by original_path to prevent triple-importing the same mod
+    const uniquePaths = new Set<string>();
+    const deduplicatedCandidates = finalCandidates.filter(c => {
+      if (uniquePaths.has(c.original_path)) return false;
+      uniquePaths.add(c.original_path);
+      return true;
+    });
+
+    try {
+      for (const candidate of deduplicatedCandidates) {
+        try {
+          await api.importMod(game.id, candidate.original_path);
+          successCount++;
+        } catch (e) {
+          console.error("Failed to import " + candidate.suggested_name, e);
+          failCount++;
+        }
+      }
+      showAlert(
+        `Successfully imported ${successCount} mods.${failCount > 0 ? ` ${failCount} failed.` : ""}`,
+        "Import Complete"
+      );
+    } finally {
+      setIsImporting(false);
+      setImportCandidates([]);
+    }
+  };
 
   const handleImport = async () => {
     const { open } = await import("@tauri-apps/plugin-dialog");
@@ -160,6 +235,17 @@ const ModManager: React.FC<ModManagerProps> = ({
       } finally {
         setIsImporting(false);
       }
+    }
+  };
+
+  const handleRedeploy = async () => {
+    setIsRedeploying(true);
+    try {
+      await api.redeployMods(game.installPath || "");
+    } catch (e) {
+      showAlert("Failed to reload mods: " + e, "Reload Error");
+    } finally {
+      setIsRedeploying(false);
     }
   };
 
@@ -187,17 +273,14 @@ const ModManager: React.FC<ModManagerProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col h-full max-h-[calc(100vh-5rem)]"
-    >
+    <div className="flex-1 flex flex-col h-full max-h-[calc(100vh-5rem)] bg-background">
       <AnimatePresence>
         {isDraggingFile && (
-          <motion.div className="absolute inset-0 z-50 bg-indigo-500/90 flex flex-col items-center justify-center text-white pointer-events-none">
+          <motion.div className="absolute inset-0 z-[100] bg-primary flex flex-col items-center justify-center text-primary-foreground pointer-events-none">
             <Archive size={64} className="animate-bounce" />
-            <h2 className="text-3xl font-bold">Drop to Install</h2>
+            <h2 className="text-3xl font-black uppercase italic tracking-tighter">
+              Drop to Install
+            </h2>
           </motion.div>
         )}
       </AnimatePresence>
@@ -211,11 +294,14 @@ const ModManager: React.FC<ModManagerProps> = ({
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         isImporting={isImporting}
+        isRedeploying={isRedeploying}
         onImport={handleImport}
+        onImportFolder={handleImportFromFolder}
+        onRedeploy={handleRedeploy}
         onClose={onClose}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden bg-card">
         {viewMode === "list" ? (
           <>
             <div
@@ -223,11 +309,11 @@ const ModManager: React.FC<ModManagerProps> = ({
               className={cn(
                 "overflow-y-auto border-r custom-scrollbar transition-all duration-300",
                 devMode
-                  ? "w-[400px] bg-slate-950 border-r-white/10"
-                  : "w-[450px] bg-slate-950/20 border-r-white/5"
+                  ? "w-[400px] bg-background border-r-border"
+                  : "w-[450px] bg-background border-r-border"
               )}
             >
-              <div className="sticky top-0 z-20 px-3 py-2 bg-slate-900/80 border-b border-white/5 backdrop-blur-md flex items-center justify-between">
+              <div className="sticky top-0 z-20 px-3 py-2 bg-background border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() =>
@@ -236,8 +322,8 @@ const ModManager: React.FC<ModManagerProps> = ({
                     className={cn(
                       "p-1.5 rounded",
                       sortBy === "name"
-                        ? "bg-indigo-600 text-white"
-                        : "text-slate-400"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
                     <ArrowUpDown size={14} />
@@ -245,10 +331,10 @@ const ModManager: React.FC<ModManagerProps> = ({
                   <button
                     onClick={() => setShowEnabledOnly(!showEnabledOnly)}
                     className={cn(
-                      "px-2 py-1.5 rounded-lg border text-[10px] font-bold uppercase",
+                      "px-2 py-1.5 rounded-md border text-[10px] font-black uppercase tracking-widest transition-all",
                       showEnabledOnly
-                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                        : "bg-black/30 text-slate-500 border-white/5"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:text-foreground"
                     )}
                   >
                     Active
@@ -257,8 +343,10 @@ const ModManager: React.FC<ModManagerProps> = ({
                 <button
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                   className={cn(
-                    "p-1.5 rounded",
-                    isFilterOpen ? "text-indigo-400" : "text-slate-400"
+                    "p-1.5 rounded transition-colors",
+                    isFilterOpen
+                      ? "text-primary bg-muted"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <Filter size={16} />
@@ -296,7 +384,7 @@ const ModManager: React.FC<ModManagerProps> = ({
                             virtualRow.index < processedMods.length - 1
                           }
                           onSelect={() => setSelectedModId(mod.id)}
-                          onToggle={(id: any, e: any) =>
+                          onToggle={(id: any) =>
                             toggleModInStore(game.id, id, !mod.enabled)
                           }
                           onMoveUp={() => handleMoveMod(mod.id, "up")}
@@ -314,7 +402,7 @@ const ModManager: React.FC<ModManagerProps> = ({
                             virtualRow.index < processedMods.length - 1
                           }
                           onSelect={() => setSelectedModId(mod.id)}
-                          onToggle={(id: any, e: any) =>
+                          onToggle={(id: any) =>
                             toggleModInStore(game.id, id, !mod.enabled)
                           }
                           onMoveUp={() => handleMoveMod(mod.id, "up")}
@@ -341,7 +429,7 @@ const ModManager: React.FC<ModManagerProps> = ({
                 })}
               </div>
             </div>
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 bg-card">
               <ModInspector
                 selectedMod={selectedMod}
                 tab={inspectorTab}
@@ -371,14 +459,14 @@ const ModManager: React.FC<ModManagerProps> = ({
             </div>
           </>
         ) : (
-          <div className="flex-1 overflow-y-auto p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 bg-black/20">
+          <div className="flex-1 overflow-y-auto p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 bg-background">
             {processedMods.map(mod => (
               <GridModItem
                 key={mod.id}
                 mod={mod}
                 isSelected={selectedModId === mod.id}
                 onSelect={() => setSelectedModId(mod.id)}
-                onToggle={(id: any, e: any) =>
+                onToggle={(id: any) =>
                   toggleModInStore(game.id, id, !mod.enabled)
                 }
                 streamSafe={streamSafe}
@@ -388,7 +476,14 @@ const ModManager: React.FC<ModManagerProps> = ({
           </div>
         )}
       </div>
-    </motion.div>
+
+      <ImportStagingModal
+        isOpen={isStagingOpen}
+        onClose={() => setIsStagingOpen(false)}
+        candidates={importCandidates}
+        onConfirm={handleCommitImport}
+      />
+    </div>
   );
 };
 

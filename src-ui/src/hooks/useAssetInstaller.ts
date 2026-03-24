@@ -71,5 +71,9 @@ export function useAssetInstaller() {
     }
   }, [refreshRunners]);
 
-  return { installState, installGameLoader, installProton };
+  const reset = useCallback(() => {
+    setInstallState({ status: "idle", progress: 0 });
+  }, []);
+
+  return { installState, installGameLoader, installProton, reset };
 }

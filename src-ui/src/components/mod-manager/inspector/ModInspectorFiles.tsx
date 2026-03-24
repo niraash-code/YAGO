@@ -44,15 +44,15 @@ export const ModInspectorFiles: React.FC<ModInspectorFilesProps> = ({
           className={cn(
             "flex items-center gap-2 px-3 py-2 cursor-pointer select-none transition-all duration-200 group relative rounded-lg mx-2 my-0.5",
             activeFileId === node.id
-              ? "bg-indigo-500/20 text-indigo-300 shadow-sm"
-              : "hover:bg-white/5 text-slate-400 hover:text-slate-200"
+              ? "bg-primary/20 text-primary shadow-sm"
+              : "hover:bg-muted/10 text-muted-foreground hover:text-foreground"
           )}
           style={{ paddingLeft: `${level * 16 + 12}px` }}
           onClick={() => onFileClick(node)}
           onContextMenu={e => onContextMenu(e, node)}
         >
           <span
-            className="opacity-50 hover:opacity-100 p-0.5 rounded hover:bg-white/10"
+            className="opacity-50 hover:opacity-100 p-0.5 rounded hover:bg-muted/20"
             onClick={e => {
               e.stopPropagation();
               if (node.type === "folder") onToggleFolder(node.id);
@@ -71,19 +71,17 @@ export const ModInspectorFiles: React.FC<ModInspectorFilesProps> = ({
             <Folder
               size={16}
               className={
-                openFolders.has(node.id)
-                  ? "text-indigo-400"
-                  : "text-amber-400/80"
+                openFolders.has(node.id) ? "text-primary" : "text-primary/80"
               }
             />
           ) : node.name.endsWith(".json") ? (
-            <FileJson size={16} className="text-yellow-400" />
+            <FileJson size={16} className="text-primary" />
           ) : node.name.endsWith(".ini") ? (
-            <Settings size={16} className="text-slate-400" />
+            <Settings size={16} className="text-muted-foreground" />
           ) : node.name.endsWith(".dds") || node.name.endsWith(".png") ? (
-            <ImageIcon size={16} className="text-purple-400" />
+            <ImageIcon size={16} className="text-primary" />
           ) : (
-            <File size={16} className="text-blue-400" />
+            <File size={16} className="text-primary" />
           )}
 
           <span className="truncate text-[15px] font-medium leading-normal">
@@ -91,7 +89,7 @@ export const ModInspectorFiles: React.FC<ModInspectorFilesProps> = ({
           </span>
 
           <button
-            className="ml-auto opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-opacity"
+            className="ml-auto opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/20 rounded transition-opacity"
             onClick={e => {
               e.stopPropagation();
               onContextMenu(e, node);
@@ -111,25 +109,25 @@ export const ModInspectorFiles: React.FC<ModInspectorFilesProps> = ({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {devMode && (
-        <div className="flex items-center gap-1 p-2 border-b border-white/10 bg-slate-950/50 shrink-0">
+        <div className="flex items-center gap-1 p-2 border-b border-border bg-background/50 shrink-0">
           <button
             onClick={() => onNewItem("file")}
-            className="p-2 hover:bg-white/10 rounded-lg text-slate-300"
+            className="p-2 hover:bg-muted/20 rounded-lg text-muted-foreground"
             title="New File"
           >
             <Plus size={18} />
           </button>
           <button
             onClick={() => onNewItem("folder")}
-            className="p-2 hover:bg-white/10 rounded-lg text-slate-300"
+            className="p-2 hover:bg-muted/20 rounded-lg text-muted-foreground"
             title="New Folder"
           >
             <FolderOpen size={18} />
           </button>
-          <div className="w-px h-6 bg-white/10 mx-2" />
+          <div className="w-px h-6 bg-border mx-2" />
           <button
             onClick={onCollapseAll}
-            className="p-2 hover:bg-white/10 rounded-lg text-slate-300"
+            className="p-2 hover:bg-muted/20 rounded-lg text-muted-foreground"
             title="Collapse All"
           >
             Collapse

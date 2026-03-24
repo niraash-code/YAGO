@@ -1,5 +1,5 @@
 use crate::AppState;
-use librarian::Profile;
+use storage::models::Profile;
 use tauri::{Emitter, State};
 use uuid::Uuid;
 
@@ -10,7 +10,10 @@ pub async fn switch_profile(
     game_id: String,
     profile_id: String,
 ) -> Result<(), String> {
-    let mut dbs = state.game_dbs.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         if let Some(config) = db.games.get_mut(&game_id) {
             let p_uuid = Uuid::parse_str(&profile_id).map_err(|e| e.to_string())?;
@@ -18,9 +21,11 @@ pub async fn switch_profile(
                 config.active_profile_id = profile_id;
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: storage::LibrarianError| e.to_string())?;
                 let _ = app.emit("library-updated", dbs.clone());
                 return Ok(());
             }
@@ -38,10 +43,15 @@ pub async fn create_profile(
 ) -> Result<Profile, String> {
     let profile = state
         .librarian
+        .lock()
+        .await
         .create_profile(&game_id, name)
         .await
-        .map_err(|e| e.to_string())?;
-    let mut dbs = state.game_dbs.lock().await;
+        .map_err(|e: storage::LibrarianError| e.to_string())?;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         db.profiles.insert(profile.id, profile.clone());
     }
@@ -59,10 +69,15 @@ pub async fn duplicate_profile(
 ) -> Result<Profile, String> {
     let profile = state
         .librarian
+        .lock()
+        .await
         .duplicate_profile(&game_id, profile_id, name)
         .await
-        .map_err(|e| e.to_string())?;
-    let mut dbs = state.game_dbs.lock().await;
+        .map_err(|e: storage::LibrarianError| e.to_string())?;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         db.profiles.insert(profile.id, profile.clone());
     }
@@ -78,7 +93,10 @@ pub async fn update_profile(
     profile_id: String,
     update: super::library::ProfileUpdate,
 ) -> Result<(), String> {
-    let mut dbs = state.game_dbs.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         let p_uuid = Uuid::parse_str(&profile_id).map_err(|e| e.to_string())?;
         if let Some(profile) = db.profiles.get_mut(&p_uuid) {
@@ -106,6 +124,9 @@ pub async fn update_profile(
             if let Some(args) = update.launch_args {
                 profile.launch_args = args;
             }
+            if let Some(ga) = update.gamescope_args {
+                profile.gamescope_args = ga;
+            }
             if let Some(path) = update.save_data_path {
                 profile.save_data_path = Some(path);
             }
@@ -117,9 +138,11 @@ pub async fn update_profile(
             }
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: storage::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -134,7 +157,10 @@ pub async fn delete_profile(
     game_id: String,
     profile_id: String,
 ) -> Result<(), String> {
-    let mut dbs = state.game_dbs.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         let p_uuid = Uuid::parse_str(&profile_id).map_err(|e| e.to_string())?;
         if db.profiles.len() <= 1 {
@@ -148,9 +174,11 @@ pub async fn delete_profile(
         if db.profiles.remove(&p_uuid).is_some() {
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: storage::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -166,16 +194,21 @@ pub async fn rename_profile(
     profile_id: String,
     new_name: String,
 ) -> Result<(), String> {
-    let mut dbs = state.game_dbs.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         let p_uuid = Uuid::parse_str(&profile_id).map_err(|e| e.to_string())?;
         if let Some(profile) = db.profiles.get_mut(&p_uuid) {
             profile.name = new_name;
             state
                 .librarian
+                .lock()
+                .await
                 .save_game_db(&game_id, db)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: storage::LibrarianError| e.to_string())?;
             let _ = app.emit("library-updated", dbs.clone());
             return Ok(());
         }
@@ -190,7 +223,10 @@ pub async fn set_load_order(
     game_id: String,
     order: Vec<Uuid>,
 ) -> Result<(), String> {
-    let mut dbs = state.game_dbs.lock().await;
+    let mut dbs: tokio::sync::MutexGuard<
+        '_,
+        std::collections::HashMap<String, storage::LibraryDatabase>,
+    > = state.game_dbs.lock().await;
     if let Some(db) = dbs.get_mut(&game_id) {
         if let Some(config) = db.games.get_mut(&game_id) {
             let p_uuid = Uuid::parse_str(&config.active_profile_id).map_err(|e| e.to_string())?;
@@ -198,9 +234,11 @@ pub async fn set_load_order(
                 profile.load_order = order;
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: storage::LibrarianError| e.to_string())?;
                 let _ = app.emit("library-updated", dbs.clone());
                 return Ok(());
             }

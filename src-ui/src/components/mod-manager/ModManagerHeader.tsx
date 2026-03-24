@@ -9,8 +9,7 @@ import {
   X,
   Plus,
   RefreshCw,
-  Database,
-  FilePlus,
+  Folder,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -23,7 +22,10 @@ interface ModManagerHeaderProps {
   searchTerm: string;
   setSearchTerm: (v: string) => void;
   isImporting: boolean;
+  isRedeploying?: boolean;
   onImport: () => void;
+  onImportFolder?: () => void;
+  onRedeploy?: () => void;
   onClose: () => void;
 }
 
@@ -36,47 +38,39 @@ export const ModManagerHeader: React.FC<ModManagerHeaderProps> = ({
   searchTerm,
   setSearchTerm,
   isImporting,
+  isRedeploying,
   onImport,
+  onImportFolder,
+  onRedeploy,
   onClose,
 }) => {
   return (
-    <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-slate-900/60 backdrop-blur-md z-30">
+    <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-background z-30">
       <div className="flex items-center gap-4">
         <button
           onClick={onClose}
-          className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
+          className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-xl font-bold text-white flex items-center gap-3">
-          <Layers className="text-indigo-400" size={20} />
+        <h1 className="text-xl font-black text-foreground flex items-center gap-3 uppercase italic tracking-tighter">
+          <Layers className="text-primary" size={20} />
           Mod Manager
-          <span className="text-xs font-mono font-normal text-slate-500 px-2 py-0.5 rounded bg-white/5 border border-white/5">
+          <span className="text-[10px] font-black text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
             {modCount}
           </span>
         </h1>
       </div>
 
       <div className="flex items-center gap-3">
-        {devMode && (
-          <div className="flex items-center gap-1 bg-slate-800/50 border border-white/5 rounded-lg p-1 mr-2">
-            <button className="p-2 hover:bg-white/10 rounded-md text-slate-400 hover:text-white">
-              <FilePlus size={18} />
-            </button>
-            <button className="p-2 hover:bg-white/10 rounded-md text-slate-400 hover:text-white">
-              <Database size={18} />
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center bg-slate-800/50 border border-white/5 rounded-lg p-1 mr-2">
+        <div className="flex items-center bg-card border border-border rounded-lg p-1">
           <button
             onClick={() => setViewMode("list")}
             className={cn(
-              "p-2 rounded-md transition-all",
+              "p-2 rounded transition-all",
               viewMode === "list"
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <List size={18} />
@@ -84,10 +78,10 @@ export const ModManagerHeader: React.FC<ModManagerHeaderProps> = ({
           <button
             onClick={() => setViewMode("grid")}
             className={cn(
-              "p-2 rounded-md transition-all",
+              "p-2 rounded transition-all",
               viewMode === "grid"
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <LayoutGrid size={18} />
@@ -99,8 +93,8 @@ export const ModManagerHeader: React.FC<ModManagerHeaderProps> = ({
           className={cn(
             "p-2.5 rounded-lg border transition-all",
             devMode
-              ? "bg-slate-800 border-indigo-500 text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-              : "border-white/5 text-slate-500 hover:text-white"
+              ? "bg-muted border-primary text-primary"
+              : "border-border text-muted-foreground hover:text-foreground"
           )}
         >
           <Terminal size={20} />
@@ -108,20 +102,20 @@ export const ModManagerHeader: React.FC<ModManagerHeaderProps> = ({
 
         <div className="relative">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             size={16}
           />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search mods..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="bg-black/20 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 w-56"
+            className="bg-card border border-border rounded-lg pl-10 pr-10 py-2 text-sm text-foreground focus:outline-none focus:border-primary w-56 font-bold"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X size={14} />
             </button>
@@ -131,15 +125,49 @@ export const ModManagerHeader: React.FC<ModManagerHeaderProps> = ({
         <button
           onClick={onImport}
           disabled={isImporting}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-black uppercase tracking-widest transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
         >
           {isImporting ? (
             <RefreshCw size={16} className="animate-spin" />
           ) : (
             <Plus size={16} />
           )}
-          <span>{isImporting ? "Importing..." : "Add"}</span>
+          <span>{isImporting ? "Importing..." : "Add Mod"}</span>
         </button>
+
+        {onImportFolder && (
+          <button
+            onClick={onImportFolder}
+            disabled={isImporting}
+            className="p-2.5 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-lg transition-all flex items-center gap-2 group disabled:opacity-50"
+            title="Import from Folder (Migration)"
+          >
+            <Folder size={18} className="text-primary" />
+            <span className="text-xs font-black uppercase tracking-widest hidden lg:inline">
+              Import Folder
+            </span>
+          </button>
+        )}
+
+        {onRedeploy && (
+          <button
+            onClick={onRedeploy}
+            disabled={isRedeploying}
+            className="p-2.5 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-lg transition-all flex items-center gap-2 group disabled:opacity-50"
+            title="Reload Mods & Refresh In-Game (F10)"
+          >
+            <RefreshCw
+              size={18}
+              className={cn(
+                "text-primary transition-transform group-hover:rotate-180 duration-500",
+                isRedeploying && "animate-spin"
+              )}
+            />
+            <span className="text-xs font-black uppercase tracking-widest hidden lg:inline">
+              Reload
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

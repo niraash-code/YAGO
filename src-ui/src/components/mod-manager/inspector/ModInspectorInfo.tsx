@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  FileJson,
-  EyeOff,
   Copy,
   Globe,
   ExternalLink,
@@ -13,6 +11,7 @@ import {
   Trash2,
   HardDrive,
   Calendar,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Mod, Game } from "../../../types";
 import { cn } from "../../../lib/utils";
@@ -29,7 +28,7 @@ interface ModInspectorInfoProps {
 }
 
 const UserAvatar = ({ name }: { name: string }) => (
-  <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-bold shadow-md ring-1 ring-white/10">
+  <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-[10px] text-primary-foreground font-black">
     {name.charAt(0).toUpperCase()}
   </div>
 );
@@ -49,10 +48,10 @@ const generateManifest = (mod: Mod, game: Game) => ({
   },
   compatibility: {
     game: game.name,
-    character: mod.compatibility.character,
+    character: mod.compatibility?.character || "Unknown",
     type: "character",
     hashes: [],
-    fingerprint: mod.compatibility.fingerprint,
+    fingerprint: mod.compatibility?.fingerprint || "",
     relations: { requires: [], overrides: [] },
   },
   config: {
@@ -75,46 +74,39 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
   deleteMod,
 }) => {
   const [isAddingTag, setIsAddingTag] = useState(false);
-  const [newTagInput, setNewTagInput] = useState("");
 
   const isNsfw = isModNSFW(selectedMod);
   const shouldBlur = isNsfw && streamSafe;
 
   if (devMode) {
     return (
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-        <div className="flex gap-5 mb-4 pb-6 border-b border-white/10">
-          <div className="w-20 h-20 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden relative shrink-0 border border-white/10 shadow-lg">
-            {shouldBlur ? (
-              <>
-                <img
-                  src={selectedMod.imageUrl}
-                  className="w-full h-full object-cover opacity-20 blur-sm"
-                  alt=""
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <EyeOff size={20} className="text-slate-500" />
-                </div>
-              </>
-            ) : (
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar bg-card">
+        <div className="flex gap-5 mb-4 pb-6 border-b border-border">
+          <div className="w-20 h-20 bg-background rounded border border-border flex items-center justify-center overflow-hidden shrink-0">
+            {selectedMod.imageUrl ? (
               <img
                 src={selectedMod.imageUrl}
-                className="w-full h-full object-cover"
+                className={cn(
+                  "w-full h-full object-cover",
+                  shouldBlur && "grayscale opacity-20"
+                )}
                 alt=""
               />
+            ) : (
+              <ImageIcon size={32} className="text-muted-foreground/20" />
             )}
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <div className="text-xl font-bold text-white truncate">
+            <div className="text-xl font-black text-foreground truncate uppercase italic tracking-tighter">
               {selectedMod.name}
             </div>
-            <div className="text-slate-500 font-mono text-sm mt-1 select-all bg-slate-950/50 px-2 py-1 rounded inline-block border border-white/5">
+            <div className="text-primary font-mono text-[10px] mt-1 select-all bg-background px-2 py-1 rounded inline-block border border-border font-bold uppercase">
               {selectedMod.id}
             </div>
           </div>
         </div>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+          <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
             Raw Metadata
           </div>
           <button
@@ -123,12 +115,12 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
                 JSON.stringify(generateManifest(selectedMod, game), null, 2)
               )
             }
-            className="text-indigo-400 hover:text-indigo-300 text-xs flex items-center gap-1"
+            className="text-primary hover:text-primary/80 text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
           >
             <Copy size={12} /> Copy JSON
           </button>
         </div>
-        <pre className="font-mono text-xs leading-relaxed bg-slate-950 p-4 rounded-xl border border-white/10 text-slate-300 overflow-x-auto shadow-inner">
+        <pre className="font-mono text-[10px] leading-relaxed bg-background p-4 rounded border border-border text-muted-foreground overflow-x-auto">
           {JSON.stringify(generateManifest(selectedMod, game), null, 2)}
         </pre>
       </div>
@@ -139,38 +131,36 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar"
+      className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar bg-card"
     >
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl group">
-        {shouldBlur ? (
-          <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500 relative">
-            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-md z-10"></div>
-            <EyeOff size={48} className="relative z-20 text-slate-400" />
-          </div>
+      <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border group flex items-center justify-center bg-muted/10">
+        {selectedMod.imageUrl ? (
+          <img
+            src={selectedMod.imageUrl}
+            className={cn(
+              "w-full h-full object-cover transition-transform duration-700 group-hover:scale-105",
+              shouldBlur && "grayscale opacity-40"
+            )}
+            alt=""
+          />
         ) : (
-          <>
-            <img
-              src={selectedMod.imageUrl}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              alt=""
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
-          </>
+          <ImageIcon size={64} className="text-muted-foreground/10" />
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <h2
             className={cn(
-              "text-3xl font-bold text-white mb-2",
-              shouldBlur ? "blur-sm" : ""
+              "text-3xl font-black text-foreground mb-2 uppercase italic tracking-tighter",
+              shouldBlur && "blur-sm select-none"
             )}
           >
             {selectedMod.name}
           </h2>
-          <div className="flex items-center gap-4 text-slate-300">
-            <span className="flex items-center gap-2 font-medium">
+          <div className="flex items-center gap-4 text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+            <span className="flex items-center gap-2">
               <UserAvatar name={selectedMod.author} /> {selectedMod.author}
             </span>
-            <span className="font-mono bg-black/40 px-2 py-0.5 rounded text-sm">
+            <span className="font-mono bg-background px-2 py-0.5 rounded border border-border">
               v{selectedMod.version}
             </span>
           </div>
@@ -179,7 +169,7 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
 
       <p
         className={cn(
-          "text-slate-300 bg-white/5 p-6 rounded-2xl border border-white/5 leading-relaxed",
+          "text-muted-foreground bg-background p-6 rounded-lg border border-border leading-relaxed font-bold text-xs uppercase tracking-tight",
           shouldBlur ? "blur-sm select-none opacity-50" : ""
         )}
       >
@@ -187,24 +177,24 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
       </p>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 bg-slate-800/40 rounded-xl border border-white/5 flex items-center gap-4 shadow-sm">
-          <HardDrive size={20} className="text-slate-400" />
+        <div className="p-4 bg-background rounded border border-border flex items-center gap-4">
+          <HardDrive size={20} className="text-primary" />
           <div>
-            <div className="text-[10px] text-slate-500 font-bold uppercase">
+            <div className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
               Size
             </div>
-            <div className="text-sm text-slate-200 font-mono">
+            <div className="text-xs text-foreground font-mono font-bold">
               {selectedMod.size}
             </div>
           </div>
         </div>
-        <div className="p-4 bg-slate-800/40 rounded-xl border border-white/5 flex items-center gap-4 shadow-sm">
-          <Calendar size={20} className="text-slate-400" />
+        <div className="p-4 bg-background rounded border border-border flex items-center gap-4">
+          <Calendar size={20} className="text-primary" />
           <div>
-            <div className="text-[10px] text-slate-500 font-bold uppercase">
+            <div className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
               Updated
             </div>
-            <div className="text-sm text-slate-200">
+            <div className="text-xs text-foreground font-bold uppercase tracking-widest">
               {selectedMod.updated
                 ? new Date(selectedMod.updated).toLocaleDateString()
                 : "Unknown"}
@@ -218,37 +208,37 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
           href={selectedMod.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between p-4 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 rounded-xl transition-colors group"
+          className="flex items-center justify-between p-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg transition-colors group"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-500 rounded-lg text-white">
+            <div className="p-2 bg-primary rounded text-primary-foreground">
               <Globe size={18} />
             </div>
             <div>
-              <div className="text-sm font-bold text-indigo-200">
+              <div className="text-[10px] font-black text-foreground uppercase tracking-widest">
                 Mod Homepage
               </div>
-              <div className="text-xs text-indigo-300/60 truncate max-w-[200px]">
+              <div className="text-[10px] text-primary/60 truncate max-w-[200px] font-bold">
                 {selectedMod.url}
               </div>
             </div>
           </div>
           <ExternalLink
             size={16}
-            className="text-indigo-400 group-hover:text-indigo-300"
+            className="text-primary group-hover:text-primary/80"
           />
         </a>
       )}
 
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+        <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
           <Tag size={14} /> Tags
         </h3>
         <div className="flex flex-wrap gap-2">
           {selectedMod.tags.map((tag: string) => (
             <span
               key={tag}
-              className={`px-3 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 group ${getTagStyle(tag)}`}
+              className={`px-3 py-1 rounded border text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 group ${getTagStyle(tag)}`}
             >
               {tag}
               <button
@@ -258,7 +248,7 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
                     selectedMod.tags.filter(t => t !== tag)
                   )
                 }
-                className="hover:bg-black/20 rounded-full p-0.5 opacity-0 group-hover:opacity-100"
+                className="hover:bg-background/20 rounded-full p-0.5 opacity-0 group-hover:opacity-100"
               >
                 <X size={10} />
               </button>
@@ -267,7 +257,7 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
           {isAddingTag ? (
             <input
               autoFocus
-              className="bg-slate-800 border border-indigo-500 rounded-lg px-2 py-1 text-xs text-white outline-none"
+              className="bg-background border border-primary rounded px-2 py-1 text-[9px] font-black uppercase text-foreground outline-none"
               onBlur={() => setIsAddingTag(false)}
               onKeyDown={e => {
                 if (e.key === "Enter") {
@@ -281,7 +271,7 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
           ) : (
             <button
               onClick={() => setIsAddingTag(true)}
-              className="px-3 py-1 rounded-lg border border-dashed border-slate-600 text-slate-500 hover:text-white text-xs font-medium flex items-center gap-2"
+              className="px-3 py-1 rounded border border-dashed border-border text-muted-foreground hover:text-foreground text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
             >
               <Plus size={12} /> Add Tag
             </button>
@@ -290,15 +280,43 @@ export const ModInspectorInfo: React.FC<ModInspectorInfoProps> = ({
       </div>
 
       <div className="pt-4 flex flex-col gap-3">
+        {selectedMod.modType === "character" ? (
+          <div className="p-4 bg-primary/5 rounded border border-primary/10 space-y-3">
+            <div className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+              <Zap size={14} /> Character Integration Tools
+            </div>
+            <p className="text-[9px] text-muted-foreground font-bold uppercase">
+              This character skin is isolated via the YAGO Router.
+            </p>
+            <div className="flex gap-2">
+              <button className="flex-1 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[9px] font-black uppercase rounded transition-colors">
+                Re-index Buffers
+              </button>
+              <button className="flex-1 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[9px] font-black uppercase rounded transition-colors">
+                Fix Vertex Groups
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 bg-primary/5 rounded border border-blue-500/10 space-y-2">
+            <div className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+              <Globe size={14} /> Global UI Protocol
+            </div>
+            <p className="text-[9px] text-muted-foreground font-bold uppercase">
+              Persistent UI enhancement. Bypasses character gates.
+            </p>
+          </div>
+        )}
+
         <button
           onClick={() => onValidate(selectedMod.id)}
-          className="w-full py-3.5 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
         >
           <Zap size={16} /> Validate Logic
         </button>
         <button
           onClick={() => deleteMod(selectedMod.id)}
-          className="w-full py-3.5 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 text-destructive rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
         >
           <Trash2 size={16} /> Uninstall Mod
         </button>

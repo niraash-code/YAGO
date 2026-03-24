@@ -1,0 +1,38 @@
+{
+  "name": "Genshin Impact",
+  "short_name": "Genshin",
+  "developer": "HoYoverse",
+  "description": "Explore a vast open world, master the elements, and uncover the mysteries of Teyvat.",
+  "color": "cyan-400",
+  "accent_color": "#22d3ee",
+  "cover_image": "genshin_background.webp",
+  "icon": "genshin_logo.webp",
+  "logo_initial": "G",
+  "executables": [
+    "GenshinImpact.exe"
+  ],
+  "injection_method_windows": "Proxy",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy"],
+  "loader_repo": "SilentNightSound/GIMI-Package",
+  "hash_repo": "leotorrez/GI-Model-Importer-Assets",
+  "patch_logic": {},
+  "launch_args": [],
+  "fps_config": {
+    "enabled": false,
+    "target_fps": 60,
+    "search_pattern": "BSS S 1 1 1 1 1 1 ?? ?? ?? ?? ?? ?? ?? ?? 01",
+    "offset": 0
+  },
+  "auto_update": true,
+  "community_folder": "hk4e_global",
+  "sophon_branch": "main",
+  "sophon_package_id": "ScSYQBFhu9",
+  "sophon_password": "bDL4JUHL625x",
+  "sophon_plat_app": "gopR6Cufr3",
+  "sophon_game_biz": "hk4e_global",
+  "sophon_launcher_id": "VYTpXlbWo8",
+  "sophon_channel_id": "1",
+  "sophon_sub_channel_id": "1"
+}

@@ -1,6 +1,6 @@
 use crate::AppState;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
-use fs_engine::Vfs;
+use vfs::Vfs;
 use tauri::{AppHandle, Emitter, Manager};
 
 pub struct Emergency;
@@ -15,7 +15,10 @@ impl Emergency {
         // 1. Purge Deployment
         // We iterate ALL known games and purge them to be safe.
         println!("Purging deployments for all known games...");
-        let dbs = state.game_dbs.lock().await;
+        let dbs: tokio::sync::MutexGuard<
+            '_,
+            std::collections::HashMap<String, storage::LibraryDatabase>,
+        > = state.game_dbs.lock().await;
         for (game_id, _db) in dbs.iter() {
             if let Some(game_config) = _db.games.get(game_id) {
                 let game_root = game_config

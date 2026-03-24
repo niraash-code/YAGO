@@ -1,58 +1,44 @@
 # Testing Guide
 
-YAGO employs a multi-tiered testing strategy to ensure the integrity of the VFS, mod logic, and process lifecycle.
+YAGO uses a multi-tiered testing strategy.
 
-## 🧪 1. Crate Unit Tests
-
-Each crate in the `crates/` directory contains its own `tests/` folder. These tests are isolated and focus on the crate's specific domain logic.
-
-**How to run:**
-```bash
-cargo test -p <crate_name>
-```
-
-| Domain | Test Modules |
-| :--- | :--- |
-| **Filesystem** | `archives.rs`, `safety.rs`, `vfs.rs` |
-| **Database** | `discovery.rs`, `storage.rs`, `templates.rs` |
-| **Logic** | `merger.rs`, `compiler.rs`, `validator.rs` |
-
-## 🔗 2. Functional Flow Integration
-
-Located in `crates/integration_tests/src/flows/`, these tests validate complex cross-crate workflows without involving the full GUI.
-
-**Common Flows:**
-*   `mod_management.rs`: End-to-end import, namespacing, and database persistence.
-*   `launch_system.rs`: Binary identification, environment injection, and process monitoring.
-*   `deployment.rs`: Planning and execution of the Virtual File System.
-
-## 🤖 3. Simulation System
-
-The simulation system (in `integration_tests/src/simulation/`) runs automated "User Stories" against a mock filesystem. It simulates actions like:
-- First-time setup.
-- Power user mod reordering.
-- Chaos Monkey (randomly deleting files/processes to test recovery).
-
-## 🖥️ 4. Frontend Testing
-
-Frontend logic, store mapping, and component integrity are tested via **Vitest**.
-
-**How to run:**
-```bash
-cd src-ui && npm run test
-```
-
-## ✅ 5. Full Workspace Validation
-
-The canonical way to verify the entire project before a commit is via the `Makefile`.
+## Running Tests
 
 ```bash
-# Run all backend and integration tests
-make test
+# All Rust tests
+cargo test
 
-# Run frontend type checking
-make lint
+# Specific crate
+cargo test -p ini
+cargo test -p vfs
+
+# Frontend tests
+bun test
 ```
 
----
-[Back: Architecture Overview](architecture.md) | [Documentation Home](../index.md)
+## Test Structure
+
+### Unit Tests
+
+Each crate has tests in `src/`:
+- `ini`: Parser and compiler tests
+- `vfs`: Archive extraction and safety tests
+- `storage`: Database and discovery tests
+- `mod_patches`: Merger and validator tests
+
+### Snapshot Tests
+
+Uses `insta` for regression testing.
+
+## Code Quality
+
+```bash
+# Format code
+cargo fmt
+
+# Lint
+cargo clippy --workspace -- -D warnings
+
+# Frontend lint
+bun run lint
+```

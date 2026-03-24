@@ -1,0 +1,38 @@
+{
+  "name": "Zenless Zone Zero",
+  "short_name": "ZZZ",
+  "developer": "HoYoverse",
+  "description": "A stylish urban action RPG set in the post-apocalyptic metropolis of New Eridu.",
+  "color": "yellow-400",
+  "accent_color": "#facc15",
+  "cover_image": "zzz_background.webp",
+  "icon": "zzz_logo.webp",
+  "logo_initial": "Z",
+  "executables": [
+    "ZenlessZoneZero.exe"
+  ],
+  "injection_method_windows": "Proxy",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy", "Loader"],
+  "loader_repo": "leotorrez/ZZMI-Package",
+  "hash_repo": "leotorrez/ZZ-Model-Importer-Assets",
+  "patch_logic": {},
+  "launch_args": [],
+  "fps_config": {
+    "enabled": false,
+    "target_fps": 60,
+    "search_pattern": "",
+    "offset": 0
+  },
+  "auto_update": true,
+  "community_folder": "nap_global",
+  "sophon_branch": "main",
+  "sophon_package_id": "qsoIbfMm4x",
+  "sophon_password": "lh0OmNjbhG9x",
+  "sophon_plat_app": "U5hbdsT9W7",
+  "sophon_game_biz": "nap_global",
+  "sophon_launcher_id": "VYTpXlbWo8",
+  "sophon_channel_id": "1",
+  "sophon_sub_channel_id": "1"
+}

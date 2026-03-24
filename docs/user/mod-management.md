@@ -1,36 +1,39 @@
 # Mod Management
 
-YAGO uses a advanced Virtual File System (VFS) to manage your mods without cluttering your game directory.
+YAGO uses a Virtual File System (VFS) to manage mods without cluttering your game directory.
 
-## 📦 The Library System
+## The Library System
 
-When you add a mod to YAGO, it is imported into a central **Library**.
+When you add a mod to YAGO, it goes into a central **Library**:
+- **Atomic Import**: Validates mod files before importing
+- **Organization**: Mods are stored by Game and unique UUIDs
+- **No Conflicts**: No naming conflicts between mods
 
-- **Atomic Import**: YAGO validates the mod files and `mod.json` before moving them to the library.
-- **Organization**: Mods are stored by Game and unique UUIDs, ensuring no naming conflicts.
+## Zero-Copy Deployment
 
-## ⚡ Zero-Copy Deployment
+YAGO uses **Symlinks** (Linux) and **Junctions** (Windows) to deploy mods:
+- **Instant**: Toggling mods takes effect immediately
+- **Safe**: No files are copied into your game folder
+- **Clean**: When you disable mods, the game returns to vanilla state
 
-YAGO uses **Symlinks** (Linux) and **Junctions** (Windows) to "deploy" mods.
+## Profiles
 
-- **Instant**: Toggling a mod takes 0ms regardless of its size.
-- **Clean**: No files are actually copied into your game folder. When you close YAGO or turn off a mod, the game folder returns to its vanilla state.
+- **Multiple Profiles**: Create different mod configurations per game
+- **Quick Switching**: Change between profiles instantly
+- **Profile Duplication**: Clone profiles for variations
 
-## 🔄 Toggling and Profiles
+## Mod Inspector
 
-- **Global Toggles**: Enable or disable mods with a single click in the UI.
-- **Context Awareness**: YAGO knows which character a mod belongs to and ensures logic is correctly merged during deployment.
+Every mod has an integrated Inspector:
+- **Metadata View**: View info, author details, and tags
+- **File Browser**: Navigate mod textures, meshes, and scripts
+- **INI Editor**: Edit mod logic directly within YAGO
 
-### Profile Duplication
-You can duplicate any existing profile to create variations (e.g., "Safe for Stream" vs "NSFW"). This copies all enabled mods and load order settings.
+## Importing Mods
 
-## 🛠️ Mod Inspector IDE
+YAGO accepts:
+- `.zip` archives
+- `.7z` archives
+- Loose folders
 
-Every mod in your library can be opened in the **Inspector**, a powerful integrated workspace:
-
-- **Metadata View**: View rich info, author details, and manage custom tags.
-- **File Manager**: A built-in tree explorer to navigate mod textures, meshes, and scripts.
-- **INI Editor**: A specialized text editor for modifying mod logic directly within YAGO.
-
----
-[Next: Launcher Features](launcher-features.md) | [Documentation Home](../index.md)
+Simply drag and drop onto the Mod Manager window.

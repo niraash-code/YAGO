@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Settings, Download, Cpu, Trash2 } from "lucide-react";
 import { Game } from "../types";
 import { cn } from "../lib/utils";
 
 import { useAppStore } from "../store/gameStore";
 import { useUiStore } from "../store/uiStore";
-import { InjectionMethod } from "../lib/api";
 
 // Sub-components
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { InstallationSettings } from "./settings/InstallationSettings";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
+import { ManagementSettings } from "./settings/ManagementSettings";
+import { Button } from "./ui/button";
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   game,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    "general" | "installation" | "advanced"
+    "general" | "installation" | "advanced" | "management"
   >("general");
   const {
     updateProfile,
@@ -36,9 +37,10 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     availableRunners,
     refreshRunners,
   } = useAppStore();
-  const { showAlert, showConfirm } = useUiStore();
+  const { showConfirm, showAlert } = useUiStore();
 
   const isLinux = window.navigator.userAgent.includes("Linux");
+
   const activeProfile =
     game.profiles.find(p => p.id === game.activeProfileId) || game.profiles[0];
 
@@ -61,6 +63,9 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   );
   const [localLaunchArgs, setLocalLaunchArgs] = useState(
     activeProfile?.launchArgs?.join(" ") || ""
+  );
+  const [localGamescopeArgs, setLocalGamescopeArgs] = useState(
+    activeProfile?.gamescopeArgs?.join(" ") || ""
   );
   const [localSavePath, setLocalSavePath] = useState(
     activeProfile?.saveDataPath || ""
@@ -87,6 +92,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     setLocalPrefixPath(game.prefixPath || "");
     setLocalGlobalLaunchArgs(game.launchArgs?.join(" ") || "");
     setLocalLaunchArgs(activeProfile?.launchArgs?.join(" ") || "");
+    setLocalGamescopeArgs(activeProfile?.gamescopeArgs?.join(" ") || "");
     setLocalSavePath(activeProfile?.saveDataPath || "");
     setLocalProfileName(activeProfile.name);
     setLocalProfileDescription(activeProfile.description);
@@ -146,6 +152,12 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       } else if (field === "launchArgs")
         await updateProfile(game.id, activeProfile.id, {
           launchArgs: localLaunchArgs.split(" ").filter(s => s.length > 0),
+        });
+      else if (field === "gamescopeArgs")
+        await updateProfile(game.id, activeProfile.id, {
+          gamescopeArgs: localGamescopeArgs
+            .split(" ")
+            .filter(s => s.length > 0),
         });
       else if (field === "savePath")
         await updateProfile(game.id, activeProfile.id, {
@@ -215,6 +227,13 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     }
   };
 
+  const tabs = [
+    { id: "general", label: "General", icon: Settings },
+    { id: "installation", label: "Installation", icon: Download },
+    { id: "advanced", label: "Advanced", icon: Cpu },
+    { id: "management", label: "Management", icon: Trash2 },
+  ];
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -224,152 +243,155 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-background/80 z-40"
           />
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-[500px] bg-slate-900 border-l border-white/10 shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-12 bottom-0 w-[900px] bg-card border-l border-border shadow-2xl z-50 flex overflow-hidden"
           >
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-900/50 backdrop-blur-md">
-              <div>
-                <h2 className="text-xl font-bold text-white">Game Settings</h2>
-                <p className="text-sm text-slate-400">{game.name}</p>
+            {/* Sidebar */}
+            <div className="w-64 bg-sidebar border-r border-border flex flex-col p-6 shrink-0">
+              <div className="mb-8">
+                <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-1">
+                  Configuration
+                </h2>
+                <p className="text-xl font-black text-foreground tracking-tighter uppercase italic truncate">
+                  {game.name}
+                </p>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="flex px-6 border-b border-white/5 gap-6">
-              {["general", "installation", "advanced"].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab as any)}
-                  className={cn(
-                    "py-4 text-sm font-medium border-b-2 transition-colors capitalize",
-                    activeTab === tab
-                      ? "border-indigo-500 text-white"
-                      : "border-transparent text-slate-500 hover:text-slate-300"
-                  )}
+              <div className="flex flex-col gap-1 space-y-1">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all text-left outline-none",
+                      activeTab === tab.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <tab.icon size={18} />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-auto">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+                  onClick={onClose}
                 >
-                  {tab}
-                </button>
-              ))}
+                  <X size={18} /> Close Settings
+                </Button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-              {activeTab === "general" && (
-                <GeneralSettings
-                  game={game}
-                  editingField={editingField}
-                  isSaving={isSaving}
-                  localName={localName}
-                  localDeveloper={localDeveloper}
-                  localDescription={localDescription}
-                  localIcon={localIcon}
-                  localCover={localCover}
-                  setLocalName={setLocalName}
-                  setLocalDeveloper={setLocalDeveloper}
-                  setLocalDescription={setLocalDescription}
-                  setLocalIcon={setLocalIcon}
-                  setLocalCover={setLocalCover}
-                  startEditing={startEditing}
-                  saveField={saveField}
-                  cancelEditing={cancelEditing}
-                />
-              )}
-              {activeTab === "installation" && (
-                <InstallationSettings
-                  game={game}
-                  activeProfile={activeProfile}
-                  isLinux={isLinux}
-                  editingField={editingField}
-                  isSaving={isSaving}
-                  localInstallPath={localInstallPath}
-                  localExeName={localExeName}
-                  localGlobalLaunchArgs={localGlobalLaunchArgs}
-                  localLaunchArgs={localLaunchArgs}
-                  localSavePath={localSavePath}
-                  localPrefixPath={localPrefixPath}
-                  setLocalInstallPath={setLocalInstallPath}
-                  setLocalExeName={setLocalExeName}
-                  setLocalGlobalLaunchArgs={setLocalGlobalLaunchArgs}
-                  setLocalLaunchArgs={setLocalLaunchArgs}
-                  setLocalSavePath={setLocalSavePath}
-                  setLocalPrefixPath={setLocalPrefixPath}
-                  startEditing={startEditing}
-                  saveField={saveField}
-                  cancelEditing={cancelEditing}
-                  toggleFeature={toggleFeature}
-                />
-              )}
-              {activeTab === "advanced" && (
-                <AdvancedSettings
-                  game={game}
-                  activeProfile={activeProfile}
-                  isLinux={isLinux}
-                  editingField={editingField}
-                  isSaving={isSaving}
-                  localFpsPattern={localFpsPattern}
-                  localFpsOffset={localFpsOffset}
-                  localProfileName={localProfileName}
-                  localProfileDescription={localProfileDescription}
-                  availableRunners={availableRunners}
-                  setLocalFpsPattern={setLocalFpsPattern}
-                  setLocalFpsOffset={setLocalFpsOffset}
-                  setLocalProfileName={setLocalProfileName}
-                  setLocalProfileDescription={setLocalProfileDescription}
-                  startEditing={startEditing}
-                  saveField={saveField}
-                  cancelEditing={cancelEditing}
-                  toggleFeature={toggleFeature}
-                  updateFpsTarget={updateFpsTarget}
-                  setInjectionMethod={m =>
-                    updateGameConfig(game.id, { injectionMethod: m })
-                  }
-                  updateResolution={(w, h) =>
-                    updateProfile(game.id, activeProfile.id, {
-                      resolution: [w, h],
-                    })
-                  }
-                  updateProfile={updateProfile}
-                  updateGameConfig={updateGameConfig}
-                  handleDeleteProfile={async () => {
-                    if (
-                      await showConfirm(
-                        `Delete loadout "${activeProfile.name}"?`,
-                        "Delete Profile"
-                      )
-                    )
-                      await deleteProfile(game.id, activeProfile.id);
-                  }}
-                  handleDeleteGame={async () => {
-                    if (
-                      await showConfirm(
-                        `Uninstall ${game.name}?`,
-                        "Uninstall Game"
-                      )
-                    ) {
-                      onUninstall(game.id);
-                      onClose();
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto bg-background custom-scrollbar">
+              <div className="p-10 max-w-3xl mx-auto space-y-8">
+                {activeTab === "general" && (
+                  <GeneralSettings
+                    game={game}
+                    editingField={editingField}
+                    isSaving={isSaving}
+                    localName={localName}
+                    localDeveloper={localDeveloper}
+                    localDescription={localDescription}
+                    localIcon={localIcon}
+                    localCover={localCover}
+                    setLocalName={setLocalName}
+                    setLocalDeveloper={setLocalDeveloper}
+                    setLocalDescription={setLocalDescription}
+                    setLocalIcon={setLocalIcon}
+                    setLocalCover={setLocalCover}
+                    startEditing={startEditing}
+                    saveField={saveField}
+                    cancelEditing={cancelEditing}
+                  />
+                )}
+                {activeTab === "installation" && (
+                  <InstallationSettings
+                    game={game}
+                    activeProfile={activeProfile}
+                    isLinux={isLinux}
+                    editingField={editingField}
+                    isSaving={isSaving}
+                    localInstallPath={localInstallPath}
+                    localExeName={localExeName}
+                    localGlobalLaunchArgs={localGlobalLaunchArgs}
+                    localLaunchArgs={localLaunchArgs}
+                    localSavePath={localSavePath}
+                    localPrefixPath={localPrefixPath}
+                    setLocalInstallPath={setLocalInstallPath}
+                    setLocalExeName={setLocalExeName}
+                    setLocalGlobalLaunchArgs={setLocalGlobalLaunchArgs}
+                    setLocalLaunchArgs={setLocalLaunchArgs}
+                    setLocalSavePath={setLocalSavePath}
+                    setLocalPrefixPath={setLocalPrefixPath}
+                    startEditing={startEditing}
+                    saveField={saveField}
+                    cancelEditing={cancelEditing}
+                    toggleFeature={toggleFeature}
+                  />
+                )}
+                {activeTab === "advanced" && (
+                  <AdvancedSettings
+                    game={game}
+                    activeProfile={activeProfile}
+                    isLinux={isLinux}
+                    editingField={editingField}
+                    isSaving={isSaving}
+                    localFpsPattern={localFpsPattern}
+                    localFpsOffset={localFpsOffset}
+                    localProfileName={localProfileName}
+                    localProfileDescription={localProfileDescription}
+                    localGamescopeArgs={localGamescopeArgs}
+                    availableRunners={availableRunners}
+                    setLocalFpsPattern={setLocalFpsPattern}
+                    setLocalFpsOffset={setLocalFpsOffset}
+                    setLocalProfileName={setLocalProfileName}
+                    setLocalProfileDescription={setLocalProfileDescription}
+                    setLocalGamescopeArgs={setLocalGamescopeArgs}
+                    startEditing={startEditing}
+                    saveField={saveField}
+                    cancelEditing={cancelEditing}
+                    toggleFeature={toggleFeature}
+                    updateFpsTarget={updateFpsTarget}
+                    setInjectionMethod={m =>
+                      updateGameConfig(game.id, { injectionMethod: m })
                     }
-                  }}
-                />
-              )}
-            </div>
-            <div className="p-6 border-t border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-end">
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Close
-              </button>
+                    updateResolution={(w, h) =>
+                      updateProfile(game.id, activeProfile.id, {
+                        resolution: [w, h],
+                      })
+                    }
+                    updateProfile={updateProfile}
+                    updateGameConfig={updateGameConfig}
+                    handleDeleteProfile={async () => {
+                      if (
+                        await showConfirm(
+                          `Delete loadout "${activeProfile.name}"?`,
+                          "Delete Profile"
+                        )
+                      )
+                        await deleteProfile(game.id, activeProfile.id);
+                    }}
+                  />
+                )}
+                {activeTab === "management" && (
+                  <ManagementSettings
+                    game={game}
+                    onClose={onClose}
+                    onUninstall={onUninstall}
+                  />
+                )}
+              </div>
             </div>
           </motion.div>
         </>

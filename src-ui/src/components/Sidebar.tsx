@@ -3,17 +3,19 @@ import { motion, LayoutGroup } from "framer-motion";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Game, InstallStatus } from "../types";
 import {
-  Box,
   Settings,
   Ghost,
   Plus,
   Play,
   Download,
+  Cloud,
   RefreshCw,
   Package,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAppStore } from "../store/gameStore";
 import { cn } from "../lib/utils";
+import { Tooltip } from "./ui/Tooltip";
 
 interface SidebarProps {
   currentView: "overview" | "mods" | "skins";
@@ -34,215 +36,256 @@ const Sidebar: React.FC<SidebarProps> = ({
   const rowVirtualizer = useVirtualizer({
     count: games.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 80, // Approximate height of a game card (p-3 + h-12 + extra padding/border)
+    estimateSize: () => 80,
     overscan: 5,
   });
 
   return (
-    <div className="w-80 h-full flex flex-col bg-slate-950/80 backdrop-blur-xl border-r border-white/5 relative z-20 shadow-2xl">
+    <div className="w-72 h-full flex flex-col bg-sidebar border-r border-border relative z-20 overflow-hidden font-sans">
       {/* Header */}
-      <div className="p-6 flex items-center gap-4 shrink-0">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
+      <div className="p-6 flex items-center gap-3 shrink-0 bg-sidebar border-b border-border">
+        <div className="w-10 h-10 rounded bg-primary flex items-center justify-center text-primary-foreground font-black text-xl">
           Y
         </div>
-        <div>
-          <h1 className="font-bold text-xl tracking-tight text-white drop-shadow-sm">
-            YAGO
-          </h1>
-          <p className="text-xs text-slate-400 font-medium tracking-wide">
+        <div className="flex flex-col">
+          <span className="text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground leading-tight">
+            Yet Another
+          </span>
+          <span className="text-[11px] font-black uppercase tracking-[0.25em] text-primary leading-tight">
             Game Organizer
-          </p>
+          </span>
         </div>
       </div>
 
-      {/* Game List (Virtualized) */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <h2 className="px-6 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest shrink-0">
-          Library
-        </h2>
+      {/* Main Navigation */}
+      <div className="px-4 py-6 space-y-1.5 shrink-0 bg-sidebar">
+        <Tooltip content="Dashboard" position="right" className="w-full">
+          <button
+            onClick={() => onChangeView("overview")}
+            className={cn(
+              "w-full flex items-center gap-3 px-5 py-3 rounded text-[10px] font-black uppercase tracking-widest transition-all outline-none",
+              currentView === "overview"
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <LayoutDashboard size={16} />
+            <span>Dashboard</span>
+          </button>
+        </Tooltip>
+        <Tooltip content="Mod Manager" position="right" className="w-full">
+          <button
+            onClick={() => onChangeView("mods")}
+            className={cn(
+              "w-full flex items-center gap-3 px-5 py-3 rounded text-[10px] font-black uppercase tracking-widest transition-all outline-none",
+              currentView === "mods"
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <Package size={16} />
+            <span>Mod Manager</span>
+          </button>
+        </Tooltip>
+        <Tooltip content="Skin Manager" position="right" className="w-full">
+          <button
+            onClick={() => onChangeView("skins")}
+            className={cn(
+              "w-full flex items-center gap-3 px-5 py-3 rounded text-[10px] font-black uppercase tracking-widest transition-all outline-none",
+              currentView === "skins"
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <Ghost size={16} />
+            <span>Wardrobe</span>
+          </button>
+        </Tooltip>
+      </div>
+
+      {/* Game List */}
+      <div className="flex-1 flex flex-col min-h-0 bg-sidebar">
+        <div className="px-6 py-2 flex items-center justify-between shrink-0 mb-2 border-t border-border pt-4">
+          <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em]">
+            Library
+          </h2>
+        </div>
 
         <div
           ref={parentRef}
           className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar"
         >
-          <div
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative",
-            }}
-          >
-            <LayoutGroup>
-              {rowVirtualizer.getVirtualItems().map(virtualItem => {
-                const game = games[virtualItem.index];
-                const isSelected = selectedGameId === game.id;
+          {games.length > 0 ? (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              <LayoutGroup>
+                {rowVirtualizer.getVirtualItems().map(virtualItem => {
+                  const game = games[virtualItem.index];
+                  const isSelected = selectedGameId === game.id;
 
-                return (
-                  <div
-                    key={game.id}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                      paddingBottom: "8px", // Gap between items
-                    }}
-                  >
-                    <button
-                      onClick={() => {
-                        selectGame(game.id);
-                        // Removed onChangeView('overview') to allow staying in ModManager when switching games
+                  return (
+                    <div
+                      key={game.id}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: `${virtualItem.size}px`,
+                        transform: `translateY(${virtualItem.start}px)`,
+                        paddingBottom: "8px",
                       }}
-                      className={cn(
-                        "w-full h-full group relative flex items-center p-3 rounded-xl transition-all duration-300 outline-none overflow-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                        isSelected ? "bg-white/5" : "hover:bg-white/5"
-                      )}
                     >
-                      {/* Active Indicator Border/Glow */}
-                      {isSelected && (
-                        <motion.div
-                          layoutId="activeGameBorder"
-                          className="absolute inset-0 rounded-xl border border-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.02)] z-0 bg-gradient-to-r from-white/5 to-transparent"
-                          initial={false}
-                          transition={{
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 30,
-                          }}
-                        />
-                      )}
-
-                      {/* Content */}
-                      <div className="relative z-10 flex items-center gap-4 w-full">
-                        {/* Official Game Icon */}
-                        <div
+                      <Tooltip
+                        content={game.name}
+                        position="right"
+                        className="w-full h-full"
+                      >
+                        <button
+                          onClick={() => selectGame(game.id)}
                           className={cn(
-                            "relative w-12 h-12 rounded-xl overflow-hidden bg-slate-800 shadow-md border transition-colors shrink-0",
+                            "w-full h-full group relative flex items-center px-4 rounded transition-all outline-none overflow-hidden border border-transparent",
                             isSelected
-                              ? "border-white/20 shadow-indigo-500/10"
-                              : "border-white/5"
+                              ? "bg-card border-border shadow-xl"
+                              : "hover:bg-muted"
                           )}
                         >
-                          {game.icon ? (
-                            <img
-                              src={game.icon}
-                              alt={game.name}
-                              className={cn(
-                                "w-full h-full object-cover transition-all duration-300",
-                                isSelected
-                                  ? "opacity-100 scale-100"
-                                  : "opacity-80 scale-100 grayscale-[0.3] group-hover:grayscale-0 group-hover:opacity-100"
-                              )}
-                            />
-                          ) : (
+                          <div className="relative z-10 flex items-center gap-4 w-full">
                             <div
-                              className="w-full h-full flex items-center justify-center font-bold text-lg text-white"
-                              style={{ backgroundColor: game.accentColor }}
+                              className={cn(
+                                "relative w-20 h-10 rounded overflow-hidden bg-background border transition-all duration-500 shrink-0 flex items-center justify-center p-1",
+                                isSelected
+                                  ? "border-primary"
+                                  : "border-border group-hover:border-primary/50"
+                              )}
                             >
-                              {game.logoInitial}
+                              {game.icon && game.icon.trim() !== "" ? (
+                                <img
+                                  src={game.icon}
+                                  alt={game.name}
+                                  className={cn(
+                                    "w-full h-full object-contain",
+                                    isSelected
+                                      ? "opacity-100 scale-105"
+                                      : "opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110 transition-all"
+                                  )}
+                                />
+                              ) : (
+                                <div
+                                  className="w-full h-full flex items-center justify-center font-black text-sm text-muted-foreground italic"
+                                  style={
+                                    isSelected
+                                      ? { color: game.accentColor }
+                                      : {}
+                                  }
+                                >
+                                  {game.logoInitial}
+                                </div>
+                              )}
                             </div>
+
+                            <div className="flex-1 text-left min-w-0">
+                              <div
+                                className={cn(
+                                  "font-black text-[11px] truncate transition-colors uppercase tracking-widest",
+                                  isSelected
+                                    ? "text-foreground"
+                                    : "text-muted-foreground group-hover:text-foreground"
+                                )}
+                              >
+                                {game.name}
+                              </div>
+
+                              <div className="flex items-center gap-2 mt-1">
+                                {game.status === InstallStatus.PLAYING ? (
+                                  <span className="flex items-center gap-1.5 text-[9px] text-primary font-black uppercase tracking-widest">
+                                    <Play size={8} fill="currentColor" /> Active
+                                  </span>
+                                ) : game.status === InstallStatus.UPDATING ||
+                                  game.status === InstallStatus.DOWNLOADING ? (
+                                  <span className="flex items-center gap-1.5 text-[9px] text-primary font-black uppercase tracking-widest animate-pulse">
+                                    <RefreshCw
+                                      size={8}
+                                      className="animate-spin"
+                                    />{" "}
+                                    Sync
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
+                                    Ready
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <motion.div
+                              layoutId="activeBar"
+                              className="absolute right-0 top-2 bottom-2 w-1 rounded-l bg-primary shadow-[0_0_10px_var(--primary)]"
+                            />
                           )}
-                        </div>
+                        </button>
+                      </Tooltip>
+                    </div>
+                  );
+                })}
+              </LayoutGroup>
+            </div>
+          ) : (
+            <div className="h-32 flex flex-col items-center justify-center gap-3 text-muted-foreground border border-dashed border-border rounded bg-muted/20 p-4 text-center">
+              <Ghost size={24} />
+              <p className="text-[9px] font-black uppercase tracking-[0.2em]">
+                Vault Empty
+              </p>
+            </div>
+          )}
 
-                        {/* Text Info */}
-                        <div className="flex-1 text-left min-w-0">
-                          <div
-                            className={cn(
-                              "font-semibold text-[15px] truncate leading-tight transition-colors",
-                              isSelected
-                                ? "text-white"
-                                : "text-slate-400 group-hover:text-slate-200"
-                            )}
-                          >
-                            {game.name}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            {game.status === InstallStatus.PLAYING ? (
-                              <div className="flex items-center gap-1.5 text-xs text-indigo-300 font-medium">
-                                <Play size={12} fill="currentColor" /> Playing
-                              </div>
-                            ) : game.status === InstallStatus.UPDATING ? (
-                              <div className="flex items-center gap-1.5 text-xs text-yellow-400 font-medium animate-pulse">
-                                <RefreshCw size={12} className="animate-spin" />{" "}
-                                Updating
-                              </div>
-                            ) : game.status === InstallStatus.NOT_INSTALLED ? (
-                              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                <Download size={12} /> Not Installed
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_currentColor]" />{" "}
-                                Ready
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Selection Bar (Left) */}
-                      {isSelected && (
-                        <motion.div
-                          layoutId="activeBar"
-                          className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full shadow-[0_0_15px_currentColor]"
-                          style={{ backgroundColor: game.accentColor }}
-                        />
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </LayoutGroup>
-          </div>
-
-          {/* Add Game Button (At bottom of list content) */}
-          <div className="pt-2">
-            <button
-              onClick={onOpenAddGame}
-              className="w-full group relative flex items-center justify-center gap-2 p-3.5 rounded-xl border border-dashed border-white/10 text-slate-500 hover:text-white hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 outline-none"
-            >
-              <Plus size={18} />
-              <span className="text-sm font-medium">Add Game</span>
-            </button>
+          {/* Add Game Button */}
+          <div className="pt-4 border-t border-border">
+            <Tooltip content="Add New Game" position="right" className="w-full">
+              <button
+                onClick={onOpenAddGame}
+                className="w-full group relative flex items-center justify-center gap-3 py-4 rounded border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-muted transition-all outline-none"
+              >
+                <Plus size={18} />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  Import Title
+                </span>
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-white/5 space-y-1 bg-slate-950/50 shrink-0">
-        <button
-          onClick={() => onChangeView("mods")}
-          className={cn(
-            "w-full flex items-center gap-3 p-3.5 rounded-xl text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none",
-            currentView === "mods"
-              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
-          )}
+      {/* Footer */}
+      <div className="p-4 border-t border-border bg-sidebar shrink-0">
+        <Tooltip
+          content="Manage Global Settings"
+          position="right"
+          className="w-full"
         >
-          <Package size={20} />
-          <span>Mod Manager</span>
-        </button>
-        <button
-          onClick={() => onChangeView("skins")}
-          className={cn(
-            "w-full flex items-center gap-3 p-3.5 rounded-xl text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none",
-            currentView === "skins"
-              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
-          )}
-        >
-          <Ghost size={20} />
-          <span>Skin Manager</span>
-        </button>
-        <button
-          onClick={onOpenAppSettings}
-          className="w-full flex items-center gap-3 p-3.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none"
-        >
-          <Settings size={20} />
-          <span>App Settings</span>
-        </button>
+          <button
+            onClick={onOpenAppSettings}
+            className="w-full flex items-center justify-between px-5 py-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all outline-none group"
+          >
+            <div className="flex items-center gap-3">
+              <Settings
+                size={18}
+                className="group-hover:rotate-90 transition-transform duration-500"
+              />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                System Hub
+              </span>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

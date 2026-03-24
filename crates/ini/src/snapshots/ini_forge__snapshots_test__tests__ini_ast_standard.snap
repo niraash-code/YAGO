@@ -1,0 +1,23 @@
+---
+source: crates/ini_forge/src/snapshots_test.rs
+expression: doc
+---
+sections:
+  - name: Section
+    items:
+      - Pair:
+          key: key
+          value: value
+      - Comment: Comment
+      - Command:
+          command: if
+          args:
+            - variable
+            - "=="
+            - "1"
+      - Pair:
+          key: nested
+          value: "true"
+      - Command:
+          command: endif
+          args: []

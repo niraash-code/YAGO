@@ -5,9 +5,9 @@
   "identifier": "yago",
   "build": {
     "frontendDist": "../src-ui/dist",
-    "devUrl": "http://localhost:30000",
-    "beforeDevCommand": "if [ -d src-ui ]; then cd src-ui; else cd ../src-ui; fi && npm run dev",
-    "beforeBuildCommand": "if [ -d src-ui ]; then cd src-ui; else cd ../src-ui; fi && npm install && npm run build"
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "bun run --cwd src-ui dev",
+    "beforeBuildCommand": "bun run --cwd src-ui build"
   },
   "app": {
     "withGlobalTauri": true,
@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline';"
     }
   },
   "bundle": {

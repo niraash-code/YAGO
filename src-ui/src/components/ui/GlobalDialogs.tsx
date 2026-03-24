@@ -21,7 +21,7 @@ const Overlay = ({
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+    className="fixed inset-0 z-[100] bg-background/90 flex items-center justify-center p-4"
     onClick={onClose}
   >
     {children}
@@ -42,18 +42,22 @@ const DialogBase = ({
     animate={{ scale: 1, opacity: 1, y: 0 }}
     exit={{ scale: 0.95, opacity: 0, y: 10 }}
     onClick={e => e.stopPropagation()}
-    className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/5"
+    className="w-full max-w-md bg-card border border-border rounded-lg shadow-2xl overflow-hidden"
   >
     <div className="p-6">
       <div className="flex items-center gap-3 mb-4">
         {Icon && (
-          <div className="p-2 bg-slate-800 rounded-full text-indigo-400">
+          <div className="p-2 bg-background rounded text-primary border border-border">
             <Icon size={24} />
           </div>
         )}
-        <h3 className="text-xl font-bold text-white">{title}</h3>
+        <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">
+          {title}
+        </h3>
       </div>
-      <div className="text-slate-300 leading-relaxed text-base">{children}</div>
+      <div className="text-muted-foreground leading-relaxed text-sm font-medium">
+        {children}
+      </div>
     </div>
   </motion.div>
 );
@@ -81,7 +85,7 @@ export const GlobalDialogs: React.FC = () => {
             <div className="flex justify-end">
               <button
                 onClick={closeAlert}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+                className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded font-black text-xs uppercase tracking-widest transition-colors shadow-lg shadow-primary/20"
               >
                 OK
               </button>
@@ -100,13 +104,13 @@ export const GlobalDialogs: React.FC = () => {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => closeConfirm(false)}
-                className="px-4 py-2 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded font-black text-xs uppercase tracking-widest transition-colors border border-border"
               >
                 {confirm.options.cancelLabel || "Cancel"}
               </button>
               <button
                 onClick={() => closeConfirm(true)}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+                className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded font-black text-xs uppercase tracking-widest transition-colors shadow-lg shadow-primary/20"
               >
                 {confirm.options.confirmLabel || "Confirm"}
               </button>
@@ -132,20 +136,20 @@ export const GlobalDialogs: React.FC = () => {
                 value={promptValue}
                 onChange={e => setPromptValue(e.target.value)}
                 placeholder={prompt.options.placeholder}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 mb-6 font-medium"
+                className="w-full bg-background border border-border rounded px-4 py-3 text-foreground focus:outline-none focus:border-primary mb-6 font-bold text-sm"
               />
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => closePrompt(null)}
-                  className="px-4 py-2 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded font-black text-xs uppercase tracking-widest transition-colors border border-border"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!promptValue.trim()}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded font-black text-xs uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
                 >
                   OK
                 </button>

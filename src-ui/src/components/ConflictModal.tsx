@@ -2,6 +2,7 @@ import React from "react";
 import { useAppStore } from "../store/gameStore";
 import { AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "../lib/utils";
 
 export const ConflictModal: React.FC = () => {
   const { conflictReport, setConflictReport, games, selectedGameId } =
@@ -21,34 +22,33 @@ export const ConflictModal: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-[100] bg-background/90 flex items-center justify-center p-4"
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-slate-900 border border-amber-500/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]"
+          className="bg-card border border-primary/30 rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]"
         >
-          <div className="p-6 border-b border-white/5 bg-amber-500/10 flex items-center justify-between">
-            <div className="flex items-center gap-3 text-amber-400">
+          <div className="p-6 border-b border-border bg-muted/5 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-primary">
               <AlertTriangle size={24} />
-              <h2 className="text-xl font-bold">
-                Deployment Conflicts Detected
+              <h2 className="text-xl font-black uppercase italic tracking-tighter">
+                Deployment Conflicts
               </h2>
             </div>
             <button
               onClick={() => setConflictReport(null)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
             >
               <X size={24} />
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto custom-scrollbar space-y-4">
-            <p className="text-slate-300 text-sm">
-              The following assets were overwritten by mods lower in the load
-              order. The <strong>last mod listed</strong> for each hash is the
-              winner.
+          <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 bg-card">
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest leading-relaxed">
+              Assets overwritten by lower load order mods. The{" "}
+              <strong>last mod listed</strong> wins.
             </p>
 
             <div className="space-y-3">
@@ -56,31 +56,31 @@ export const ConflictModal: React.FC = () => {
                 ([hash, modIds]) => (
                   <div
                     key={hash}
-                    className="bg-black/30 rounded-xl p-4 border border-white/5"
+                    className="bg-background rounded-lg p-4 border border-border"
                   >
-                    <div className="flex items-center gap-2 mb-2 text-xs font-mono text-slate-500">
-                      <span className="bg-white/5 px-2 py-0.5 rounded">
+                    <div className="flex items-center gap-2 mb-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      <span className="bg-card px-2 py-0.5 rounded border border-border">
                         Hash: {hash}
                       </span>
                     </div>
                     <div className="space-y-2">
                       {modIds.map((uuid, index) => (
                         <div key={uuid} className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 border border-white/5">
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground border border-border">
                             {index + 1}
                           </div>
                           <span
                             className={cn(
-                              "text-sm font-medium",
+                              "text-xs font-bold uppercase tracking-tight",
                               index === modIds.length - 1
-                                ? "text-emerald-400"
-                                : "text-slate-400 line-through decoration-slate-600"
+                                ? "text-primary"
+                                : "text-muted-foreground/50 line-through"
                             )}
                           >
                             {getModName(uuid)}
                           </span>
                           {index === modIds.length - 1 && (
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 uppercase font-bold tracking-wider ml-auto">
+                            <span className="text-[9px] bg-primary text-primary-foreground px-2 py-0.5 rounded font-black uppercase tracking-widest ml-auto">
                               Active
                             </span>
                           )}
@@ -93,10 +93,10 @@ export const ConflictModal: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 border-t border-white/5 bg-slate-950/50 flex justify-end">
+          <div className="p-4 border-t border-border bg-background flex justify-end">
             <button
               onClick={() => setConflictReport(null)}
-              className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
+              className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded font-black text-[10px] uppercase tracking-widest transition-colors shadow-lg shadow-primary/20"
             >
               Acknowledge
             </button>
@@ -106,8 +106,3 @@ export const ConflictModal: React.FC = () => {
     </AnimatePresence>
   );
 };
-
-// Helper for conditional classes
-function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ");
-}

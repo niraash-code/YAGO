@@ -1,0 +1,18 @@
+---
+source: crates/logic_weaver/src/snapshots_test.rs
+expression: merged
+---
+sections:
+  - name: Section1
+    items:
+      - Pair:
+          key: key1
+          value: value1
+      - Pair:
+          key: key2
+          value: value2
+  - name: Section2
+    items:
+      - Pair:
+          key: key3
+          value: value3

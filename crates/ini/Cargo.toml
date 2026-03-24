@@ -1,0 +1,23 @@
+[package]
+license = "Proprietary"
+name = "ini"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nom = "7.1"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+anyhow = "1.0"
+walkdir = "2"
+
+[dev-dependencies]
+criterion = "0.8.2"
+insta = { version = "1.46.3", features = ["redactions", "yaml"] }
+proptest = "1.10.0"
+tempfile = "3.10"
+
+[[bench]]
+name = "parser_bench"
+harness = false
+

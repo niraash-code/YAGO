@@ -1,12 +1,219 @@
 use crate::AppState;
-use fs_engine::{ExeInspector, Safety};
-use librarian::scanner::DiscoveredGame;
-use librarian::{Discovery, FpsConfig, LibraryDatabase};
-use proc_marshal::InjectionMethod;
+use vfs::{ExeInspector, Safety};
+use storage::catalog::RemoteCatalogEntry;
+use storage::scanner::DiscoveredGame;
+use storage::settings::GlobalSettings;
+use storage::{CatalogManager, Discovery, FpsConfig, LibraryDatabase};
+use launcher::InjectionMethod;
+use sync::SophonClient;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::{Emitter, Manager, State};
 use uuid::Uuid;
+
+#[tauri::command]
+pub async fn get_remote_catalog(
+    state: State<'_, AppState>,
+) -> Result<Vec<RemoteCatalogEntry>, String> {
+    let templates: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+        state.game_templates.lock().await;
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
+    let installed_ids: Vec<String> = dbs.keys().cloned().collect();
+
+    let mut catalog = CatalogManager::get_remote_catalog(&templates, &installed_ids)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Resolve assets for the catalog entries
+    let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> = state.librarian.lock().await;
+    for entry in &mut catalog {
+        entry.template.cover_image = librarian.resolve_template_asset(&entry.template.cover_image);
+        entry.template.icon = librarian.resolve_template_asset(&entry.template.icon);
+    }
+
+    Ok(catalog)
+}
+
+#[tauri::command]
+pub async fn initialize_remote_game(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    template_id: String,
+) -> Result<String, String> {
+    let game_id = template_id.clone();
+
+    // 1. Scoped check/load
+    let (exists, template) = {
+        let templates: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+            state.game_templates.lock().await;
+        let t = templates
+            .get(&template_id)
+            .ok_or_else(|| format!("Template {} not found", template_id))?
+            .clone();
+
+        let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
+        (dbs.contains_key(&game_id), t)
+    };
+
+    if exists {
+        return Ok(game_id);
+    }
+
+    let default_profile = storage::models::Profile::default();
+    let p_id = default_profile.id;
+
+    let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> = state.librarian.lock().await;
+
+    // Ensure game directory exists before saving DB
+    let game_dir = librarian.games_root.join(&game_id);
+    if !game_dir.exists() {
+        std::fs::create_dir_all(&game_dir).map_err(|e| e.to_string())?;
+    }
+
+    let config = storage::models::GameConfig {
+        id: game_id.clone(),
+        name: template.name.clone(),
+        short_name: template.short_name.clone(),
+        developer: template.developer.clone(),
+        description: template.description.clone(),
+        install_path: PathBuf::new(),
+        exe_path: PathBuf::new(),
+        exe_name: template.executables.first().cloned().unwrap_or_default(),
+        version: "Pending".to_string(),
+        remote_version: None,
+        installed_components: vec![],
+        size: "Unknown".to_string(),
+        color: template.color.clone(),
+        accent_color: template.accent_color.clone(),
+        cover_image: librarian.resolve_template_asset(&template.cover_image),
+        icon: librarian.resolve_template_asset(&template.icon),
+        logo_initial: template.logo_initial.clone(),
+        enabled: true,
+        added_at: chrono::Utc::now(),
+        launch_args: template.launch_args.clone().unwrap_or_default(),
+        gamescope_args: vec![],
+        active_profile_id: p_id.to_string(),
+        fps_config: template.fps_config.clone(),
+        injection_method: if cfg!(target_os = "windows") {
+            template.injection_method_windows
+        } else {
+            template.injection_method_linux
+        }
+        .unwrap_or(storage::models::InjectionMethod::None),
+        install_status: storage::models::InstallStatus::Remote,
+        auto_update: template.auto_update.unwrap_or(true),
+        active_runner_id: None,
+        prefix_path: None,
+        modloader_enabled: template.modloader_enabled.unwrap_or(true),
+        sandbox: storage::models::SandboxConfig {
+            registry_keys: vec![],
+            files: vec!["d3dx_user.ini".to_string()],
+        },
+        loader_repo: template.loader_repo.clone(),
+        hash_db_url: template.hash_db_url.clone(),
+        patch_logic: template.patch_logic.clone(),
+        enable_linux_shield: true,
+        supported_injection_methods: template
+            .supported_injection_methods
+            .clone()
+            .unwrap_or_default(),
+        remote_info: None,
+    };
+
+    let mut db = LibraryDatabase::default();
+    db.games.insert(game_id.clone(), config);
+    db.profiles.insert(p_id, default_profile);
+
+    let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> = state.librarian.lock().await;
+    librarian
+        .save_game_db(&game_id, &db)
+        .await
+        .map_err(|e: storage::LibrarianError| e.to_string())?;
+    drop(librarian);
+
+    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
+    dbs.insert(game_id.clone(), db);
+    let _ = app.emit("library-updated", dbs.clone());
+
+    Ok(game_id)
+}
+#[tauri::command]
+pub async fn get_install_options(
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<Vec<sync::protocol::ManifestCategory>, String> {
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
+    let db = dbs
+        .get(&game_id)
+        .ok_or_else(|| format!("Game {} not found", game_id))?;
+    let _config = db
+        .games
+        .get(&game_id)
+        .ok_or_else(|| format!("Config for {} missing", game_id))?;
+
+    // We need RemoteInfo to get the manifest URL
+    // If it's missing, we try to fetch it from template
+    let templates: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+        state.game_templates.lock().await;
+    let template = templates
+        .get(&game_id)
+        .or_else(|| {
+            let base = game_id.trim_end_matches(".exe");
+            templates.get(base).or_else(|| {
+                templates.values().find(|t| {
+                    let name_low = t.name.to_lowercase();
+                    let short_low = t.short_name.to_lowercase();
+                    base.contains(&short_low)
+                        || base.contains(&name_low)
+                        || short_low.contains(base)
+                        || name_low.contains(base)
+                })
+            })
+        })
+        .ok_or_else(|| format!("Template not found for game ID: {}", game_id))?;
+
+    let client = SophonClient::new();
+    let build = client
+        .get_build(
+            &template.sophon_branch,
+            &template.sophon_package_id,
+            &template.sophon_password,
+            &template.sophon_plat_app,
+            &template.sophon_game_biz,
+            &template.sophon_launcher_id,
+            &template.sophon_channel_id,
+            &template.sophon_sub_channel_id,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(build
+        .manifests
+        .into_iter()
+        .map(|m| {
+            let name = match m.matching_field.as_str() {
+                "game" => "Game Core".to_string(),
+                "en-us" => "English Audio".to_string(),
+                "zh-cn" => "Chinese Audio".to_string(),
+                "ja-jp" => "Japanese Audio".to_string(),
+                "ko-kr" => "Korean Audio".to_string(),
+                "zh-tw" => "Traditional Chinese Audio".to_string(),
+                _ => m.category_name.clone(), // Fallback to raw name if unknown
+            };
+
+            sync::protocol::ManifestCategory {
+                id: m.category_id,
+                name,
+                size: m.uncompressed_size,
+                is_required: m.matching_field == "game",
+            }
+        })
+        .collect())
+}
 
 #[derive(serde::Serialize)]
 pub struct IdentifiedGame {
@@ -17,7 +224,6 @@ pub struct IdentifiedGame {
     pub description: String,
     pub version: String,
     pub size: String,
-    pub regions: u32,
     pub color: String,
     pub accent_color: String,
     pub cover_image: String,
@@ -25,6 +231,9 @@ pub struct IdentifiedGame {
     pub logo_initial: String,
     pub install_path: String,
     pub exe_name: String,
+    pub supported_injection_methods: Vec<InjectionMethod>,
+    pub injection_method: InjectionMethod,
+    pub modloader_enabled: bool,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -35,6 +244,20 @@ pub struct FileNode {
     pub kind: String, // "file" or "folder"
     pub size: Option<String>,
     pub children: Option<Vec<FileNode>>,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct LoaderProgress {
+    pub game_id: String,
+    pub status: String,
+    pub progress: f64,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct ProtonProgress {
+    pub version: String,
+    pub status: String,
+    pub progress: f64,
 }
 
 #[derive(serde::Serialize)]
@@ -55,16 +278,17 @@ pub struct GameConfigUpdate {
     pub install_path: Option<String>,
     pub exe_name: Option<String>,
     pub launch_args: Option<Vec<String>>,
+    pub gamescope_args: Option<Vec<String>>,
     pub fps_config: Option<FpsConfig>,
     pub short_name: Option<String>,
-    pub regions: Option<u32>,
     pub color: Option<String>,
     pub accent_color: Option<String>,
     pub logo_initial: Option<String>,
     pub injection_method: Option<InjectionMethod>,
+    pub modloader_enabled: Option<bool>,
     pub auto_update: Option<bool>,
     pub active_profile_id: Option<String>,
-    pub active_runner_id: Option<String>,
+    pub active_runner_id: Option<Option<String>>,
     pub prefix_path: Option<Option<String>>,
     pub enable_linux_shield: Option<bool>,
 }
@@ -80,17 +304,20 @@ pub struct ProfileUpdate {
     pub use_reshade: Option<bool>,
     pub resolution: Option<(u32, u32)>,
     pub launch_args: Option<Vec<String>>,
+    pub gamescope_args: Option<Vec<String>>,
     pub save_data_path: Option<PathBuf>,
     pub enabled_mod_ids: Option<Vec<Uuid>>,
     pub load_order: Option<Vec<Uuid>>,
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn force_reset_state(state: State<'_, AppState>) -> Result<(), String> {
-    let mut running = state.running_game_name.lock().await;
+    let mut running: tokio::sync::MutexGuard<'_, Option<String>> =
+        state.running_game_name.lock().await;
     *running = None;
 
-    let mut launching = state.is_launching.lock().await;
+    let mut launching: tokio::sync::MutexGuard<'_, bool> = state.is_launching.lock().await;
     *launching = false;
 
     Ok(())
@@ -100,7 +327,8 @@ pub async fn force_reset_state(state: State<'_, AppState>) -> Result<(), String>
 pub async fn get_library(
     state: State<'_, AppState>,
 ) -> Result<HashMap<String, LibraryDatabase>, String> {
-    let dbs = state.game_dbs.lock().await;
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     Ok(dbs.clone())
 }
 
@@ -108,13 +336,14 @@ pub async fn get_library(
 pub async fn get_skin_inventory(
     state: State<'_, AppState>,
     game_id: String,
-) -> Result<HashMap<String, librarian::queries::CharacterGroup>, String> {
-    let dbs = state.game_dbs.lock().await;
+) -> Result<HashMap<String, storage::queries::CharacterGroup>, String> {
+    let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     let db = dbs
         .get(&game_id)
         .ok_or_else(|| format!("Game {} not found", game_id))?;
 
-    Ok(librarian::queries::Queries::get_character_roster(
+    Ok(storage::queries::Queries::get_character_roster(
         db, &game_id,
     ))
 }
@@ -189,7 +418,8 @@ pub async fn identify_game(
         return Err("Could not identify game executable".to_string());
     }
     let game_id = exe_name.to_lowercase();
-    let templates_guard = state.game_templates.lock().await;
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+        state.game_templates.lock().await;
     let template = templates_guard.get(&game_id).or_else(|| {
         if game_id.ends_with(".exe") {
             templates_guard.get(game_id.trim_end_matches(".exe"))
@@ -212,6 +442,11 @@ pub async fn identify_game(
     if let Some(t) = template {
         let t_cloned = t.clone();
         drop(templates_guard);
+
+        // Resolve assets async
+        let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> =
+            state.librarian.lock().await;
+
         Ok(IdentifiedGame {
             id: game_id,
             name: t_cloned.name,
@@ -220,18 +455,45 @@ pub async fn identify_game(
             description: t_cloned.description,
             version,
             size: size_str,
-            regions: t_cloned.regions,
             color: t_cloned.color,
             accent_color: t_cloned.accent_color,
-            cover_image: t_cloned.cover_image,
-            icon: t_cloned.icon,
+            cover_image: librarian.resolve_template_asset(&t_cloned.cover_image),
+            icon: librarian.resolve_template_asset(&t_cloned.icon),
             logo_initial: t_cloned.logo_initial,
             install_path: install_path.to_string_lossy().to_string(),
             exe_name,
+            supported_injection_methods: t_cloned
+                .supported_injection_methods
+                .unwrap_or_default()
+                .into_iter()
+                .map(|m| match m {
+                    storage::InjectionMethod::None => InjectionMethod::None,
+                    storage::InjectionMethod::Proxy => InjectionMethod::Proxy,
+                    storage::InjectionMethod::Loader => InjectionMethod::Loader,
+                    storage::InjectionMethod::RemoteThread => InjectionMethod::RemoteThread,
+                    storage::InjectionMethod::ManualMap => InjectionMethod::ManualMap,
+                })
+                .collect(),
+            injection_method: {
+                let method = if cfg!(target_os = "windows") {
+                    t_cloned.injection_method_windows
+                } else {
+                    t_cloned.injection_method_linux
+                };
+                match method.unwrap_or(storage::InjectionMethod::None) {
+                    storage::InjectionMethod::None => InjectionMethod::None,
+                    storage::InjectionMethod::Proxy => InjectionMethod::Proxy,
+                    storage::InjectionMethod::Loader => InjectionMethod::Loader,
+                    storage::InjectionMethod::RemoteThread => InjectionMethod::RemoteThread,
+                    storage::InjectionMethod::ManualMap => InjectionMethod::ManualMap,
+                }
+            },
+            modloader_enabled: t_cloned.modloader_enabled.unwrap_or(true),
         })
     } else {
         drop(templates_guard);
-        let app_config = state.app_config.lock().await;
+        let app_config: tokio::sync::MutexGuard<'_, crate::config::AppConfig> =
+            state.app_config.lock().await;
         let name = install_path
             .file_name()
             .unwrap_or_default()
@@ -245,7 +507,6 @@ pub async fn identify_game(
             description: "A custom added game.".to_string(),
             version,
             size: size_str,
-            regions: 1,
             color: "slate-400".to_string(),
             accent_color: "#94a3b8".to_string(),
             cover_image: app_config.default_cover_image.clone(),
@@ -253,8 +514,72 @@ pub async fn identify_game(
             logo_initial: name.chars().next().unwrap_or('?').to_string(),
             install_path: install_path.to_string_lossy().to_string(),
             exe_name,
+            supported_injection_methods: vec![InjectionMethod::Proxy],
+            injection_method: InjectionMethod::Proxy,
+            modloader_enabled: true,
         })
     }
+}
+
+#[tauri::command]
+pub async fn sync_game_assets(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let result = {
+        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
+        let templates: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+            state.game_templates.lock().await;
+
+        if let (Some(db), Some(template)) = (dbs.get_mut(&game_id), templates.get(&game_id)) {
+            if let Some(config) = db.games.get_mut(&game_id) {
+                println!("Syncing assets for {}: using local templates", game_id);
+
+                let librarian_guard: tokio::sync::MutexGuard<'_, storage::Librarian> =
+                    state.librarian.lock().await;
+
+                // ONLY update if currently empty or using a default template path
+                // This allows users to keep custom cover images and icons
+                if config.cover_image.is_empty() || config.cover_image.contains("/templates/") {
+                    config.cover_image =
+                        librarian_guard.resolve_template_asset(&template.cover_image);
+                }
+
+                if config.icon.is_empty() || config.icon.contains("/templates/") {
+                    config.icon = librarian_guard.resolve_template_asset(&template.icon);
+                }
+
+                config.accent_color = template.accent_color.clone();
+                config.color = template.color.clone();
+                config.logo_initial = template.logo_initial.clone();
+
+                // Return data needed to save outside this lock scope
+                Some((game_id.clone(), db.clone()))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+
+    if let Some((id, db)) = result {
+        state
+            .librarian
+            .lock()
+            .await
+            .save_game_db(&id, &db)
+            .await
+            .map_err(|e| e.to_string())?;
+        let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
+        let _ = app.emit("library-updated", dbs.clone());
+        return Ok(());
+    }
+
+    Err("Game or Template not found".to_string())
 }
 
 #[tauri::command]
@@ -264,32 +589,92 @@ pub async fn add_game(
     path: String,
 ) -> Result<String, String> {
     let path_buf = PathBuf::from(&path);
-    let templates_guard = state.game_templates.lock().await;
-    let game_id = Discovery::add_game_by_path(&state.librarian, path_buf, &templates_guard)
-        .await
-        .map_err(|e| e.to_string())?;
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+        state.game_templates.lock().await;
+
+    let game_id = {
+        let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> =
+            state.librarian.lock().await;
+        Discovery::add_game_by_path(&librarian, path_buf, &templates_guard)
+            .await
+            .map_err(|e| e.to_string())?
+    };
     drop(templates_guard);
     #[cfg(target_os = "linux")]
     {
         let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-        let prefix_path = app_data_dir.join("prefixes").join(&game_id);
+
+        let settings: tokio::sync::MutexGuard<'_, GlobalSettings> =
+            state.global_settings.lock().await;
+        let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+            app_data_dir.clone()
+        } else {
+            settings.yago_storage_path.clone()
+        };
+        drop(settings);
+
+        let prefix_path = base_storage.join("prefixes").join(&game_id);
         if !prefix_path.exists() {
             std::fs::create_dir_all(prefix_path.join("pfx")).map_err(|e| e.to_string())?;
         }
-        let mut dbs = state.game_dbs.lock().await;
+        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
         if let Some(db) = dbs.get_mut(&game_id) {
             if let Some(config) = db.games.get_mut(&game_id) {
                 config.prefix_path = Some(prefix_path);
                 state
                     .librarian
+                    .lock()
+                    .await
                     .save_game_db(&game_id, db)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e: storage::LibrarianError| e.to_string())?;
             }
         }
     }
-    if let Ok(db) = state.librarian.load_game_db(&game_id).await {
-        let mut dbs = state.game_dbs.lock().await;
+
+    let db_res = {
+        let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> =
+            state.librarian.lock().await;
+        librarian.load_game_db(&game_id).await
+    };
+
+    if let Ok(mut db) = db_res {
+        // Fetch remote version if it's a Sophon game
+        if let Some(config) = db.games.get_mut(&game_id) {
+            let templates: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+                state.game_templates.lock().await;
+            if let Some(template) = templates.get(&game_id) {
+                if !template.sophon_package_id.is_empty() {
+                    let client = SophonClient::new();
+                    let build_res = client
+                        .get_build(
+                            &template.sophon_branch,
+                            &template.sophon_package_id,
+                            &template.sophon_password,
+                            &template.sophon_plat_app,
+                            &template.sophon_game_biz,
+                            &template.sophon_launcher_id,
+                            &template.sophon_channel_id,
+                            &template.sophon_sub_channel_id,
+                        )
+                        .await;
+
+                    if let Ok(build) = build_res {
+                        config.remote_version = Some(build.version);
+                        let _ = state
+                            .librarian
+                            .lock()
+                            .await
+                            .save_game_db(&game_id, &db)
+                            .await;
+                    }
+                }
+            }
+        }
+
+        let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
         dbs.insert(game_id.clone(), db);
         let _ = app.emit("library-updated", dbs.clone());
     }
@@ -302,11 +687,37 @@ pub async fn remove_game(
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<(), String> {
-    let mut dbs = state.game_dbs.lock().await;
+    // 1. Stop any active download
+    {
+        let controls: tokio::sync::MutexGuard<
+            '_,
+            HashMap<String, tokio::sync::watch::Sender<bool>>,
+        > = state.download_controls.lock().await;
+        if let Some(tx) = controls.get(&game_id) {
+            // Signal stop (true means paused/stopped in our current logic)
+            let _ = tx.send(true);
+        }
+    }
+    // Give background threads a moment to notice the signal and close file handles
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+    {
+        let mut controls: tokio::sync::MutexGuard<
+            '_,
+            HashMap<String, tokio::sync::watch::Sender<bool>>,
+        > = state.download_controls.lock().await;
+        controls.remove(&game_id);
+    }
+
+    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
     if let Some(db) = dbs.remove(&game_id) {
-        let game_dir = state.librarian.games_root.join(&game_id);
-        if game_dir.exists() {
-            std::fs::remove_dir_all(game_dir).map_err(|e| e.to_string())?;
+        let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> =
+            state.librarian.lock().await;
+        let game_paths = librarian.game_paths(&game_id);
+
+        if game_paths.root.exists() {
+            std::fs::remove_dir_all(game_paths.root).map_err(|e| e.to_string())?;
         }
         #[cfg(target_os = "linux")]
         {
@@ -326,14 +737,74 @@ pub async fn remove_game(
 
 #[tauri::command]
 pub async fn scan_for_games(state: State<'_, AppState>) -> Result<Vec<DiscoveredGame>, String> {
-    let templates_root = state.app_data_dir.join("templates");
+    let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> = state.librarian.lock().await;
+    let templates_root = &librarian.templates_root;
     if !templates_root.exists() {
         return Ok(vec![]);
     }
-    let templates_guard = state.game_templates.lock().await;
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+        state.game_templates.lock().await;
     let templates_vec: Vec<_> = templates_guard.values().cloned().collect();
-    let discovered = librarian::scanner::scan(&templates_vec);
+    let discovered = storage::scanner::scan(&templates_vec);
     Ok(discovered)
+}
+
+#[tauri::command]
+pub async fn recursive_scan_path(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<Vec<DiscoveredGame>, String> {
+    let templates_guard: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+        state.game_templates.lock().await;
+    let templates_vec: Vec<_> = templates_guard.values().cloned().collect();
+
+    let path_buf = PathBuf::from(path);
+    if !path_buf.exists() {
+        return Err("Path does not exist".to_string());
+    }
+
+    Ok(storage::scanner::recursive_scan(
+        &path_buf,
+        &templates_vec,
+        4,
+    ))
+}
+
+#[tauri::command]
+pub async fn trust_game_installation(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    println!("Sophon: [TRUST] Manual override for game: {}", game_id);
+
+    let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+        state.game_dbs.lock().await;
+    if let Some(db) = dbs.get_mut(&game_id) {
+        if let Some(config) = db.games.get_mut(&game_id) {
+            config.install_status = storage::models::InstallStatus::Installed;
+
+            // If version is unknown, try to set it to remote version if available
+            if config.version == "Unknown" || config.version == "Pending" {
+                if let Some(rv) = &config.remote_version {
+                    config.version = rv.clone();
+                }
+            }
+
+            state
+                .librarian
+                .lock()
+                .await
+                .save_game_db(&game_id, db)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let _ = app.emit("library-updated", dbs.clone());
+            println!("Sophon: Game {} marked as trusted and installed.", game_id);
+            return Ok(());
+        }
+    }
+    Err("Game not found".to_string())
 }
 
 #[tauri::command]
@@ -341,21 +812,125 @@ pub async fn sync_templates(
     _app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let templates_root = state.app_data_dir.join("templates");
+    let librarian: tokio::sync::MutexGuard<'_, storage::Librarian> = state.librarian.lock().await;
+    let templates_root = librarian.templates_root.clone();
+    drop(librarian);
+
     if !templates_root.exists() {
         std::fs::create_dir_all(&templates_root).map_err(|e| e.to_string())?;
     }
-    let registry = librarian::TemplateRegistry::new(templates_root);
+    let registry = storage::TemplateRegistry::new(templates_root);
     let new_templates = registry.load_all().await.map_err(|e| e.to_string())?;
-    let mut templates_guard = state.game_templates.lock().await;
-    *templates_guard = new_templates;
+
+    // Update templates first
+    {
+        let mut guard: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+            state.game_templates.lock().await;
+        *guard = new_templates.clone();
+    }
+
+    // Refresh remote versions without holding the main DB lock
+    let ids: Vec<String> = {
+        let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+            state.game_dbs.lock().await;
+        dbs.keys().cloned().collect()
+    };
+
+    let client = SophonClient::new();
+
+    for id in ids {
+        // 1. Get info needed for this specific game (Scoped lock)
+        let template = {
+            let templates: tokio::sync::MutexGuard<'_, HashMap<String, storage::GameTemplate>> =
+                state.game_templates.lock().await;
+            templates.get(&id).cloned()
+        };
+
+        if let Some(template) = template {
+            let mut remote_v = None;
+
+            // Fetch Remote Version (Network I/O - NO LOCKS HELD)
+            if !template.sophon_package_id.is_empty() {
+                let build_res = client
+                    .get_build(
+                        &template.sophon_branch,
+                        &template.sophon_package_id,
+                        &template.sophon_password,
+                        &template.sophon_plat_app,
+                        &template.sophon_game_biz,
+                        &template.sophon_launcher_id,
+                        &template.sophon_channel_id,
+                        &template.sophon_sub_channel_id,
+                    )
+                    .await;
+
+                if let Ok(build) = build_res {
+                    remote_v = Some(build.version);
+                }
+            }
+
+            // 2. Apply updates to the LIVE database object
+            let (_changed, db_to_save) = {
+                let mut dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+                    state.game_dbs.lock().await;
+                if let Some(db) = dbs.get_mut(&id) {
+                    let mut changed = false;
+                    if let Some(config) = db.games.get_mut(&id) {
+                        // Refresh Local Version
+                        if config.version == "Unknown" || config.version == "Pending" {
+                            let mut current = Some(config.install_path.as_path());
+                            for _ in 0..3 {
+                                if let Some(p) = current {
+                                    let exe_path = p.join(&config.exe_name);
+                                    if let Ok(v) = ExeInspector::get_version(&exe_path) {
+                                        if v != "Unknown" {
+                                            config.version = v;
+                                            changed = true;
+                                            break;
+                                        }
+                                    }
+                                    current = p.parent();
+                                }
+                            }
+                        }
+
+                        // Update Remote Version
+                        if let Some(rv) = remote_v {
+                            if config.remote_version != Some(rv.clone()) {
+                                config.remote_version = Some(rv);
+                                changed = true;
+                            }
+                        }
+                    }
+                    (changed, if changed { Some(db.clone()) } else { None })
+                } else {
+                    (false, None)
+                }
+            };
+
+            if let Some(db) = db_to_save {
+                state
+                    .librarian
+                    .lock()
+                    .await
+                    .save_game_db(&id, &db)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                let dbs: tokio::sync::MutexGuard<'_, HashMap<String, LibraryDatabase>> =
+                    state.game_dbs.lock().await;
+                let _ = _app.emit("library-updated", dbs.clone());
+            }
+        }
+    }
+
     Ok(())
 }
 
 #[tauri::command]
 pub async fn list_runners(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     let mut runners = std::collections::HashSet::new();
-    let runners_dir = state.app_data_dir.join("runners");
+    let librarian = state.librarian.lock().await;
+    let runners_dir = &librarian.runners_root;
     if runners_dir.exists() {
         if let Ok(entries) = std::fs::read_dir(runners_dir) {
             for entry in entries.filter_map(|e| e.ok()) {
@@ -365,6 +940,8 @@ pub async fn list_runners(state: State<'_, AppState>) -> Result<Vec<String>, Str
             }
         }
     }
+    drop(librarian);
+
     let settings = state.global_settings.lock().await;
     if !settings.steam_compat_tools_path.as_os_str().is_empty()
         && settings.steam_compat_tools_path.exists()
@@ -384,7 +961,8 @@ pub async fn list_runners(state: State<'_, AppState>) -> Result<Vec<String>, Str
 
 #[tauri::command]
 pub async fn remove_runner(state: State<'_, AppState>, runner_id: String) -> Result<(), String> {
-    let runners_dir = state.app_data_dir.join("runners").join(&runner_id);
+    let librarian = state.librarian.lock().await;
+    let runners_dir = librarian.runners_root.join(&runner_id);
     if !runners_dir.exists() {
         return Err("Runner not found".to_string());
     }
@@ -416,6 +994,115 @@ pub async fn detect_steam_proton_path_internal() -> Result<Option<String>, Strin
         }
     }
     Ok(None)
+}
+
+#[tauri::command]
+pub async fn wipe_game_mods(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let mut dbs = state.game_dbs.lock().await;
+    if let Some(db) = dbs.get_mut(&game_id) {
+        // 1. Delete mod files from disk
+        let librarian = state.librarian.lock().await;
+        let mods_root = librarian.game_paths(&game_id).mods;
+        if mods_root.exists() {
+            std::fs::remove_dir_all(&mods_root).map_err(|e| e.to_string())?;
+            std::fs::create_dir_all(&mods_root).map_err(|e| e.to_string())?;
+        }
+
+        // 2. Clear from DB
+        db.mods.clear();
+
+        // 3. Update profiles to remove mod references
+        for profile in db.profiles.values_mut() {
+            profile.enabled_mod_ids.clear();
+            profile.load_order.clear();
+        }
+
+        librarian
+            .save_game_db(&game_id, db)
+            .await
+            .map_err(|e| e.to_string())?;
+        let _ = app.emit("library-updated", dbs.clone());
+        return Ok(());
+    }
+    Err("Game not found".to_string())
+}
+
+#[tauri::command]
+pub async fn reset_game_profiles(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let mut dbs = state.game_dbs.lock().await;
+    if let Some(db) = dbs.get_mut(&game_id) {
+        let librarian = state.librarian.lock().await;
+
+        // Keep only the active profile but reset it, or just wipe all and create new Default
+        db.profiles.clear();
+        let default_profile = storage::models::Profile::default();
+        let p_id = default_profile.id;
+
+        if let Some(config) = db.games.get_mut(&game_id) {
+            config.active_profile_id = p_id.to_string();
+        }
+
+        db.profiles.insert(p_id, default_profile);
+
+        librarian
+            .save_game_db(&game_id, db)
+            .await
+            .map_err(|e| e.to_string())?;
+        let _ = app.emit("library-updated", dbs.clone());
+        return Ok(());
+    }
+    Err("Game not found".to_string())
+}
+
+#[tauri::command]
+pub async fn remove_game_prefix(state: State<'_, AppState>, game_id: String) -> Result<(), String> {
+    let dbs = state.game_dbs.lock().await;
+    if let Some(db) = dbs.get(&game_id) {
+        if let Some(config) = db.games.get(&game_id) {
+            if let Some(prefix_path) = &config.prefix_path {
+                if prefix_path.exists() {
+                    std::fs::remove_dir_all(prefix_path).map_err(|e| e.to_string())?;
+                    return Ok(());
+                }
+            }
+        }
+    }
+    Err("Prefix not found or game missing".to_string())
+}
+
+#[tauri::command]
+pub async fn uninstall_game_files(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    // 1. First remove from library (handles process cleanup)
+    let install_path = {
+        let dbs = state.game_dbs.lock().await;
+        dbs.get(&game_id)
+            .and_then(|db| db.games.get(&game_id))
+            .map(|c| c.install_path.clone())
+    };
+
+    remove_game(app, state, game_id).await?;
+
+    // 2. Wipe the actual game folder from disk
+    if let Some(path) = install_path {
+        if path.exists() && path.is_dir() {
+            println!("Sophon: Wiping game files at {:?}", path);
+            std::fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

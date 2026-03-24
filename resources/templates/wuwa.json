@@ -1,0 +1,30 @@
+{
+  "name": "Wuthering Waves",
+  "short_name": "Wuwa",
+  "developer": "Kuro Games",
+  "description": "An open-world action RPG set in a futuristic world.",
+  "color": "slate-400",
+  "accent_color": "#94a3b8",
+  "cover_image": "wuwa_background.webp",
+  "icon": "wuwa_logo.png",
+  "logo_initial": "W",
+  "executables": [
+    "Wuthering Waves.exe",
+    "Client-Win64-Shipping.exe"
+  ],
+  "injection_method_windows": "Proxy",
+  "injection_method_linux": "Proxy",
+  "modloader_enabled": true,
+  "supported_injection_methods": ["Proxy"],
+  "loader_repo": "SpectrumQT/WWMI-Package",
+  "hash_db_url": "https://raw.githubusercontent.com/SpectrumQT/WWMI-Package/main/Tools/hashes.json",
+  "patch_logic": {},
+  "launch_args": [],
+  "fps_config": {
+    "enabled": false,
+    "target_fps": 60,
+    "search_pattern": "",
+    "offset": 0
+  },
+  "auto_update": true
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { FolderOpen, Edit2, RefreshCw, Check, X } from "lucide-react";
 import { api } from "../../lib/api";
+import { cn } from "../../lib/utils";
 
 interface EditableSettingProps {
   label: string;
@@ -28,73 +29,76 @@ export const EditableSetting: React.FC<EditableSettingProps> = ({
   path,
 }) => {
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/5 transition-colors hover:bg-white/[0.07] relative group/card">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white mb-0.5 pr-8">
-            {label}
+    <div className="group relative p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
+      <div className="flex flex-col gap-3">
+        {/* Header Row */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-foreground">{label}</h4>
+            {description && (
+              <p className="text-xs text-muted-foreground leading-relaxed pr-8">
+                {description}
+              </p>
+            )}
           </div>
-          {description && (
-            <div className="text-xs text-slate-400 mb-2 leading-relaxed">
-              {description}
-            </div>
-          )}
 
+          {/* Open Folder - Top Right */}
           {path && !isEditing && (
             <button
               onClick={e => {
                 e.stopPropagation();
                 if (path) api.openPath(path);
               }}
-              className="absolute top-4 right-4 p-1.5 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 rounded-md transition-all opacity-0 group-hover:opacity-100"
               title="Open Folder"
             >
-              <FolderOpen size={16} />
+              <FolderOpen size={18} />
             </button>
           )}
+        </div>
 
-          <div className="mt-2">
-            {isEditing ? (
-              <div className="animate-in fade-in zoom-in-95 duration-200">
-                {children}
-                <div className="flex items-center gap-2 mt-3">
-                  <button
-                    onClick={onSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <RefreshCw size={12} className="animate-spin" />
-                    ) : (
-                      <Check size={12} />
-                    )}
-                    Save
-                  </button>
-                  <button
-                    onClick={onCancel}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium rounded-lg transition-colors"
-                  >
-                    <X size={12} />
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between group gap-4">
-                <div className="text-sm text-slate-200 font-mono break-all line-clamp-2">
-                  {displayValue}
-                </div>
+        {/* Content Row */}
+        <div className="pt-1">
+          {isEditing ? (
+            <div className="animate-in fade-in zoom-in-95 duration-200">
+              {children}
+              <div className="flex items-center justify-end gap-2 mt-3">
                 <button
-                  onClick={onEdit}
-                  className="p-1.5 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0"
-                  title="Edit Setting"
+                  onClick={onCancel}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground text-xs font-bold uppercase tracking-wide rounded-md transition-colors border border-border"
                 >
-                  <Edit2 size={14} />
+                  <X size={14} />
+                  Cancel
+                </button>
+                <button
+                  onClick={onSave}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold uppercase tracking-wide rounded-md transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {isSaving ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <Check size={14} />
+                  )}
+                  Save
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4 bg-background/50 p-3 rounded-md border border-border/50">
+              <div className="text-sm text-foreground font-mono break-all line-clamp-2">
+                {displayValue}
+              </div>
+              <button
+                onClick={onEdit}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-background border border-transparent hover:border-border rounded-md transition-all shrink-0 opacity-0 group-hover:opacity-100"
+                title="Edit"
+              >
+                <Edit2 size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

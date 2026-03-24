@@ -1,80 +1,83 @@
 # YAGO - Yet Another Game Organizer
 
-[![Status](https://img.shields.io/badge/status-production--ready-green)](https://github.com/your-org/yago)
-[![Rust](https://img.shields.io/badge/rust-1.75+-000000)](https://www.rust-lang.org/)
-[![Tauri](https://img.shields.io/badge/tauri-2.0-24c8db)](https://tauri.app/)
-[![React](https://img.shields.io/badge/react-19.0-61dafb)](https://reactjs.org/)
+A high-performance game mod manager built with Tauri, React, and Rust.
 
-YAGO is a high-performance, next-generation modding platform that bridges the gap between a user-friendly Game Manager and a technical Integrated Development Environment (IDE) for modders.
+## Features
 
-## 🌟 The Vision
+- **Multi-Game Support** - Manage mods for multiple games from a single interface
+- **Smart INI Handling** - Parse and merge 3DMigoto configurations with conflict resolution
+- **Profile System** - Multiple mod configurations per game with easy switching
+- **Game Launching** - Launch games with Wine, Proton, or native runners
+- **Mod Import** - Drag-and-drop mod import with automatic categorization
+- **Modern UI** - Clean glassmorphism design with smooth animations
 
-YAGO provides a clean, safe, and powerful environment for both players and modders:
+## Supported Games
 
-- **For Players**: Zero-copy mod deployment via a Virtual File System (Symlinks), context-aware profile management, and global "Streamer Mode" safety features.
-- **For Modders**: A specialized IDE featuring a logic-aware INI editor, shader (DXBC) patching, and automated mod merging.
+- Genshin Impact
+- Honkai: Star Rail
+- Zenless Zone Zero
+- (And other HoYoverse games)
 
-## 🧩 Architecture: The 8 Pillars
+## Tech Stack
 
-The core logic is distributed across 8 specialized Rust crates, ensuring maximum isolation and testability.
+- **Backend**: Rust (Tauri v2)
+- **Frontend**: React 19 + TypeScript + Tailwind CSS
+- **Build**: Bun
 
-| Crate | Responsibility | Key Tech |
-| :--- | :--- | :--- |
-| **`fs_engine`** | VFS (Symlinks), Archive extraction, Atomic operations. | `zip`, `sevenz-rust` |
-| **`librarian`** | Decentralized databases, Mod metadata, Game discovery. | `serde`, `chrono` |
-| **`proc_marshal`** | Process execution, FPS Unlocking, Sandbox snapshots. | `sysinfo`, `tokio` |
-| **`logic_weaver`** | Deployment planning, INI merging, DXBC patching. | (Pure Rust) |
-| **`ini_forge`** | Logic-aware .ini parsing with `if/endif` support. | `nom` |
-| **`loader_ctl`** | 3DMigoto/ReShade installation & dual-proxy chaining. | (Pure Rust) |
-| **`quartermaster`** | High-perf asset caching and GitHub update resolution. | `reqwest`, `md5` |
-| **`sophon_engine`** | Delta update protocol and checksum verification. | `tokio`, `md5` |
+## Getting Started
 
----
+### Prerequisites
 
-## 📂 Project Structure
+- [Bun](https://bun.sh) (latest)
+- [Rust](https://rustup.rs/) (latest stable)
 
-The project follows a modern, modular structure designed for large-scale engineering:
+### Build
 
-```text
-├── docs/                      # Technical and user documentation
-├── crates/                    # Core logic crates (independent & testable)
-├── src-tauri/                 # Rust Tauri host & modular IPC commands
-│   └── src/commands/          # Logic-specific command modules
-├── src-ui/                    # React Frontend
-│   └── src/                   # Standardized source directory
-│       ├── components/        # Modular dashboard & inspector sub-components
-│       ├── store/             # Zustand state management (mapped models)
-│       └── tests/             # Vitest suite
-├── assets/                    # Centralized app config & presets
-└── build_tools/               # Multi-platform packaging system
+```bash
+# Install dependencies
+bun install
+
+# Run development server
+bun run tauri dev
+
+# Build for production
+bun run tauri build
 ```
 
----
+## Architecture
 
-## 🛠 Developer Quickstart
+The core logic is split into 8 Rust crates:
 
-For detailed architectural insights, please read **`STRUCTURE.md`**.
+| Crate | Purpose |
+|-------|---------|
+| **ini** | INI file parser with 3DMigoto syntax support |
+| **vfs** | Virtual file system for mod deployment via symlinks |
+| **storage** | Game library and database management |
+| **mod_patches** | INI patching and conflict resolution |
+| **launcher** | Game launching with Wine/Proton support |
+| **sync** | Asset synchronization and delta updates |
+| **resources** | Resource downloading and management |
+| **loader** | Mod loader interface |
 
-### Development Workflow
-1.  **Environment Setup**: `./setup_yago.sh`
-2.  **Run Dev Mode**: `make dev`
-3.  **Execute Tests**: `make test` (Runs all 8 crates + Integration flows)
-4.  **Lint & Format**: `make lint`
+## Project Structure
 
-### Documentation Map
-- **Technical Overview**: [Architecture](docs/dev/architecture.md)
-- **Testing Protocol**: [Testing Guide](docs/dev/testing.md)
-- **Mod Specification**: [mod.json Spec](docs/dev/mod-json-spec.md)
-- **Contribution**: [Contributing to YAGO](docs/dev/contribution.md)
+```
+yago/
+├── crates/           # Rust backend crates
+├── src-tauri/        # Tauri backend entry
+├── src-ui/           # React frontend
+├── resources/        # App resources and game templates
+└── scripts/          # Build and utility scripts
+```
 
----
+## Contributing
 
-## 📝 License & Ethical Use
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-Licensed under **MIT**. 
+## License
 
-YAGO is a non-destructive research project. It does not modify game binaries. Use at your own risk; modding can lead to account termination. This project is not affiliated with or endorsed by any game developer.
+Licensed under MIT. See [LICENSE](LICENSE) for details.
 
----
+YAGO is a non-destructive tool. It does not modify game binaries. Use responsibly.
 
-**Happy Modding!** 🎮✨
+**Happy Modding!**

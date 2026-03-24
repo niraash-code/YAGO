@@ -1,22 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Sparkles,
-  Search,
-  User,
-  Folder,
-  RefreshCw,
-  Layers,
-  Plus,
-  Archive,
-} from "lucide-react";
+import { Sparkles, Search, User, RefreshCw, Plus, Archive } from "lucide-react";
 import { api, CharacterGroup } from "../lib/api";
 import { useAppStore } from "../store/gameStore";
 import { useUiStore } from "../store/uiStore";
 import { useFileDrop } from "../hooks/useFileDrop";
 import { CharacterCard } from "./skins/CharacterCard";
 import { CycleEditor } from "./skins/CycleEditor";
+import { ModImportModal } from "./ModImportModal";
 import { cn } from "../lib/utils";
+import { ImportCandidate } from "../lib/api";
 
 interface SkinManagerProps {
   gameId: string;
@@ -34,29 +27,41 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
     null
   );
 
-  // Import State
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isRedeploying, setIsRedeploying] = useState(false);
+  
+  const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  // Hook into global library updates
   const { games, importMod } = useAppStore();
   const { showAlert } = useUiStore();
   const currentGame = games.find(g => g.id === gameId);
+
 
   const handleNativeDrop = useCallback(
     async (paths: string[]) => {
       setIsImporting(true);
       try {
+        let allCandidates: ImportCandidate[] = [];
         for (const path of paths) {
-          await importMod(gameId, path);
+          const candidates = await api.scanModDirectory(path, gameId);
+          allCandidates = [...allCandidates, ...candidates];
+        }
+        
+        if (allCandidates.length > 0) {
+          setImportCandidates(allCandidates);
+          setIsImportModalOpen(true);
+        } else {
+          showAlert("No valid mod assets identified in the dropped files.", "Empty Essence");
         }
       } catch (e) {
-        showAlert("Failed to import dropped mod: " + e, "Import Error");
+        showAlert("Failed to scan dropped assets: " + e, "Alchemy Error");
       } finally {
         setIsImporting(false);
       }
     },
-    [gameId, importMod, showAlert]
+    [gameId, showAlert]
   );
 
   useFileDrop(handleNativeDrop, setIsDraggingFile);
@@ -65,15 +70,14 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
     let targetPath = path;
 
     if (!targetPath) {
-      // Open native file picker via Tauri
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({
         directory: false,
         multiple: false,
         title:
-          "Select Character Mod Directory or Archive (.zip, .7z) to Import",
+          "Select Asset Archive (.zip, .7z) or Folder to Transmute",
         filters: [
-          { name: "Archives", extensions: ["zip", "7z"] },
+          { name: "Archives", extensions: ["zip", "7z", "rar"] },
           { name: "All Files", extensions: ["*"] },
         ],
       });
@@ -85,12 +89,45 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
     if (targetPath) {
       setIsImporting(true);
       try {
-        await importMod(gameId, targetPath);
+        const candidates = await api.scanModDirectory(targetPath, gameId);
+        if (candidates.length > 0) {
+          setImportCandidates(candidates);
+          setIsImportModalOpen(true);
+        } else {
+          showAlert("No valid mod assets identified in the selected target.", "Empty Essence");
+        }
       } catch (e) {
-        showAlert("Failed to import mod: " + e, "Import Error");
+        showAlert("Failed to scan assets: " + e, "Alchemy Error");
       } finally {
         setIsImporting(false);
       }
+    }
+  };
+
+  const handleConfirmImport = async (selected: ImportCandidate[]) => {
+    setIsImporting(true);
+    try {
+      for (const candidate of selected) {
+        await importMod(gameId, candidate.original_path);
+      }
+      setIsImportModalOpen(false);
+      await fetchRoster();
+    } catch (e) {
+      showAlert("Transmutation failed: " + e, "Alchemy Failure");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleRedeploy = async () => {
+    if (!currentGame) return;
+    setIsRedeploying(true);
+    try {
+      await api.redeployMods(currentGame.installPath || "");
+    } catch (e) {
+      showAlert("Failed to reload mods: " + e, "Reload Error");
+    } finally {
+      setIsRedeploying(false);
     }
   };
 
@@ -108,7 +145,7 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
 
   useEffect(() => {
     fetchRoster();
-  }, [gameId, games]); // Refetch when library changes
+  }, [gameId, games]);
 
   const filteredRoster = useMemo(() => {
     return Object.entries(roster).filter(([name]) =>
@@ -117,13 +154,11 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
   }, [roster, searchTerm]);
 
   const getThumbnailForCharacter = (name: string, group: CharacterGroup) => {
-    // 1. Try first enabled mod
     const enabledModId = group.active_cycle[0];
     if (enabledModId && currentGame) {
       const mod = currentGame.mods.find(m => m.id === enabledModId);
       if (mod?.imageUrl) return mod.imageUrl;
     }
-    // 2. Fallback to first mod
     if (group.skins.length > 0 && currentGame) {
       const mod = currentGame.mods.find(m => m.id === group.skins[0].id);
       if (mod?.imageUrl) return mod.imageUrl;
@@ -136,7 +171,7 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950/20 relative">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
       {/* Drop Zone Overlay */}
       <AnimatePresence>
         {isDraggingFile && (
@@ -144,79 +179,92 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-indigo-500/90 backdrop-blur-sm flex flex-col items-center justify-center text-white pointer-events-none rounded-3xl"
+            className="absolute inset-0 z-[100] bg-primary flex flex-col items-center justify-center text-primary-foreground pointer-events-none"
           >
             <Archive size={64} className="mb-4 animate-bounce" />
-            <h2 className="text-3xl font-bold text-center px-6">
-              Drop Character Mods Here
+            <h2 className="text-3xl font-black uppercase italic tracking-tighter">
+              Drop to Install
             </h2>
-            <p className="text-indigo-100 mt-2">ZIP, 7z, or Folder</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Header */}
-      <div className="px-10 py-8 shrink-0 flex items-center justify-between">
+      <div className="px-10 py-8 shrink-0 flex items-center justify-between border-b border-border bg-muted/20 backdrop-blur-md">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Sparkles className="text-indigo-400" size={28} />
-            Character Wardrobe
+          <h1 className="text-2xl font-black text-foreground tracking-tighter flex items-center gap-3 uppercase italic leading-none drop-shadow-lg">
+            <Sparkles className="text-primary animate-pulse" size={28} />
+            Gallery of Sovereigns
           </h1>
-          <p className="text-slate-400 font-medium tracking-wide">
-            Manage skins, outfits, and automated cycle sequences.
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] pl-10">
+            Exclusive Wardrobe // v0.1.0 Beta
           </p>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="relative">
+          <div className="relative group">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors"
               size={18}
             />
             <input
               type="text"
-              placeholder="Search characters..."
+              placeholder="Search assets..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="bg-slate-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-64 transition-all"
+              className="bg-card border border-border rounded-full pl-10 pr-6 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 w-72 transition-all font-bold placeholder:text-muted-foreground/50"
             />
           </div>
 
           <button
             onClick={() => handleImport()}
             disabled={isImporting}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs font-black uppercase tracking-[0.2em] transition-all shadow-2xl shadow-primary/40 disabled:opacity-50 hover:scale-105 active:scale-95"
           >
             {isImporting ? (
-              <RefreshCw size={18} className="animate-spin" />
+              <RefreshCw size={16} className="animate-spin" />
             ) : (
-              <Plus size={18} />
+              <Plus size={16} />
             )}
-            <span>{isImporting ? "Importing..." : "Add Mod"}</span>
+            <span>{isImporting ? "Processing..." : "Import Asset"}</span>
           </button>
 
           <button
-            onClick={fetchRoster}
-            className="p-2.5 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors border border-white/5"
+            onClick={handleRedeploy}
+            disabled={isRedeploying}
+            className="p-2.5 bg-card text-foreground border border-border rounded-full transition-all flex items-center gap-2 group disabled:opacity-50 hover:border-primary/50"
+            title="Reload Environment (F10)"
           >
-            <RefreshCw size={20} className={cn(loading && "animate-spin")} />
+            <RefreshCw
+              size={18}
+              className={cn(
+                "text-primary transition-transform group-hover:rotate-180 duration-700",
+                isRedeploying && "animate-spin"
+              )}
+            />
           </button>
         </div>
       </div>
 
       {/* Grid Area */}
-      <div className="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-10 pt-10 pb-20 custom-scrollbar bg-transparent">
         {loading && Object.keys(roster).length === 0 ? (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">
-                Cataloging Wardrobe...
+            <div className="text-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+                <Sparkles className="absolute inset-0 m-auto text-primary animate-pulse" size={24} />
+              </div>
+              <p className="text-muted-foreground font-black uppercase tracking-[0.4em] text-[10px] animate-pulse">
+                Synchronizing Wardrobe...
               </p>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <motion.div 
+            layout
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8"
+          >
             <AnimatePresence mode="popLayout">
               {filteredRoster.map(([name, group]) => (
                 <CharacterCard
@@ -231,29 +279,39 @@ export const SkinManager: React.FC<SkinManagerProps> = ({
                 />
               ))}
             </AnimatePresence>
-          </div>
+          </motion.div>
         )}
 
         {!loading && filteredRoster.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4 opacity-50">
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground/50 space-y-4">
             <User size={64} />
-            <p className="text-xl font-bold">
-              No characters found matching your search
+            <p className="text-lg font-black uppercase tracking-widest italic">
+              No results found
             </p>
           </div>
         )}
       </div>
 
-      {/* Character Editor Drawer */}
       <CycleEditor
         isOpen={selectedCharacter !== null}
         onClose={() => setSelectedCharacter(null)}
         characterName={selectedCharacter || ""}
         group={
-          roster[selectedCharacter || ""] || { skins: [], active_cycle: [] }
+          roster[selectedCharacter || ""] || {
+            skins: [],
+            active_cycle: [],
+          }
         }
         gameId={gameId}
         streamSafe={streamSafe}
+      />
+
+      <ModImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        candidates={importCandidates}
+        onConfirm={handleConfirmImport}
+        isProcessing={isImporting}
       />
     </div>
   );

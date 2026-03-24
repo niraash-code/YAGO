@@ -18,7 +18,7 @@ export const ModInspectorEditor: React.FC<ModInspectorEditorProps> = ({
 }) => {
   if (!activeFileId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
         <FileCode size={64} className="mb-6 opacity-20" />
         <p className="text-xl font-medium mb-2">No File Selected</p>
         <p className="text-base">
@@ -29,20 +29,20 @@ export const ModInspectorEditor: React.FC<ModInspectorEditorProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-950">
-      <div className="h-12 bg-slate-900 flex items-center justify-end px-4 gap-2 border-b border-white/10 shrink-0">
-        <span className="mr-auto text-xs text-slate-400 truncate flex items-center gap-2">
-          <FileCode size={14} className="text-indigo-400" /> {activeFileId}
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
+      <div className="h-12 bg-muted/20 flex items-center justify-end px-4 gap-2 border-b border-border shrink-0">
+        <span className="mr-auto text-xs text-muted-foreground truncate flex items-center gap-2">
+          <FileCode size={14} className="text-primary" /> {activeFileId}
         </span>
         <button
-          className="p-1.5 hover:bg-white/10 rounded text-slate-300"
+          className="p-1.5 hover:bg-muted/10 rounded text-foreground"
           onClick={onReload}
           title="Reload"
         >
           <RotateCcw size={16} />
         </button>
         <button
-          className="p-1.5 hover:bg-indigo-500/20 text-indigo-400 rounded transition-colors"
+          className="p-1.5 hover:bg-primary/20 text-primary rounded transition-colors"
           onClick={onSave}
           title="Save"
         >
@@ -53,7 +53,7 @@ export const ModInspectorEditor: React.FC<ModInspectorEditorProps> = ({
         value={activeFileContent}
         onChange={e => onContentChange(e.target.value)}
         spellCheck={false}
-        className="flex-1 bg-slate-950 text-slate-300 p-6 resize-none focus:outline-none leading-relaxed font-mono text-sm"
+        className="flex-1 bg-background text-foreground p-6 resize-none focus:outline-none leading-relaxed font-mono text-sm"
       />
     </div>
   );

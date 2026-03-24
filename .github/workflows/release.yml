@@ -1,0 +1,112 @@
+name: Release YAGO
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: 'Release Notes'
+        required: false
+        default: 'Manual Windows Build'
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd src-ui
+          npm install
+          npm run build
+
+      - name: Install cargo-make
+        run: cargo install cargo-make
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Windows Artifacts
+        shell: cmd
+        run: |
+          cargo make --no-workspace release-windows
+
+      - name: Upload Setup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YAGO-Windows-Setup
+          path: release/latest/yago-setup.exe
+
+      - name: Upload Portable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YAGO-Windows-Portable
+          path: release/latest/yago-portable.exe
+
+  publish-release:
+    needs: [build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Determine Tag Name
+        id: tag
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "name=nightly-$(date +%Y%m%d-%H%M)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          files: |
+            artifacts/YAGO-Windows-Setup/yago-setup.exe
+            artifacts/YAGO-Windows-Portable/yago-portable.exe
+          draft: true
+          prerelease: true
+          name: YAGO ${{ steps.tag.outputs.name }}
+          body: |
+            ${{ github.event.inputs.notes || '🚀 YAGO Alpha-1 Release' }}
+            
+            ### 📚 Documentation
+            - [**Getting Started / Installation**](https://github.com/niraash-code/YAGO/blob/main/docs/user/getting-started.md)
+            - [**Mod Management Guide**](https://github.com/niraash-code/YAGO/blob/main/docs/user/mod-management.md)
+            
+            ### 📦 Artifacts
+            - **Windows**: `yago-setup.exe` (Installer) and `yago-portable.exe` (Standalone)
+            - **Linux**: AppImage, DEB, RPM, Flatpak, and PKGBUILD are available for this release.
+            
+            ---
+            *Built with bit-perfect fidelity by the Alpha-1 Forge.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,6 @@ import {
   Download,
   User,
   Monitor,
-  Hash,
   Copy,
   Check,
   Shield,
@@ -15,14 +14,13 @@ import {
 import { SystemStats, Game, InstallStatus } from "../types";
 import { cn } from "../lib/utils";
 import { useAppStore } from "../store/gameStore";
+import { InjectionMethod } from "../lib/api";
 
 interface SystemStatusCardProps {
   stats: SystemStats;
   game: Game;
   streamSafe: boolean;
 }
-
-import { InjectionMethod } from "../lib/api";
 
 const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
   stats,
@@ -34,8 +32,6 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
 
   const activeProfile = game.profiles.find(p => p.id === game.activeProfileId);
   const enabledModCount = activeProfile?.enabledModIds.length || 0;
-
-  // Injection Status: Active if method != None
   const isInjectionActive = game.injectionMethod !== InjectionMethod.None;
 
   const isDownloading =
@@ -52,7 +48,6 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
 
   const runnerName = game.activeRunnerId || "System Default";
 
-  // Mock UID based on game ID
   const mockUid =
     game.id === "genshin"
       ? "800123456"
@@ -73,197 +68,151 @@ const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.3 }}
-      className="w-96 flex flex-col gap-4"
+      className="w-72 flex flex-col gap-3"
     >
-      {/* SECTION 1: Game Status */}
-      <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <Activity size={16} className="text-indigo-400" />
-            Game Status
-          </span>
+      <div className="bg-card border border-border rounded-lg overflow-hidden flex flex-col divide-y divide-border shadow-xl">
+        {/* Header / Game Status */}
+        <div className="p-4 bg-background flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity size={14} className="text-primary" />
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+              Status
+            </span>
+          </div>
           <div
             className={cn(
-              "px-2.5 py-1 rounded text-xs font-bold border",
+              "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border",
               isDownloading || game.status === InstallStatus.UPDATING
-                ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                ? "bg-primary text-primary-foreground border-primary/50"
                 : game.status === InstallStatus.PLAYING
-                  ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
-                  : game.status === InstallStatus.INSTALLED
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                    : "bg-slate-700/50 text-slate-400 border-slate-600"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border"
             )}
           >
-            {isDownloading ? "DOWNLOADING" : game.status}
+            {isDownloading ? "SYNC" : game.status}
           </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Status Text & Progress */}
-          <div>
-            <div className="flex justify-between items-end mb-2">
-              <span className="text-base text-white font-semibold">
-                {statusText}
-              </span>
-              {isDownloading && (
-                <span className="text-xs font-mono text-indigo-400">
-                  {Math.round(displayProgress)}%
-                </span>
-              )}
-            </div>
-
-            {isDownloading && (
-              <div className="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden mb-1">
+        {/* Core Stats */}
+        <div className="p-4 space-y-4 bg-card">
+          {isDownloading && (
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[10px] font-medium text-muted-foreground">
+                <span>{statusText}</span>
+                <span>{Math.round(displayProgress)}%</span>
+              </div>
+              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${displayProgress}%` }}
-                  className="h-full rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]"
+                  className="h-full bg-primary"
                 />
               </div>
-            )}
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-950/50 p-3.5 rounded-xl border border-white/5 shadow-inner">
-              <div className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">
-                Size on Disk
-              </div>
-              <div className="text-sm font-mono text-slate-200 flex items-center gap-2">
-                <HardDrive size={16} className="text-slate-500" />
-                {isDownloading
-                  ? `${((parseFloat(game.size) * displayProgress) / 100).toFixed(1)} GB`
-                  : game.size}
-              </div>
             </div>
-            <div className="bg-slate-950/50 p-3.5 rounded-xl border border-white/5 shadow-inner">
-              <div className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">
-                Available Mods
-              </div>
-              <div className="text-sm font-mono text-slate-200 flex items-center gap-2">
-                <Download size={16} className="text-slate-500" />
-                {game.mods.length}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* SECTION 2: Active Profile */}
-      <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <User size={16} className="text-indigo-400" />
-            Active Profile
-          </span>
-          <div className="text-sm text-white font-semibold">
-            {activeProfile?.name || "Default"}
-          </div>
-        </div>
-
-        <div className="p-6 space-y-5">
-          {/* Runner & Resolution */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 bg-slate-950/50 p-3 rounded-xl border border-white/5 flex items-center gap-3 shadow-inner min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
-                <Cpu size={18} className="text-slate-400" />
+          <div className="grid grid-cols-1 gap-2.5">
+            <div className="flex items-center justify-between bg-background px-3 py-2 rounded-lg border border-border">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <HardDrive size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  Disk
+                </span>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                  Runner
-                </div>
-                <div
-                  className="text-sm text-white truncate font-medium"
-                  title={runnerName}
-                >
-                  {runnerName}
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 bg-slate-900/50 p-3 rounded-xl border border-white/5 flex items-center gap-3 shadow-inner min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
-                <Monitor size={18} className="text-slate-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                  Res
-                </div>
-                <div className="text-sm text-white truncate font-medium">
-                  {displayResolution}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Mod Status */}
-          <div className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-white/5">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-2.5 h-2.5 rounded-full",
-                  isInjectionActive
-                    ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
-                    : "bg-red-500"
-                )}
-              />
-              <span className="text-sm font-medium text-slate-300">
-                Mod Engine
+              <span className="text-xs font-black text-foreground font-mono uppercase">
+                {game.size}
               </span>
             </div>
-            <span
-              className={cn(
-                "text-xs font-bold px-2.5 py-1 rounded",
-                isInjectionActive
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "bg-red-500/10 text-red-400 border border-red-500/20"
-              )}
-            >
-              {isInjectionActive ? "ACTIVE" : "DISABLED"}
-            </span>
-          </div>
 
-          <div className="flex items-center justify-between text-sm text-slate-400 px-1 font-medium">
-            <span>Active Mods Loaded</span>
-            <span className="text-white font-mono text-base">
-              {enabledModCount}
-            </span>
-          </div>
+            <div className="flex items-center justify-between bg-background px-3 py-2 rounded-lg border border-border">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  Profile
+                </span>
+              </div>
+              <span className="text-xs font-black text-foreground truncate max-w-[100px] uppercase italic">
+                {activeProfile?.name || "Default"}
+              </span>
+            </div>
 
-          {/* Gamer ID (Stream Safe) */}
-          <div className="pt-3 border-t border-white/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400">
-                <Hash size={14} />
-                <span className="text-xs font-bold uppercase tracking-wide">
-                  Gamer ID
+            <div className="flex items-center justify-between bg-background px-3 py-2 rounded-lg border border-border">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Download size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  Mods
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {streamSafe ? (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 italic font-medium">
-                    <Shield size={12} />
-                    <span>Hidden (Stream Mode)</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5 hover:border-white/20 transition-colors group">
-                    <span className="font-mono text-sm text-indigo-300">
-                      {mockUid}
-                    </span>
-                    <button
-                      onClick={handleCopyUid}
-                      className="text-slate-500 hover:text-white transition-colors"
-                      title="Copy ID"
-                    >
-                      {copied ? (
-                        <Check size={14} className="text-emerald-400" />
-                      ) : (
-                        <Copy size={14} />
-                      )}
-                    </button>
-                  </div>
-                )}
+                <div
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    isInjectionActive ? "bg-primary" : "bg-destructive"
+                  )}
+                />
+                <span className="text-xs font-black text-foreground font-mono">
+                  {enabledModCount}
+                </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Runtime Environment */}
+        <div className="p-4 bg-card space-y-3 border-t border-border">
+          <div className="flex items-center gap-3">
+            <Cpu size={14} className="text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                Runner
+              </div>
+              <div className="text-xs text-foreground truncate font-bold">
+                {runnerName}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Monitor size={14} className="text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                Display
+              </div>
+              <div className="text-xs text-foreground font-bold">
+                {displayResolution}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Identity Footer */}
+        <div className="p-4 bg-background border-t border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+              Gamer ID
+            </span>
+            {streamSafe ? (
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground italic font-bold">
+                <Shield size={10} />
+                <span>HIDDEN</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <span className="font-mono text-xs text-primary font-bold">
+                  {mockUid}
+                </span>
+                <button
+                  onClick={handleCopyUid}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copied ? (
+                    <Check size={12} className="text-primary" />
+                  ) : (
+                    <Copy size={12} />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

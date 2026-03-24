@@ -1,11 +1,14 @@
+#[cfg(target_os = "linux")]
 use std::fs;
+#[cfg(target_os = "linux")]
 use std::path::Path;
+#[cfg(target_os = "linux")]
 use std::process::Command;
 
 fn main() {
     #[cfg(target_os = "linux")]
     {
-        println!("cargo:rerun-if-changed=../crates/loader_ctl/src/assets/shield.c");
+        println!("cargo:rerun-if-changed=../crates/loader/src/assets/shield.c");
 
         let out_dir = std::env::var("OUT_DIR").unwrap();
         let shield_out_path = Path::new(&out_dir).join("libshield.so");
@@ -14,7 +17,7 @@ fn main() {
             .args([
                 "-shared",
                 "-fPIC",
-                "../crates/loader_ctl/src/assets/shield.c",
+                "../crates/loader/src/assets/shield.c",
                 "-o",
                 shield_out_path.to_str().unwrap(),
                 "-ldl",
@@ -27,7 +30,6 @@ fn main() {
         }
 
         // Copy to a location that Tauri can bundle
-        // We'll use a 'libs' folder in src-tauri
         let libs_dir = Path::new("libs");
         if !libs_dir.exists() {
             fs::create_dir_all(libs_dir).expect("failed to create libs directory");

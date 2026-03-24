@@ -1,29 +1,34 @@
 # Launcher Features
 
-YAGO is more than just a mod manager; it is a high-performance game launcher.
+YAGO is both a mod manager and a game launcher.
 
-## 🐧 Linux Support
+## Linux Support
 
-YAGO is built with Linux in mind. It handles the complex command chain required for peak performance:
+Built for Linux with support for:
+- **Proton/Wine**: Automatic environment setup
+- **Gamescope**: High-quality micro-compositor
+- **Gamemode**: CPU and I/O optimization
+- **MangoHud**: Performance overlay
 
-- **Proton/Wine**: Automatic environment variable management.
-- **Gamemode**: Optimizes CPU and I/O priorities.
-- **Gamescope**: Provides a high-quality micro-compositor.
-- **MangoHud**: Displays performance metrics.
+## Performance
 
-## 🚀 Performance Optimizations
+- **FPS Unlock**: Bypass 60 FPS cap (up to 120+ FPS)
+- **GPU Selection**: Force dedicated GPU on laptops
+- **Borderless Window**: Optimal window mode for Unity games
 
-- **FPS Unlock**: Supports unlocking frame rates beyond the official 60 FPS limit (up to 120+ FPS).
-- **GPU Forcing**: Ensures your laptop uses its dedicated GPU (`GpuPreference=2`) for maximum performance.
-- **Unity Arguments**: Automatically applies borderless windowed mode and custom resolution flags.
+## Injection Methods
 
-## 💉 Injection Methods
+1. **Proxy DLL (Default)**: Most stable option
+   - Linux: Dual proxy (d3d11.dll + dxgi.dll)
+   - Windows: Standard proxy injection
 
-YAGO supports multiple methods for 3DMigoto and ReShade injection:
+2. **ReShade Only**: Standalone ReShade without mod loader
 
-1.  **Proxy DLL (Default)**: The standard and most stable method. It uses a "Dual Proxy" (side-by-side) strategy on Linux, loading both the mod loader (`d3d11.dll`) and ReShade (`dxgi.dll`) automatically.
-2.  **ReShade Only**: Installs ReShade as a local proxy without the mod loader.
-3.  **Loader (Memory Injection)**: Uses a dedicated loader executable for injection, often preferred for specific compatibility scenarios on Windows.
+3. **Loader (Memory Injection)**: For complex scenarios
 
----
-[Next: Safety & Streamer Mode](safety.md) | [Documentation Home](../index.md)
+## Environment Variables
+
+YAGO automatically manages:
+- WINEPREFIX / STEAM_COMPAT_DATA_PATH
+- DXVK state cache
+- Library paths for mod loaders

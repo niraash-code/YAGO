@@ -1,252 +1,425 @@
 use crate::AppState;
-use serde_json::json;
-use sophon_engine::{Downloader, Provider, SophonManifest, Verifier};
-use std::path::PathBuf;
+use sync::SophonClient;
 use tauri::{Emitter, State};
 
 #[tauri::command]
-pub async fn fetch_manifest(url: String) -> Result<SophonManifest, String> {
-    let downloader = Downloader::default();
-    downloader
-        .download_manifest(&url)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn download_game(
-    app: tauri::AppHandle,
-    game_id: String,
-    install_path: String,
-) -> Result<(), String> {
-    let info = Provider::fetch_game_info(&game_id)
-        .await
-        .map_err(|e| e.to_string())?;
-    let url = info.main_package.url;
-    let expected_md5 = info.main_package.md5;
-
-    let target = PathBuf::from(&install_path);
-    let file_name = url.split('/').next_back().unwrap_or("game.zip");
-    let target_file = target.join(file_name);
-
-    if !target.exists() {
-        std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+pub async fn check_setup(state: State<'_, AppState>) -> Result<bool, String> {
+    // 1. Check if settings.json exists
+    let settings_path = state.app_data_dir.join("settings.json");
+    if !settings_path.exists() {
+        println!("CheckSetup: settings.json missing at {:?}", settings_path);
+        return Ok(false);
     }
 
-    let downloader = Downloader::default();
-    let app_handle = app.clone();
-    let error_handle = app.clone(); // Clone for error callback
-    let verify_handle = app.clone(); // Clone for verification
-    let game_id_clone = game_id.clone();
+    // Pick a default runner if none is set
+    let _ = pick_default_runner(state.clone()).await;
 
-    tauri::async_runtime::spawn(async move {
-        println!("Starting download for {} from {}", game_id_clone, url);
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
 
-        let res = downloader
-            .download_file(&url, &target_file, move |progress| {
-                let _ = app_handle.emit(
-                    "game-download-progress",
-                    serde_json::json!({
-                        "task_id": game_id_clone,
-                        "progress": progress.overall_progress,
-                        "downloaded": progress.bytes_downloaded,
-                        "total": progress.total_bytes,
-                        "speed": "Calculating...",
-                        "eta": "Calculating..."
-                    }),
-                );
-            })
-            .await;
+    // 2. Check for common loaders
+    let common_loaders = base_storage.join("loaders").join("common");
+    if !common_loaders.exists()
+        || !common_loaders.join("d3d11.dll").exists()
+        || !common_loaders.join("ReShade.dll").exists()
+    {
+        println!(
+            "CheckSetup: Common loaders or ReShade missing at {:?}",
+            common_loaders
+        );
+        return Ok(false);
+    }
 
-        if let Err(e) = res {
-            eprintln!("Download failed: {}", e);
-            let _ = error_handle.emit("game-download-error", e.to_string());
-        } else {
-            println!("Download complete. Verifying...");
-            let _ = verify_handle.emit("game-download-verifying", ());
+    println!("CheckSetup: System fully initialized.");
+    Ok(true)
+}
 
-            match Verifier::verify_file(&target_file, &expected_md5).await {
-                Ok(_) => {
-                    println!("Verification successful.");
-                    let _ = verify_handle.emit("game-download-complete", target_file);
-                }
-                Err(e) => {
-                    eprintln!("Verification failed: {}", e);
-                    let _ = verify_handle
-                        .emit("game-download-error", format!("Verification Failed: {}", e));
-                }
-            }
+async fn pick_default_runner(state: State<'_, AppState>) -> Result<(), String> {
+    // 1. Scoped check to see if we need to pick a runner
+    {
+        let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+            state.global_settings.lock().await;
+        if settings.default_runner_id.is_some()
+            && !settings.default_runner_id.as_ref().unwrap().is_empty()
+        {
+            return Ok(());
         }
-    });
+    }
+
+    println!("Setup: Attempting to pick a default Proton runner...");
+
+    // 2. List runners (this will lock global_settings internally, so we MUST NOT hold the lock here)
+    let runners = super::library::list_runners(state.clone())
+        .await
+        .unwrap_or_default();
+    if runners.is_empty() {
+        println!("Setup: No runners found, skipping default selection.");
+        return Ok(());
+    }
+
+    // 3. Selection Priority Logic
+    let preferred = runners
+        .iter()
+        .find(|r| r.contains("GE-Proton"))
+        .or_else(|| runners.iter().find(|r| r.contains("cachyos")))
+        .or_else(|| runners.iter().find(|r| r.contains("Proton")))
+        .or_else(|| runners.first());
+
+    if let Some(runner_id) = preferred {
+        println!(
+            "Setup: Automatically selected default runner: {}",
+            runner_id
+        );
+
+        let mut settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+            state.global_settings.lock().await;
+        // Double check after re-locking
+        if settings.default_runner_id.is_none()
+            || settings.default_runner_id.as_ref().unwrap().is_empty()
+        {
+            settings.default_runner_id = Some(runner_id.clone());
+
+            // Save to disk
+            let sm = state.settings_manager.clone();
+            let settings_clone = settings.clone();
+            tokio::spawn(async move {
+                let _ = sm.save(&settings_clone).await;
+            });
+        }
+    }
 
     Ok(())
 }
 
-fn make_loader_progress_handler(window: tauri::Window, game_id: String) -> impl FnMut(u64, u64) {
-    move |current, total| {
-        let progress = if total > 0 {
-            current as f64 / total as f64
-        } else {
-            0.0
-        };
-        let _ = window.emit(
-            "loader-progress",
-            json!({
-                "game_id": game_id,
-                "status": "Downloading",
-                "progress": progress
-            }),
-        );
-    }
+#[tauri::command]
+pub async fn get_setup_status(
+    state: State<'_, AppState>,
+) -> Result<super::library::SetupStatus, String> {
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let runners_dir = base_storage.join("runners");
+    let has_runners = runners_dir.exists()
+        && std::fs::read_dir(runners_dir)
+            .map(|e| e.count() > 0)
+            .unwrap_or(false);
+
+    let common_loaders = base_storage.join("loaders").join("common");
+    let has_common_loaders = common_loaders.exists()
+        && common_loaders.join("d3d11.dll").exists()
+        && common_loaders.join("ReShade.dll").exists();
+
+    let detected_steam = crate::commands::library::detect_steam_proton_path_internal()
+        .await
+        .unwrap_or(None);
+
+    Ok(super::library::SetupStatus {
+        has_runners,
+        has_common_loaders,
+        detected_steam_path: detected_steam,
+    })
 }
 
-fn make_proton_progress_handler(window: tauri::Window, version: String) -> impl FnMut(u64, u64) {
-    move |current, total| {
-        let progress = if total > 0 {
-            current as f64 / total as f64
-        } else {
-            0.0
-        };
-        let _ = window.emit(
-            "proton-progress",
-            json!({
-                "version": version,
-                "status": "Downloading",
-                "progress": progress
-            }),
-        );
-    }
+#[tauri::command]
+pub async fn fetch_manifest(url: String) -> Result<sync::SophonManifest, String> {
+    let client = SophonClient::new();
+    client.fetch_manifest(&url).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn download_game(
+    _app: tauri::AppHandle,
+    _state: State<'_, AppState>,
+    _game_id: String,
+    _install_path: String,
+) -> Result<(), String> {
+    // This is a stub for now as we have Phase III startGameDownload
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn install_common_libs(
-    window: tauri::Window,
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let common_path = state.app_data_dir.join("loaders").join("common");
-    let (common_repo_str, reshade_url) = {
-        let app_config = state.app_config.lock().await;
-        (
-            app_config.common_loader_repo.clone(),
-            app_config.reshade_url.clone(),
-        )
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
     };
+    drop(settings);
 
-    let common_parts: Vec<&str> = common_repo_str.split('/').collect();
-    if common_parts.len() != 2 {
-        return Err(format!("Invalid common_loader_repo: {}", common_repo_str));
+    let common_path = base_storage.join("loaders").join("common");
+    if !common_path.exists() {
+        std::fs::create_dir_all(&common_path).map_err(|e| e.to_string())?;
     }
 
-    println!(
-        "Loader: Installing common binaries from {}...",
-        common_repo_str
+    // 1. Install XXMI Libs (Common Loaders)
+    install_xxmi_libs_internal(&app, &state, &common_path).await?;
+
+    // 2. Install ReShade
+    download_reshade_internal(&app, &state, &common_path).await?;
+
+    let _ = app.emit(
+        "loader-progress",
+        super::library::LoaderProgress {
+            game_id: "common".to_string(),
+            status: "Done".to_string(),
+            progress: 1.0,
+        },
     );
 
-    let window_clone = window.clone();
-    quartermaster::loader::update_loader(
-        common_parts[0],
-        common_parts[1],
-        &common_path,
-        move |curr, tot| {
-            let progress = if tot > 0 {
-                curr as f64 / tot as f64
-            } else {
-                0.0
-            };
-            let _ = window_clone.emit("loader-progress", json!({
-            "game_id": "common", "status": "Downloading Common Assets...", "progress": progress
-        }));
+    Ok(())
+}
+
+async fn install_xxmi_libs_internal(
+    app: &tauri::AppHandle,
+    state: &State<'_, AppState>,
+    common_path: &std::path::Path,
+) -> Result<(), String> {
+    let repo_full = {
+        let config: tokio::sync::MutexGuard<'_, crate::config::AppConfig> =
+            state.app_config.lock().await;
+        config.common_loader_repo.clone()
+    };
+
+    let parts: Vec<&str> = repo_full.split('/').collect();
+    if parts.len() != 2 {
+        return Err("Invalid common_loader_repo format".to_string());
+    }
+    let owner = parts[0];
+    let repo = parts[1];
+
+    println!(
+        "Installing common libs from {} to {:?}",
+        repo_full, common_path
+    );
+
+    // 1. Get Latest Release
+    let release = resources::github::get_latest_release(owner, repo)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let asset = release
+        .assets
+        .iter()
+        .find(|a| a.name.ends_with(".zip"))
+        .ok_or_else(|| "No zip asset found in latest release".to_string())?;
+
+    // 2. Download to temp
+    let temp_zip = state.app_data_dir.join("cache").join("temp_common.zip");
+    if let Some(parent) = temp_zip.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let app_clone = app.clone();
+    resources::download_file(
+        &asset.browser_download_url,
+        &temp_zip,
+        move |current, total| {
+            let progress = (current as f64 / total as f64) * 0.5; // First half of total progress
+            let _ = app_clone.emit(
+                "loader-progress",
+                super::library::LoaderProgress {
+                    game_id: "common".to_string(),
+                    status: "Downloading Loaders...".to_string(),
+                    progress,
+                },
+            );
         },
     )
     .await
     .map_err(|e| e.to_string())?;
 
-    if !common_path.join("ReShade.dll").exists() {
-        println!("Loader: Downloading ReShade...");
-        let window_clone = window.clone();
-        match quartermaster::reshade::download_reshade_dll(
-            &reshade_url,
-            &common_path,
-            move |curr, tot| {
-                let progress = if tot > 0 {
-                    curr as f64 / tot as f64
+    // 3. Extract
+    let extract_dir = common_path.join("_tmp_extract");
+    if extract_dir.exists() {
+        let _ = std::fs::remove_dir_all(&extract_dir);
+    }
+    std::fs::create_dir_all(&extract_dir).map_err(|e| e.to_string())?;
+
+    vfs::extract_and_sanitize(&temp_zip, &extract_dir).map_err(|e| e.to_string())?;
+
+    // 4. Move required files to common root
+    let walker = walkdir::WalkDir::new(&extract_dir);
+    let mut files_found = 0;
+    for entry in walker.into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            let fname = entry.file_name().to_string_lossy().to_lowercase();
+            if fname == "d3d11.dll"
+                || fname == "3dmloader.dll"
+                || fname == "dxgi.dll"
+                || fname == "d3dcompiler_47.dll"
+            {
+                let dest = common_path.join(entry.file_name());
+                println!("Setup: Copying {:?} to {:?}", entry.path(), dest);
+                if let Err(e) = std::fs::copy(entry.path(), dest) {
+                    eprintln!("Setup: Failed to copy {}: {}", fname, e);
                 } else {
-                    0.0
-                };
-                let _ = window_clone.emit("loader-progress", json!({
-                "game_id": "common", "status": "Downloading ReShade...", "progress": progress
-            }));
-            },
-        )
-        .await
-        {
-            Ok(_) => println!("Loader: ReShade installed successfully."),
-            Err(e) => return Err(format!("Failed to install ReShade: {}", e)),
+                    files_found += 1;
+                }
+            }
         }
     }
+
+    if files_found == 0 {
+        return Err("No required DLLs found in the downloaded archive".to_string());
+    }
+
+    // 5. Cleanup
+    let _ = std::fs::remove_dir_all(&extract_dir);
+    let _ = std::fs::remove_file(&temp_zip);
+
+    Ok(())
+}
+
+async fn download_reshade_internal(
+    app: &tauri::AppHandle,
+    state: &State<'_, AppState>,
+    common_path: &std::path::Path,
+) -> Result<(), String> {
+    let url = {
+        let config: tokio::sync::MutexGuard<'_, crate::config::AppConfig> =
+            state.app_config.lock().await;
+        config.reshade_url.clone()
+    };
+
+    println!("Installing ReShade from {} to {:?}", url, common_path);
+
+    let app_clone = app.clone();
+    resources::reshade::download_reshade_dll(&url, common_path, move |current, total| {
+        let progress = 0.5 + (current as f64 / total as f64) * 0.5; // Second half of total progress
+        let _ = app_clone.emit(
+            "loader-progress",
+            super::library::LoaderProgress {
+                game_id: "common".to_string(),
+                status: "Downloading ReShade...".to_string(),
+                progress,
+            },
+        );
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn install_reshade(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let common_path = base_storage.join("loaders").join("common");
+    if !common_path.exists() {
+        std::fs::create_dir_all(&common_path).map_err(|e| e.to_string())?;
+    }
+
+    download_reshade_internal(&app, &state, &common_path).await?;
+
+    let _ = app.emit(
+        "loader-progress",
+        super::library::LoaderProgress {
+            game_id: game_id.clone(),
+            status: "Done".to_string(),
+            progress: 1.0,
+        },
+    );
+
     Ok(())
 }
 
 #[tauri::command]
 pub async fn download_loader(
-    window: tauri::Window,
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     game_id: String,
 ) -> Result<(), String> {
-    let path = state.app_data_dir.join("loaders").join(&game_id);
-    let common_path = state.app_data_dir.join("loaders").join("common");
-
-    let (package_repo, hash_db_url, common_repo_str, reshade_url) = {
-        let dbs = state.game_dbs.lock().await;
-        let db = dbs.get(&game_id);
-        let config = db.and_then(|d| d.games.get(&game_id));
-        let templates_guard = state.game_templates.lock().await;
-        let template = templates_guard.get(&game_id);
-        let app_config = state.app_config.lock().await;
-
-        (
-            config
-                .and_then(|c| c.loader_repo.clone())
-                .or(template.and_then(|t| t.loader_repo.clone())),
-            config
-                .and_then(|c| c.hash_db_url.clone())
-                .or(template.and_then(|t| t.hash_db_url.clone())),
-            app_config.common_loader_repo.clone(),
-            app_config.reshade_url.clone(),
-        )
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
     };
+    drop(settings);
 
-    let common_parts: Vec<&str> = common_repo_str.split('/').collect();
-    if common_parts.len() == 2 {
-        quartermaster::loader::update_loader(
-            common_parts[0],
-            common_parts[1],
-            &common_path,
-            |_, _| {},
-        )
-        .await
-        .map_err(|e| e.to_string())?;
-        if !common_path.join("ReShade.dll").exists() {
-            let window_clone = window.clone();
-            let game_id_clone = game_id.clone();
-            let _ = quartermaster::reshade::download_reshade_dll(&reshade_url, &common_path, move |curr, tot| {
-                let progress = if tot > 0 { curr as f64 / tot as f64 } else { 0.0 };
-                let _ = window_clone.emit("loader-progress", json!({ "game_id": game_id_clone, "status": "Downloading ReShade...", "progress": progress }));
-            }).await;
-        }
-    }
+    let path = base_storage.join("loaders").join(&game_id);
+    let common_path = base_storage.join("loaders").join("common");
 
-    if let Some(r) = package_repo {
-        let parts: Vec<&str> = r.split('/').collect();
-        if parts.len() == 2 {
-            quartermaster::loader::update_loader(
-                parts[0],
-                parts[1],
-                &path,
-                make_loader_progress_handler(window, game_id.clone()),
-            )
-            .await
-            .map_err(|e| e.to_string())?;
+    if let Some(repo_full) = {
+        let guard: tokio::sync::MutexGuard<
+            '_,
+            std::collections::HashMap<String, storage::GameTemplate>,
+        > = state.game_templates.lock().await;
+        guard.get(&game_id).and_then(|t| t.loader_repo.clone())
+    } {
+        if !path.exists() {
+            std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+
+            let parts: Vec<&str> = repo_full.split('/').collect();
+            if parts.len() == 2 {
+                let owner = parts[0];
+                let repo = parts[1];
+
+                println!("Downloading loader for {} from {}", game_id, repo_full);
+
+                if let Ok(release) = resources::github::get_latest_release(owner, repo).await {
+                    if let Some(asset) = release.assets.iter().find(|a| a.name.ends_with(".zip")) {
+                        let temp_zip = state
+                            .app_data_dir
+                            .join("cache")
+                            .join(format!("temp_{}.zip", game_id));
+
+                        let app_clone = app.clone();
+                        let gid_clone = game_id.clone();
+                        let _ = resources::download_file(
+                            &asset.browser_download_url,
+                            &temp_zip,
+                            move |current, total| {
+                                let progress = current as f64 / total as f64;
+                                let _ = app_clone.emit(
+                                    "loader-progress",
+                                    super::library::LoaderProgress {
+                                        game_id: gid_clone.clone(),
+                                        status: "Downloading...".to_string(),
+                                        progress,
+                                    },
+                                );
+                            },
+                        )
+                        .await;
+
+                        if temp_zip.exists() {
+                            let _ = vfs::extract_and_sanitize(&temp_zip, &path);
+                            let _ = std::fs::remove_file(temp_zip);
+                        }
+                    }
+                }
+            }
         }
     } else if !path.exists() {
         std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
@@ -255,106 +428,149 @@ pub async fn download_loader(
     if common_path.exists() {
         for file in [
             "d3d11.dll",
-            "3DMigoto Loader.exe",
+            "3dmloader.dll",
             "d3dcompiler_47.dll",
-            "d3dcompiler_46.dll",
+            "nvapi64.dll",
         ] {
             let src = common_path.join(file);
             if src.exists() {
-                let _ = std::fs::copy(src, path.join(file));
+                let dest = path.join(file);
+                if !dest.exists() {
+                    let _ = std::fs::copy(src, dest);
+                }
             }
         }
     }
 
-    if let Some(hash_url) = hash_db_url {
-        let hash_dest = state
-            .app_data_dir
-            .join("assets/hashes")
-            .join(format!("{}.json", game_id));
-        let _ = quartermaster::loader::download_hash_db(&hash_url, &hash_dest).await;
+    let _ = app.emit(
+        "loader-progress",
+        super::library::LoaderProgress {
+            game_id: game_id.clone(),
+            status: "Done".to_string(),
+            progress: 1.0,
+        },
+    );
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn ensure_game_resources(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<(), String> {
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let common_path = base_storage.join("loaders").join("common");
+
+    // 1. Check Common Libs
+    let common_exists = common_path.exists() && common_path.join("d3d11.dll").exists();
+
+    if !common_exists {
+        println!("EnsureResources: Common libs missing. Installing...");
+        install_common_libs(app.clone(), state.clone()).await?;
     }
+
+    // 2. Ensure Loader
+    download_loader(app, state, game_id).await?;
+
     Ok(())
 }
 
 #[tauri::command]
 pub async fn download_proton(
-    window: tauri::Window,
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let path = state.app_data_dir.join("runners");
-    let app_config = state.app_config.lock().await;
-    let parts: Vec<&str> = app_config.proton_repo.split('/').collect();
+    let settings: tokio::sync::MutexGuard<'_, storage::settings::GlobalSettings> =
+        state.global_settings.lock().await;
+    let base_storage = if settings.yago_storage_path.as_os_str().is_empty() {
+        state.app_data_dir.clone()
+    } else {
+        settings.yago_storage_path.clone()
+    };
+    drop(settings);
+
+    let repo_full = {
+        let config = state.app_config.lock().await;
+        config.proton_repo.clone()
+    };
+
+    let parts: Vec<&str> = repo_full.split('/').collect();
     if parts.len() != 2 {
         return Err("Invalid proton_repo format".to_string());
     }
-    quartermaster::proton::update_ge_proton(
-        parts[0],
-        parts[1],
-        &path,
-        make_proton_progress_handler(window, "latest".to_string()),
+    let owner = parts[0];
+    let repo = parts[1];
+
+    let runners_dir = base_storage.join("runners");
+    if !runners_dir.exists() {
+        std::fs::create_dir_all(&runners_dir).map_err(|e| e.to_string())?;
+    }
+
+    println!("Downloading Proton from {} to {:?}", repo_full, runners_dir);
+
+    // 1. Get Latest Release
+    let release: resources::github::GithubRelease =
+        resources::github::get_latest_release(owner, repo)
+            .await
+            .map_err(|e| e.to_string())?;
+
+    let asset = release
+        .assets
+        .iter()
+        .find(|a| a.name.ends_with(".tar.gz"))
+        .ok_or_else(|| "No tar.gz asset found in latest release".to_string())?;
+
+    // 2. Download
+    let temp_tar = state.app_data_dir.join("cache").join("temp_proton.tar.gz");
+    if let Some(parent) = temp_tar.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let app_clone = app.clone();
+    resources::download_file(
+        &asset.browser_download_url,
+        &temp_tar,
+        move |current, total| {
+            let progress = current as f64 / total as f64;
+            let _ = app_clone.emit(
+                "proton-progress",
+                super::library::ProtonProgress {
+                    version: "Latest".to_string(),
+                    status: "Downloading...".to_string(),
+                    progress,
+                },
+            );
+        },
     )
     .await
-    .map_err(|e| e.to_string())
-}
+    .map_err(|e| e.to_string())?;
 
-#[tauri::command]
-pub async fn check_setup(state: State<'_, AppState>) -> Result<bool, String> {
-    let runners_dir = state.app_data_dir.join("runners");
-    let loaders_dir = state.app_data_dir.join("loaders").join("common");
-    let settings_path = state.app_data_dir.join("settings.json");
-    let settings = state.global_settings.lock().await;
-    if !settings_path.exists() {
-        return Ok(false);
-    }
-    let has_runners = if cfg!(target_os = "linux") {
-        let has_local = runners_dir.exists()
-            && std::fs::read_dir(&runners_dir)
-                .map(|mut d| d.next().is_some())
-                .unwrap_or(false);
-        let has_steam = !settings.steam_compat_tools_path.as_os_str().is_empty()
-            && settings.steam_compat_tools_path.exists();
-        has_local || has_steam
-    } else {
-        true
-    };
-    let has_common_loaders = loaders_dir.exists()
-        && std::fs::read_dir(&loaders_dir)
-            .map(|mut d| d.next().is_some())
-            .unwrap_or(false);
-    Ok(has_runners && has_common_loaders)
-}
+    // 3. Extract
+    // Note: fs_engine handles tar.gz via extract_targz
+    vfs::extract_targz(&temp_tar, &runners_dir)
+        .map_err(|e: vfs::FsError| e.to_string())?;
 
-#[tauri::command]
-pub async fn get_setup_status(
-    state: State<'_, AppState>,
-) -> Result<super::library::SetupStatus, String> {
-    let runners_dir = state.app_data_dir.join("runners");
-    let loaders_dir = state.app_data_dir.join("loaders").join("common");
-    let settings = state.global_settings.lock().await;
-    let mut detected_steam_path = None;
-    let has_runners = if cfg!(target_os = "linux") {
-        let has_local = runners_dir.exists()
-            && std::fs::read_dir(&runners_dir)
-                .map(|mut d| d.next().is_some())
-                .unwrap_or(false);
-        let steam_path_valid = !settings.steam_compat_tools_path.as_os_str().is_empty()
-            && settings.steam_compat_tools_path.exists();
-        if !steam_path_valid {
-            if let Ok(Some(detected)) = super::library::detect_steam_proton_path_internal().await {
-                detected_steam_path = Some(detected);
-            }
-        }
-        has_local || steam_path_valid || detected_steam_path.is_some()
-    } else {
-        true
-    };
-    let has_common_loaders = loaders_dir.exists()
-        && std::fs::read_dir(&loaders_dir)
-            .map(|mut d| d.next().is_some())
-            .unwrap_or(false);
-    Ok(super::library::SetupStatus {
-        has_runners,
-        has_common_loaders,
-        detected_steam_path,
-    })
+    // 4. Cleanup
+    let _ = std::fs::remove_file(&temp_tar);
+
+    let _ = app.emit(
+        "proton-progress",
+        super::library::ProtonProgress {
+            version: "Latest".to_string(),
+            status: "Done".to_string(),
+            progress: 1.0,
+        },
+    );
+
+    Ok(())
 }

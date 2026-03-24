@@ -1,0 +1,29 @@
+---
+source: crates/librarian/src/snapshots_test.rs
+expression: record
+---
+id: 00000000-0000-0000-0000-000000000000
+owner_game_id: genshin
+path: /vault/mods/raiden-123
+size: 15MB
+meta:
+  name: Raiden Shogun - Eternal Excellence
+  version: 1.0.0
+  author: "Y'shtola"
+  url: ~
+  preview_image: ~
+  description: A high-fidelity variant for the Sovereign.
+compatibility:
+  game: genshin
+  character: raiden
+  hashes:
+    - 7f0f8b
+  fingerprint: abc-123
+config:
+  mod_type: character
+  tags:
+    - raiden
+    - nsfw
+  keybinds: {}
+enabled: true
+added_at: "[timestamp]"

@@ -1,0 +1,476 @@
+[config]
+skip_core_tasks = true
+load_cargo_aliases = false
+
+[env]
+VERSION = { script = ["grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/version = \"\\(.*\\)\"/\\1/'"] }
+RELEASE_DIR = "release"
+LATEST_DIR = "${RELEASE_DIR}/latest"
+OLDER_DIR = "${RELEASE_DIR}/older"
+BUILD_ROOT = "${RELEASE_DIR}/build"
+TEMP_BUILD_DIR = "${BUILD_ROOT}/temp"
+
+[tasks.default]
+alias = "help"
+
+[tasks.help]
+description = "List all available tasks"
+category = "Development"
+command = "cargo"
+args = ["make", "--list-all-steps"]
+
+# --- Development Tasks ---
+
+[tasks.watch]
+description = "Watch for changes and run check/test"
+category = "Development"
+command = "cargo"
+args = ["watch", "-x", "check", "-x", "nextest"]
+
+[tasks.test]
+description = "Run all tests using nextest"
+category = "Development"
+command = "cargo"
+args = ["nextest", "run"]
+
+[tasks.review]
+workspace = false
+description = "Review backend snapshots"
+category = "Development"
+command = "cargo"
+args = ["insta", "review"]
+
+[tasks.lint]
+description = "Run clippy and check formatting"
+category = "Development"
+dependencies = ["format-check", "clippy"]
+
+[tasks.format-check]
+description = "Check code formatting"
+category = "Development"
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.clippy]
+description = "Run clippy with warnings treated as errors"
+category = "Development"
+command = "cargo"
+args = ["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"]
+
+[tasks.ci]
+description = "Full CI suite: Format, Lint, Test, and Bench"
+category = "Development"
+dependencies = ["lint", "test", "bench"]
+
+[tasks.bench]
+description = "Run backend benchmarks"
+category = "Development"
+command = "cargo"
+args = ["bench"]
+
+# --- Setup Tasks (Phase 2) ---
+
+[tasks.setup]
+description = "Initialize development environment"
+category = "Setup"
+dependencies = [
+    "check-requirements",
+    "init-env",
+    "npm-install",
+    "setup-welcome"
+]
+
+[tasks.check-requirements]
+description = "Verify core dependencies are installed"
+category = "Setup"
+script_runner = "@duckscript"
+script = [
+    "exit_on_error true",
+    "echo Checking core requirements...",
+    "exec --fail-on-error rustc --version",
+    "exec --fail-on-error node --version",
+    "exec --fail-on-error npm --version",
+    "exec --fail-on-error cargo tauri --version",
+]
+
+[tasks.init-env]
+description = "Initialize .env file from example"
+category = "Setup"
+script_runner = "@duckscript"
+script = [
+    "is_env_exists = is_path_exists .env",
+    "if not ${is_env_exists}",
+    "  echo Creating .env from .env.example...",
+    "  cp .env.example .env",
+    "else",
+    "  echo .env already exists, skipping creation.",
+    "end"
+]
+
+[tasks.npm-install]
+description = "Install all dependencies"
+category = "Setup"
+script = [
+    "echo Installing root dependencies...",
+    "bun install",
+    "echo Installing frontend dependencies...",
+    "cd src-ui && bun install"
+]
+
+[tasks.setup-welcome]
+description = "Final welcome message"
+category = "Setup"
+script = [
+    "echo ''",
+    "echo '================================================'",
+    "echo '   🎉 YAGO Environment Setup Complete! 🎉'",
+    "echo '================================================'",
+    "echo ''",
+    "echo 'Next steps:'",
+    "echo '  cargo make dev    - Start development mode'",
+    "echo '  cargo make test   - Run test suite'",
+    "echo ''",
+    "echo 'For release building details, see docs/dev/release-system.md'"
+]
+
+# --- Platform Specific Setup (Optional) ---
+
+[tasks.setup-linux]
+description = "Initialize Distrobox containers for compatible Linux builds"
+category = "Setup"
+condition = { platforms = ["linux"] }
+dependencies = ["setup-linux-deb", "setup-linux-rpm", "setup-linux-arch"]
+
+[tasks.setup-linux-deb]
+description = "Setup Debian container for DEB builds"
+condition = { platforms = ["linux"] }
+script = [
+    "if ! distrobox list | grep -q 'yago-deb'; then",
+    "  echo '🐳 Creating yago-deb (Debian 12)...'",
+    "  distrobox create -n yago-deb --image debian:12 --yes",
+    "fi",
+    "echo '🛠️  Updating yago-deb packages...'",
+    "distrobox enter yago-deb -- bash -c 'sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get install -y curl build-essential libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev pkg-config protobuf-compiler libxdo-dev'",
+    "echo '🦀 Checking Rust in yago-deb...'",
+    "distrobox enter yago-deb -- bash -c 'command -v rustc || (curl --proto \"=https\" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y)'",
+    "echo '📦 Checking Node.js in yago-deb...'",
+    "distrobox enter yago-deb -- bash -c 'command -v node || (curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash - && sudo apt-get install -y nodejs)'",
+    "echo '🚀 Checking tauri-cli in yago-deb (Compile step - please wait)...'",
+    "distrobox enter yago-deb -- bash -c 'export PATH=\"$HOME/.cargo/bin:$PATH\" && command -v cargo-tauri || cargo install tauri-cli'"
+]
+
+[tasks.setup-linux-rpm]
+description = "Setup Fedora container for RPM builds"
+condition = { platforms = ["linux"] }
+script = [
+    "if ! distrobox list | grep -q 'yago-rpm'; then",
+    "  echo '🐳 Creating yago-rpm (Fedora 38)...'",
+    "  distrobox create -n yago-rpm --image fedora:38 --yes",
+    "fi",
+    "echo '🛠️  Updating yago-rpm packages...'",
+    "distrobox enter yago-rpm -- bash -c 'sudo dnf groupinstall -y \"Development Tools\" && sudo dnf install -y webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel openssl-devel protobuf-compiler libxdo-devel pkgconf-pkg-config'",
+    "echo '🦀 Checking Rust in yago-rpm...'",
+    "distrobox enter yago-rpm -- bash -c 'command -v rustc || (curl --proto \"=https\" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y)'",
+    "echo '📦 Checking Node.js in yago-rpm...'",
+    "distrobox enter yago-rpm -- bash -c 'command -v node || (curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash - && sudo dnf install -y nodejs)'",
+    "echo '🚀 Checking tauri-cli in yago-rpm (Compile step - please wait)...'",
+    "distrobox enter yago-rpm -- bash -c 'export PATH=\"$HOME/.cargo/bin:$PATH\" && command -v cargo-tauri || cargo install tauri-cli'"
+]
+
+[tasks.setup-linux-arch]
+description = "Setup Arch container for AppImage/PKGBUILD"
+condition = { platforms = ["linux"] }
+script = [
+    "if ! distrobox list | grep -q 'yago-arch'; then",
+    "  echo '🏔️  Creating yago-arch (Arch Linux)...'",
+    "  distrobox create -n yago-arch --image archlinux:latest --yes",
+    "fi",
+    "echo '🛠️  Updating yago-arch packages...'",
+    "distrobox enter yago-arch -- bash -c 'sudo pacman -Syu --noconfirm base-devel rustup nodejs npm wget fuse2 libappindicator-gtk3 openssl protobuf xdotool pkgconf squashfs-tools'",
+    "echo '📦 Installing linuxdeploy in yago-arch...'",
+    "distrobox enter yago-arch -- bash -c 'sudo curl -L https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -o /usr/local/bin/linuxdeploy && sudo chmod +x /usr/local/bin/linuxdeploy'",
+    "echo '🦀 Checking Rust in yago-arch...'",
+    "distrobox enter yago-arch -- bash -c 'rustup default stable'",
+    "echo '🚀 Checking tauri-cli in yago-arch (Compile step - please wait)...'",
+    "distrobox enter yago-arch -- bash -c 'command -v cargo-tauri || cargo install tauri-cli'"
+]
+
+[tasks.setup-windows]
+description = "Additional setup steps for Windows"
+category = "Setup"
+condition = { platforms = ["windows"] }
+script = [
+    "echo Checking Windows specific tools...",
+    "rustup target add x86_64-pc-windows-msvc",
+    "echo 'Ensure NSIS is installed for .exe bundling.'"
+]
+
+[tasks.dev]
+workspace = false
+description = "Start development mode"
+category = "Development"
+command = "bun"
+args = ["run", "tauri:dev"]
+
+[tasks.build]
+description = "Build for production"
+category = "Development"
+script = [
+    "bun run build"
+]
+
+[tasks.check]
+description = "Check Rust code"
+category = "Development"
+command = "cargo"
+args = ["check"]
+
+[tasks.clean]
+description = "Clean build artifacts"
+category = "Development"
+script = [
+    "cargo clean",
+    "rm -rf src-ui/dist",
+    "rm -rf src-tauri/target"
+]
+
+# --- Individual Crate Tests ---
+
+[tasks.test-fs-engine]
+description = "Run tests for fs_engine crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "fs_engine"]
+
+[tasks.test-ini-forge]
+description = "Run tests for ini_forge crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "ini_forge"]
+
+[tasks.test-integration]
+description = "Run tests for integration_tests crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "integration_tests"]
+
+[tasks.test-librarian]
+description = "Run tests for librarian crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "librarian"]
+
+[tasks.test-loader-ctl]
+description = "Run tests for loader_ctl crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "loader_ctl"]
+
+[tasks.test-logic-weaver]
+description = "Run tests for logic_weaver crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "logic_weaver"]
+
+[tasks.test-proc-marshal]
+description = "Run tests for proc_marshal crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "proc_marshal"]
+
+[tasks.test-sophon-engine]
+description = "Run tests for sophon_engine crate"
+category = "Testing"
+command = "cargo"
+args = ["test", "-p", "sophon_engine"]
+
+# --- Release Infrastructure ---
+
+[tasks.init-release]
+description = "Prepare release directories"
+category = "Release"
+script_runner = "@duckscript"
+script = [
+    "mkdir ${RELEASE_DIR}",
+    "mkdir ${LATEST_DIR}",
+    "mkdir ${OLDER_DIR}",
+    "mkdir ${BUILD_ROOT}",
+    "mkdir ${TEMP_BUILD_DIR}",
+    "mkdir ${BUILD_ROOT}/deb",
+    "mkdir ${BUILD_ROOT}/rpm",
+    "mkdir ${BUILD_ROOT}/windows",
+    "mkdir ${BUILD_ROOT}/appimage",
+    "mkdir ${BUILD_ROOT}/flatpak",
+    "mkdir ${BUILD_ROOT}/pkgbuild"
+]
+
+[tasks.organize-artifact]
+description = "Organize a build artifact with timestamp"
+category = "Release"
+private = true
+script_runner = "@duckscript"
+script = [
+    "assert_set ${ARTIFACT_PATH}",
+    "assert_set ${ARTIFACT_TYPE}",
+    "filename = basename ${ARTIFACT_PATH}",
+    "timestamp = exec date +%Y%m%d_%H%M%S",
+    "timestamp = set ${timestamp.stdout}",
+    "name = set ${filename}",
+    "ext = set \"\"",
+    
+    # Simple extension splitting
+    "is_pkg = contains ${filename} .pkg.tar.zst",
+    "if ${is_pkg}",
+    "  ext = set \"pkg.tar.zst\"",
+    "else",
+    "  ext = set \"\"", # Simplified for duckscript
+    "end",
+
+    "echo Organizing ${filename} into ${LATEST_DIR} and ${OLDER_DIR}/${ARTIFACT_TYPE}",
+    "cp ${ARTIFACT_PATH} ${LATEST_DIR}/${filename}",
+    "mkdir ${OLDER_DIR}/${ARTIFACT_TYPE}",
+    "mv ${ARTIFACT_PATH} ${OLDER_DIR}/${ARTIFACT_TYPE}/${filename}_${timestamp}"
+]
+
+# --- Release Packaging (Phase 3) ---
+
+[tasks.release-linux-artifacts]
+description = "Build all Linux bundles in one pass (DEB, RPM, AppImage, Flatpak, PKGBUILD)"
+category = "Release"
+dependencies = ["init-release"]
+script = [
+    "export APPIMAGE_EXTRACT_AND_RUN=1",
+    "export NO_STRIP=1",
+    "echo '📦 Building Primary Linux Bundles (Tauri)...'",
+    "cd src-tauri",
+    "cargo tauri build --bundles deb,rpm,appimage",
+    "cp ../target/release/bundle/deb/*.deb ../release/latest/",
+    "cp ../target/release/bundle/rpm/*.rpm ../release/latest/",
+    "find ../target/release/bundle/appimage/ -name \"*.AppImage\" -exec cp {} ../release/latest/YAGO-x86_64.AppImage \\;",
+    "cd ..",
+    "echo '📦 Building Flatpak bundle...'",
+    "rm -rf release/build/flatpak/build",
+    "flatpak-builder --force-clean --user --install-deps-from=flathub --repo=release/build/flatpak/repo release/build/flatpak/build release/build/flatpak/io.github.niraash_code.YAGO.json",
+    "flatpak build-bundle release/build/flatpak/repo release/latest/yago.flatpak io.github.niraash_code.YAGO",
+    "echo '📦 Building PKGBUILD (Arch Linux)...'",
+    "VERSION=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/version = \"\\(.*\\)\"/\\1/')",
+    "DEB_NAME=\"yago_${VERSION}_amd64.deb\"",
+    "cp target/release/bundle/deb/${DEB_NAME} release/build/pkgbuild/",
+    "echo '🛠️ Running makepkg inside yago-arch...'",
+    "distrobox enter yago-arch -- bash -c \"cd release/build/pkgbuild && makepkg -f --nodeps\"",
+    "cp release/build/pkgbuild/*.pkg.tar.zst release/latest/",
+    "cp release/build/pkgbuild/PKGBUILD release/latest/",
+    "echo '✅ All Linux artifacts ready in release/latest/'"
+]
+
+[tasks.release-deb]
+description = "Build DEB package"
+category = "Release"
+dependencies = ["init-release"]
+script = [
+    "cd src-tauri",
+    "cargo tauri build --bundles deb",
+    "cp ../target/release/bundle/deb/*.deb ../release/latest/"
+]
+
+[tasks.release-rpm]
+description = "Build RPM package"
+category = "Release"
+dependencies = ["init-release"]
+script = [
+    "cd src-tauri",
+    "cargo tauri build --bundles rpm",
+    "cp ../target/release/bundle/rpm/*.rpm ../release/latest/"
+]
+
+[tasks.release-windows]
+description = "Build Windows EXE (Native)"
+category = "Release"
+dependencies = ["init-release", "build"]
+script_runner = "powershell"
+script_extension = "ps1"
+script = [
+    "$ErrorActionPreference = 'Stop'",
+    "Write-Host 'Building YAGO for Windows...'",
+    "cd src-tauri",
+    "npx tauri build --bundles nsis",
+    "cd ..",
+    "Write-Host 'Windows build complete. Organizing artifacts...'",
+    "if (!(Test-Path \"release/latest\")) { New-Item -ItemType Directory -Path \"release/latest\" -Force }",
+    "Copy-Item -Path \"target/release/yago.exe\" -Destination \"release/latest/yago-portable.exe\" -Force",
+    "$setupExe = Get-ChildItem -Path \"target/release/bundle/nsis\" -Filter \"*.exe\" -Recurse | Select-Object -First 1",
+    "if ($setupExe) { ",
+    "  Copy-Item -Path $setupExe.FullName -Destination \"release/latest/yago-setup.exe\" -Force ",
+    "  Write-Host \"✅ Setup artifact copied: $($setupExe.Name)\"",
+    "} else { ",
+    "  Write-Error '❌ Could not find Windows Setup EXE in target/release/bundle/nsis'",
+    "}",
+    "Write-Host '🎉 Windows artifacts ready in release/latest/'"
+]
+
+[tasks.release-appimage]
+description = "Build AppImage"
+category = "Release"
+dependencies = ["init-release", "build"]
+script = [
+    "export NO_STRIP=1",
+    "export APPIMAGE_EXTRACT_AND_RUN=1",
+    "cd src-tauri",
+    "cargo tauri build --bundles appimage",
+    "cp ../target/release/bundle/appimage/*.AppImage ../release/latest/YAGO-x86_64.AppImage"
+]
+
+[tasks.release-flatpak]
+description = "Build Flatpak"
+category = "Release"
+dependencies = ["init-release"]
+script = [
+    "rm -rf release/build/flatpak/build",
+    "flatpak-builder --force-clean --user --install-deps-from=flathub --repo=release/build/flatpak/repo release/build/flatpak/build release/build/flatpak/io.github.niraash_code.YAGO.json",
+    "flatpak build-bundle release/build/flatpak/repo release/latest/yago.flatpak io.github.niraash_code.YAGO"
+]
+
+[tasks.release-pkgbuild]
+description = "Build PKGBUILD package"
+category = "Release"
+dependencies = ["init-release"]
+script = [
+    "VERSION=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/version = \"\\(.*\\)\"/\\1/')",
+    "DEB_NAME=\"yago_${VERSION}_amd64.deb\"",
+    "cp target/release/bundle/deb/${DEB_NAME} release/build/pkgbuild/",
+    "echo '🛠️ Running makepkg inside yago-arch...'",
+    "distrobox enter yago-arch -- bash -c \"cd release/build/pkgbuild && makepkg -f --nodeps\"",
+    "cp release/build/pkgbuild/*.pkg.tar.zst release/latest/",
+    "cp release/build/pkgbuild/PKGBUILD release/latest/"
+]
+
+[tasks.release-all]
+description = "Build all release packages"
+category = "Release"
+dependencies = [
+    "release-appimage",
+    "release-deb",
+    "release-rpm",
+    "release-pkgbuild",
+    "release-windows"
+]
+
+[tasks.release-list]
+description = "List current release builds"
+category = "Release"
+script = ["ls -la release/latest/ || echo 'No releases found.'"]
+
+[tasks.finish-appimage]
+description = "Manually complete AppImage creation if tool fails"
+category = "Release"
+script = [
+    "echo 🔧 Completing YAGO AppImage build manually...",
+    "if [ ! -d \"release/build/appimage/AppDir\" ]; then echo '❌ AppDir not found'; exit 1; fi",
+    "if [ ! -f \"appimagetool-x86_64.AppImage\" ]; then wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage; chmod +x appimagetool-x86_64.AppImage; fi",
+    "./appimagetool-x86_64.AppImage \"release/build/appimage/AppDir\"",
+    "APPIMAGE_FILE=$(ls -t *.AppImage | head -1)",
+    "mkdir -p release/latest",
+    "mv \"$APPIMAGE_FILE\" release/latest/",
+    "echo '🎉 AppImage ready in release/latest/'"
+]
+

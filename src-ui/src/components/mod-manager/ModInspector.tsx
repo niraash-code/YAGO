@@ -15,6 +15,7 @@ import {
 import { api } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { FileNode } from "./types";
+import { useUiStore } from "../../store/uiStore";
 
 // Sub-components
 import { ModInspectorInfo } from "./inspector/ModInspectorInfo";
@@ -37,7 +38,6 @@ export const ModInspector = ({
   showConfirm,
   showPrompt,
 }: any) => {
-  // File Manager State
   const [fileSystem, setFileSystem] = useState<FileNode[]>([]);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
@@ -50,6 +50,7 @@ export const ModInspector = ({
   const [openWithModal, setOpenWithModal] = useState<{ file: FileNode } | null>(
     null
   );
+  const { showAlert } = useUiStore();
 
   useEffect(() => {
     if (selectedMod && game) {
@@ -100,22 +101,24 @@ export const ModInspector = ({
       setOpenWithModal({ file });
     } else if (action === "delete") {
       if (await showConfirm(`Delete ${file.name}?`, "Confirm Delete")) {
-        // TODO: Implement file deletion API
       }
     } else if (action === "rename") {
       const newName = await showPrompt("Rename to:", file.name, "Rename File");
       if (newName && newName !== file.name) {
-        // TODO: Implement file rename API
       }
     }
   };
 
   if (!selectedMod) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-600">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground bg-card">
         <FileJson size={64} className="mb-4 opacity-20" />
-        <h3 className="text-lg font-medium mb-2">No Mod Selected</h3>
-        <p className="text-sm">Select a mod to inspect.</p>
+        <h3 className="text-lg font-black uppercase italic tracking-tighter">
+          No Mod Selected
+        </h3>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2">
+          Select a mod to inspect.
+        </p>
       </div>
     );
   }
@@ -125,37 +128,23 @@ export const ModInspector = ({
     : ["info", "files"];
 
   return (
-    <div
-      className={cn(
-        "flex flex-col h-full",
-        devMode
-          ? "bg-slate-900 text-slate-300"
-          : "bg-slate-900/40 backdrop-blur-sm"
-      )}
-    >
-      <div
-        className={cn(
-          "flex items-center justify-between shrink-0",
-          devMode
-            ? "bg-slate-950/50 border-b border-white/10 px-2"
-            : "px-6 border-b border-white/5 bg-slate-900/60 sticky top-0 z-10 backdrop-blur-md"
-        )}
-      >
+    <div className="flex flex-col h-full bg-card">
+      <div className="flex items-center justify-between shrink-0 px-6 border-b border-border bg-background sticky top-0 z-10">
         <div className="flex items-center">
           {availableTabs.map(t => (
             <button
               key={t}
               onClick={() => setTab(t as any)}
               className={cn(
-                "px-4 py-3 flex items-center gap-2 border-b-2 transition-colors focus-visible:outline-none capitalize text-sm font-medium",
+                "px-4 py-3 flex items-center gap-2 border-b-2 transition-colors focus-visible:outline-none capitalize text-[10px] font-black uppercase tracking-widest",
                 tab === t
-                  ? "border-indigo-500 text-white bg-white/5"
-                  : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                  ? "border-primary text-primary bg-primary/5"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              {t === "info" && <FileText size={16} />}
-              {t === "files" && <FolderOpen size={16} />}
-              {t === "editor" && <Code size={16} />}
+              {t === "info" && <FileText size={14} />}
+              {t === "files" && <FolderOpen size={14} />}
+              {t === "editor" && <Code size={14} />}
               {t}
             </button>
           ))}
@@ -163,33 +152,35 @@ export const ModInspector = ({
 
         <div className="flex items-center gap-1">
           {isSorted ? (
-            <div className="flex items-center gap-1 bg-white/5 rounded-lg px-2 py-1.5 border border-white/5 text-slate-500 cursor-not-allowed">
+            <div className="flex items-center gap-1 bg-card rounded-lg px-2 py-1.5 border border-border text-muted-foreground cursor-not-allowed">
               <SortAsc size={14} />
-              <span className="text-[10px] font-medium">List Sorted</span>
+              <span className="text-[9px] font-black uppercase tracking-tighter">
+                Sorted
+              </span>
             </div>
           ) : (
-            <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/5">
+            <div className="flex items-center bg-card rounded-lg p-0.5 border border-border">
               <button
                 onClick={() => onMove(selectedMod.id, "top")}
-                className="p-1.5 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors"
               >
                 <ArrowUpToLine size={16} />
               </button>
               <button
                 onClick={() => onMove(selectedMod.id, "up")}
-                className="p-1.5 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors"
               >
                 <ChevronUp size={16} />
               </button>
               <button
                 onClick={() => onMove(selectedMod.id, "down")}
-                className="p-1.5 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors"
               >
                 <ChevronDown size={16} />
               </button>
               <button
                 onClick={() => onMove(selectedMod.id, "bottom")}
-                className="p-1.5 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors"
               >
                 <ArrowDownToLine size={16} />
               </button>
@@ -257,7 +248,7 @@ export const ModInspector = ({
                   activeFileContent
                 );
               } catch (e) {
-                alert(e);
+                showAlert(String(e), "Error");
               }
             }}
           />
@@ -265,41 +256,43 @@ export const ModInspector = ({
 
         {contextMenu && (
           <div
-            className="fixed z-50 bg-slate-900 border border-white/10 shadow-2xl rounded-xl py-1 min-w-[160px]"
+            className="fixed z-50 bg-card border border-border shadow-2xl rounded-lg py-1 min-w-[160px] overflow-hidden"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
-            <button
-              onClick={() => handleAction("rename", contextMenu.file)}
-              className="w-full text-left px-4 py-2 text-slate-300 hover:bg-indigo-500 hover:text-white text-xs font-medium flex items-center gap-2"
-            >
-              Rename
-            </button>
-            <button
-              onClick={() => handleAction("delete", contextMenu.file)}
-              className="w-full text-left px-4 py-2 text-red-400 hover:bg-red-500/20 text-xs font-medium flex items-center gap-2"
-            >
-              Delete
-            </button>
+            <div className="px-1">
+              <button
+                onClick={() => handleAction("rename", contextMenu.file)}
+                className="w-full text-left px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-bold uppercase tracking-widest rounded-md transition-all"
+              >
+                Rename
+              </button>
+              <button
+                onClick={() => handleAction("delete", contextMenu.file)}
+                className="w-full text-left px-3 py-2 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs font-bold uppercase tracking-widest rounded-md transition-all"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         )}
 
         <AnimatePresence>
           {openWithModal && (
-            <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center">
-              <div className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl w-[28rem] overflow-hidden">
-                <div className="p-5 border-b border-white/10 flex justify-between items-center text-white bg-slate-800/50">
-                  <span className="text-base font-bold">
+            <div className="fixed inset-0 z-[100] bg-background/90 flex items-center justify-center">
+              <div className="bg-card border border-border rounded-lg shadow-2xl w-[28rem] overflow-hidden">
+                <div className="p-5 border-b border-border flex justify-between items-center text-foreground bg-background">
+                  <span className="text-sm font-black uppercase italic tracking-tighter">
                     Open {openWithModal.file.name}
                   </span>
                   <X
                     size={20}
-                    className="cursor-pointer text-slate-400 hover:text-white"
+                    className="cursor-pointer text-muted-foreground hover:text-foreground"
                     onClick={() => setOpenWithModal(null)}
                   />
                 </div>
-                <div className="p-4">
-                  <p className="text-sm text-slate-400 text-center">
-                    Select an application to open this file.
+                <div className="p-10 bg-card">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">
+                    Select application to open file.
                   </p>
                 </div>
               </div>

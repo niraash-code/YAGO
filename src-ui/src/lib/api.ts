@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { InjectionMethod, AppConfig } from "../types";
+import { InjectionMethod, AppConfig, FileNode } from "../types";
 export { InjectionMethod };
 
 export interface FpsConfig {
@@ -19,6 +19,8 @@ export interface GameConfig {
   exe_path: string;
   exe_name: string;
   version: string;
+  remote_version?: string;
+  installed_components: string[];
   size: string;
   regions: number;
   color: string;
@@ -29,13 +31,28 @@ export interface GameConfig {
   enabled: boolean;
   added_at: string;
   launch_args: string[];
+  gamescope_args: string[];
   active_profile_id: string;
   fps_config?: FpsConfig;
   injection_method: InjectionMethod;
+  modloader_enabled: boolean;
+  supported_injection_methods?: InjectionMethod[];
   auto_update: boolean;
   active_runner_id?: string;
   prefix_path?: string;
   enable_linux_shield: boolean;
+  install_status: string;
+  remote_info?: {
+    manifest_url: string;
+    chunk_base_url: string;
+    total_size: number;
+    version: string;
+    branch: string;
+    package_id: string;
+    password: string;
+    plat_app: string;
+    game_biz: string;
+  };
   // Advanced settings (legacy or flattened from profile in some views)
   use_gamescope?: boolean;
   use_gamemode?: boolean;
@@ -47,6 +64,7 @@ export interface ModMetadata {
   name: string;
   version: string;
   author: string;
+  description?: string;
   url: string | null;
   preview_image: string | null;
 }
@@ -64,12 +82,14 @@ export interface Keybind {
 }
 
 export interface ModConfig {
+  mod_type?: string;
   tags: string[];
   keybinds: Record<string, Keybind>;
 }
 
 export interface ModRecord {
   id: string;
+  owner_game_id: string;
   path: string;
   size: string;
   meta: ModMetadata;
@@ -87,6 +107,7 @@ export interface Profile {
   load_order: string[];
   added_at: string;
   launch_args: string[];
+  gamescope_args: string[];
   save_data_path?: string;
   use_gamescope: boolean;
   use_gamemode: boolean;
@@ -151,7 +172,6 @@ export interface IdentifiedGame {
   description: string;
   version: string;
   size: string;
-  regions: number;
   color: string;
   accent_color: string;
   cover_image: string;
@@ -159,6 +179,21 @@ export interface IdentifiedGame {
   logo_initial: string;
   install_path: string;
   exe_name: string;
+  supported_injection_methods: InjectionMethod[];
+  injection_method: InjectionMethod;
+  modloader_enabled: boolean;
+}
+
+export interface ManifestCategory {
+  id: string;
+  name: string;
+  size: number;
+  is_required: boolean;
+}
+
+export interface RemoteCatalogEntry {
+  template: any;
+  remote_info?: any;
 }
 
 export interface DiscoveredGame {
@@ -175,18 +210,38 @@ export interface GlobalSettings {
   steam_compat_tools_path: string; // PathBuf string
   wine_prefix_path: string;
   yago_storage_path: string;
+  default_games_path: string;
+  mods_path: string;
+  runners_path: string;
+  prefixes_path: string;
+  cache_path: string;
   default_runner_id: string | null;
   stream_safe: boolean;
   nsfw_behavior: "blur" | "hide";
   close_on_launch: boolean;
 }
 
-export interface FileNode {
+export interface fileNode {
   id: string;
   name: string;
   type: "file" | "folder";
   size?: string;
-  children?: FileNode[];
+  children?: fileNode[];
+}
+
+export interface ImportWarning {
+  level: "Critical" | "Warning" | "Info";
+  message: string;
+}
+
+export interface ImportCandidate {
+  original_path: string;
+  suggested_name: string;
+  identified_character: string | null;
+  detected_topology: "Standard" | "Merged" | "Legacy" | "Archive";
+  preview_image: string | null;
+  initial_state: boolean;
+  warnings: ImportWarning[];
 }
 
 export interface GameConfigUpdate {
@@ -205,6 +260,7 @@ export interface GameConfigUpdate {
   accentColor?: string;
   logoInitial?: string;
   injectionMethod?: InjectionMethod;
+  modloaderEnabled?: boolean;
   autoUpdate?: boolean;
   activeProfileId?: string;
   activeRunnerId?: string;
@@ -221,6 +277,7 @@ export interface ProfileUpdate {
   useReshade?: boolean;
   resolution?: [number, number];
   launchArgs?: string[];
+  gamescopeArgs?: string[];
   saveDataPath?: string;
   enabledModIds?: string[];
   loadOrder?: string[];
@@ -239,13 +296,19 @@ export interface ModSnippet {
 }
 
 export const api = {
-  getLibrary: (): Promise<Record<string, LibraryDatabase>> =>
-    invoke("get_library"),
+  resolveAsset: (url: string) => invoke<string>("resolve_asset", { url }),
+  syncGameAssets: (gameId: string) =>
+    invoke<void>("sync_game_assets", { gameId }),
+  getCommunityBackgrounds: (gameId: string) =>
+    invoke<string[]>("get_community_backgrounds", { gameId }),
+  getLibrary: () => invoke<Record<string, LibraryDatabase>>("get_library"),
   getSkinInventory: (gameId: string): Promise<Record<string, CharacterGroup>> =>
     invoke("get_skin_inventory", { gameId }),
   identifyGame: (path: string): Promise<IdentifiedGame> =>
     invoke("identify_game", { path }),
   scanForGames: (): Promise<DiscoveredGame[]> => invoke("scan_for_games"),
+  recursiveScanPath: (path: string): Promise<DiscoveredGame[]> =>
+    invoke("recursive_scan_path", { path }),
   syncTemplates: (): Promise<void> => invoke("sync_templates"),
   addGame: (path: string): Promise<string> => invoke("add_game", { path }),
   removeGame: (gameId: string): Promise<void> =>
@@ -255,13 +318,17 @@ export const api = {
   killGame: (): Promise<void> => invoke("kill_game"),
   importMod: (gameId: string, path: string): Promise<ModRecord> =>
     invoke("import_mod", { gameId, path }),
+  scanModDirectory: (path: string, gameId: string): Promise<ImportCandidate[]> =>
+    invoke("scan_mod_directory", { path, gameId }),
   addMod: (gameId: string, path: string): Promise<ModRecord> =>
     invoke("add_mod", { gameId, path }),
   deleteMod: (modId: string): Promise<void> => invoke("delete_mod", { modId }),
   toggleMod: (gameId: string, modId: string, enabled: boolean): Promise<void> =>
     invoke("toggle_mod", { gameId, modId, enabled }),
-  deployMods: (gamePath: string): Promise<ConflictReport> =>
-    invoke("deploy_mods", { gamePath }),
+  deployMods: (gamePath: string, force: boolean) =>
+    invoke<ConflictReport>("deploy_mods", { gamePath, force }),
+  redeployMods: (gamePath: string) =>
+    invoke<void>("redeploy_mods", { gamePath }),
   validateMod: (modId: string): Promise<boolean> =>
     invoke("validate_mod", { modId }),
   fetchManifest: (url: string): Promise<SophonManifest> =>
@@ -304,9 +371,10 @@ export const api = {
     invoke("update_game_config", { gameId, update }),
   listRunners: (): Promise<string[]> => invoke("list_runners"),
   installCommonLibs: (): Promise<void> => invoke("install_common_libs"),
-  downloadLoader: (gameId: string): Promise<void> =>
-    invoke("download_loader", { gameId }),
-  downloadProton: (): Promise<void> => invoke("download_proton"),
+  downloadLoader: (gameId: string) => invoke("download_loader", { gameId }),
+  ensureGameResources: (gameId: string) =>
+    invoke("ensure_game_resources", { gameId }),
+  downloadProton: () => invoke("download_proton"),
   getAppConfig: (): Promise<AppConfig> => invoke("get_app_config"),
   updateAppConfig: (config: AppConfig): Promise<void> =>
     invoke("update_app_config", { config }),
@@ -329,6 +397,37 @@ export const api = {
     filePath: string,
     content: string
   ): Promise<void> => invoke("write_mod_file", { modId, filePath, content }),
+
+  // New Sophon Commands
+  getRemoteCatalog: (): Promise<any[]> => invoke("get_remote_catalog"),
+  initializeRemoteGame: (templateId: string): Promise<string> =>
+    invoke("initialize_remote_game", { templateId }),
+  getInstallOptions: (gameId: string): Promise<any[]> =>
+    invoke("get_install_options", { gameId }),
+  startGameDownload: (
+    gameId: string,
+    selectedCategoryIds: string[]
+  ): Promise<void> =>
+    invoke("start_game_download", { gameId, selectedCategoryIds }),
+  pauseGameDownload: (gameId: string): Promise<void> =>
+    invoke("pause_game_download", { gameId }),
+  resumeGameDownload: (gameId: string): Promise<void> =>
+    invoke("resume_game_download", { gameId }),
+  repairGame: (gameId: string): Promise<void> =>
+    invoke("repair_game", { gameId }),
+  wipeGameMods: (gameId: string): Promise<void> =>
+    invoke("wipe_game_mods", { gameId }),
+  resetGameProfiles: (gameId: string): Promise<void> =>
+    invoke("reset_game_profiles", { gameId }),
+  removeGamePrefix: (gameId: string): Promise<void> =>
+    invoke("remove_game_prefix", { gameId }),
+  uninstallGameFiles: (gameId: string): Promise<void> =>
+    invoke("uninstall_game_files", { gameId }),
+  trustGameInstallation: (gameId: string): Promise<void> =>
+    invoke("trust_game_installation", { gameId }),
+  installReshade: (gameId: string): Promise<void> =>
+    invoke("install_reshade", { gameId }),
+  triggerPanic: (): Promise<void> => invoke("trigger_panic"),
 };
 // Event Listeners
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";

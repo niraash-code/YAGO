@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
+import { useUiStore } from "./uiStore";
 import {
   Game,
   InstallStatus,
@@ -78,7 +79,25 @@ interface AppState {
   updateAppConfig: (config: AppConfig) => Promise<void>;
   removeRunner: (id: string) => Promise<void>;
   deployCurrentMods: () => Promise<void>;
+  triggerPanic: () => Promise<void>;
   startDownload: (manifestUrl: string, installPath: string) => Promise<void>;
+  startGameDownload: (
+    gameId: string,
+    selectedCategoryIds: string[]
+  ) => Promise<void>;
+  pauseDownload: (gameId: string) => Promise<void>;
+  resumeDownload: (gameId: string) => Promise<void>;
+  repairGame: (gameId: string) => Promise<void>;
+  trustGameInstallation: (gameId: string) => Promise<void>;
+}
+
+export interface ProgressDetailed {
+  game_id: string;
+  percentage: number;
+  speed_bps: number;
+  eta_secs: number;
+  downloaded_bytes: number;
+  total_bytes: number;
 }
 
 const mapBackendGameToFrontend = (
@@ -95,9 +114,9 @@ const mapBackendGameToFrontend = (
     shortName: bg.short_name || bg.name,
     developer: bg.developer || "Unknown",
     description: bg.description || "No description provided.",
-    status: InstallStatus.INSTALLED,
+    status: bg.install_status as unknown as InstallStatus,
     version: bg.version,
-    regions: bg.regions,
+    remoteVersion: bg.remote_version,
     color: bg.color || "slate-400",
     accentColor: bg.accent_color || "#94a3b8",
     coverImage: bg.cover_image || "",
@@ -110,11 +129,27 @@ const mapBackendGameToFrontend = (
     installPath: bg.install_path,
     exeName: bg.exe_name,
     launchArgs: bg.launch_args || [],
+    gamescopeArgs: bg.gamescope_args || [],
     injectionMethod: bg.injection_method,
+    modloaderEnabled: bg.modloader_enabled,
     autoUpdate: bg.auto_update,
     activeRunnerId: bg.active_runner_id,
     prefixPath: bg.prefix_path,
     enableLinuxShield: bg.enable_linux_shield,
+    supportedInjectionMethods: bg.supported_injection_methods,
+    remoteInfo: bg.remote_info
+      ? {
+          manifestUrl: bg.remote_info.manifest_url,
+          chunkBaseUrl: bg.remote_info.chunk_base_url,
+          totalSize: bg.remote_info.total_size,
+          version: bg.remote_info.version,
+          branch: bg.remote_info.branch,
+          packageId: bg.remote_info.package_id,
+          password: bg.remote_info.password,
+          platApp: bg.remote_info.plat_app,
+          gameBiz: bg.remote_info.game_biz,
+        }
+      : undefined,
     // Get settings from active profile
     useGamescope: activeProfile?.useGamescope,
     useGamemode: activeProfile?.useGamemode,
@@ -200,12 +235,16 @@ export const useAppStore = create<AppState>()(
       },
 
       refreshSetupStatus: async () => {
-        const isSetupDone = await api.checkSetup();
-        const status = await api.getSetupStatus();
-        set({
-          setupStatus: status,
-          isSetupRequired: !isSetupDone,
-        });
+        try {
+          const isSetupDone = await api.checkSetup();
+          const status = await api.getSetupStatus();
+          set({
+            setupStatus: status,
+            isSetupRequired: !isSetupDone,
+          });
+        } catch (e) {
+          console.error("Failed to refresh setup status:", e);
+        }
       },
 
       forceResetAppState: async () => {
@@ -234,6 +273,9 @@ export const useAppStore = create<AppState>()(
             defaultIconImage: config.default_icon_image,
             presetCovers: config.preset_covers,
             yagoUpdateUrl: config.yago_update_url,
+            communityBackgroundsRepo: config.community_backgrounds_repo,
+            communityBackgroundsBaseUrl: config.community_backgrounds_base_url,
+            theme: config.theme,
           };
           set({ appConfig: mappedConfig });
         } catch (e) {
@@ -251,6 +293,9 @@ export const useAppStore = create<AppState>()(
             default_icon_image: config.defaultIconImage,
             preset_covers: config.presetCovers,
             yago_update_url: config.yagoUpdateUrl,
+            community_backgrounds_repo: config.communityBackgroundsRepo,
+            community_backgrounds_base_url: config.communityBackgroundsBaseUrl,
+            theme: config.theme,
           };
           await api.updateAppConfig(backendConfig);
           set({ appConfig: config });
@@ -282,6 +327,56 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      startGameDownload: async (gameId, selectedCategoryIds) => {
+        try {
+          await api.startGameDownload(gameId, selectedCategoryIds);
+          set({ isDownloading: true, selectedGameId: gameId });
+        } catch (e) {
+          console.error("Failed to start Sophon download:", e);
+          throw e;
+        }
+      },
+
+      pauseDownload: async gameId => {
+        try {
+          await api.pauseGameDownload(gameId);
+        } catch (e) {
+          console.error("Failed to pause download:", e);
+        }
+      },
+
+      resumeDownload: async gameId => {
+        try {
+          await api.resumeGameDownload(gameId);
+        } catch (e) {
+          console.error("Failed to resume download:", e);
+        }
+      },
+
+      repairGame: async gameId => {
+        try {
+          await api.repairGame(gameId);
+          set({ isDownloading: true, selectedGameId: gameId });
+        } catch (e) {
+          console.error("Failed to start repair:", e);
+          useUiStore.getState().showAlert("Repair failed: " + e, "Error");
+          throw e;
+        }
+      },
+
+      trustGameInstallation: async gameId => {
+        try {
+          await api.trustGameInstallation(gameId);
+          // Backend emits library-updated, so state will sync automatically
+        } catch (e) {
+          console.error("Trust failed:", e);
+          useUiStore
+            .getState()
+            .showAlert("Failed to trust installation: " + e, "Error");
+          throw e;
+        }
+      },
+
       deployCurrentMods: async () => {
         const game = get().games.find(g => g.id === get().selectedGameId);
         if (!game || !game.installPath || !game.exeName) return;
@@ -290,7 +385,7 @@ export const useAppStore = create<AppState>()(
         try {
           const separator = game.installPath.includes("\\") ? "\\" : "/";
           const fullPath = `${game.installPath}${separator}${game.exeName}`;
-          const report = await api.deployMods(fullPath);
+          const report = await api.deployMods(fullPath, false);
           if (Object.keys(report.overwritten_hashes).length > 0) {
             set({ conflictReport: report });
           }
@@ -299,6 +394,18 @@ export const useAppStore = create<AppState>()(
           throw e;
         } finally {
           set({ isDeploying: false });
+        }
+      },
+
+      triggerPanic: async () => {
+        try {
+          await api.triggerPanic();
+          set({ streamSafe: true });
+          // No need to manually update mods enabled state here as the
+          // backend will emit a library-updated event or similar if needed,
+          // but we can proactively clear things if we want.
+        } catch (e) {
+          console.error("Panic trigger failed:", e);
         }
       },
 
@@ -324,17 +431,27 @@ export const useAppStore = create<AppState>()(
         const game = get().games.find(g => g.id === get().selectedGameId);
         if (!game || !game.installPath || !game.exeName) return;
 
-        set({ isLaunching: true, launchStatus: "Starting..." });
+        set({ isLaunching: true, launchStatus: "Verifying resources..." });
 
         try {
+          // 1. Ensure Loaders / ReShade
+          await api.ensureGameResources(game.id);
+
+          // 2. Deploy Mods (if injection enabled)
+          if (game.injectionMethod !== InjectionMethod.None) {
+            set({ launchStatus: "Deploying mods..." });
+            const separator = game.installPath.includes("\\") ? "\\" : "/";
+            const fullPath = `${game.installPath}${separator}${game.exeName}`;
+            await api.deployMods(fullPath, false);
+          }
+
+          set({ launchStatus: "Starting process..." });
           await api.launchGame(game.id);
         } catch (e) {
           console.error("Launch failed:", e);
           set({ isLaunching: false, launchStatus: "" });
           throw e;
         } finally {
-          // Keep status for a moment or clear?
-          // isRunning event will usually fire.
           set({ isLaunching: false });
         }
       },
@@ -349,24 +466,23 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      toggleMod: async (gameId, modId, enabled) => {
+      toggleMod: async (gameId, mod_id, enabled) => {
         try {
-          await api.toggleMod(gameId, modId, enabled);
+          await api.toggleMod(gameId, mod_id, enabled);
           set(state => {
             const updatedGames = state.games.map(game => {
               if (game.id !== gameId) return game;
 
               const updatedMods = game.mods.map(m =>
-                m.id === modId ? { ...m, enabled } : m
+                m.id === mod_id ? { ...m, enabled } : m
               );
 
-              // Update active profile too
               const newProfiles = game.profiles.map(p => {
                 if (p.id !== game.activeProfileId) return p;
                 const currentIds = p.enabledModIds || [];
                 const newIds = enabled
-                  ? [...new Set([...currentIds, modId])]
-                  : currentIds.filter(id => id !== modId);
+                  ? [...new Set([...currentIds, mod_id])]
+                  : currentIds.filter(id => id !== mod_id);
                 return { ...p, enabledModIds: newIds };
               });
 
@@ -374,6 +490,9 @@ export const useAppStore = create<AppState>()(
             });
             return { games: updatedGames };
           });
+
+          // Trigger Re-compile
+          await get().deployCurrentMods();
         } catch (e) {
           console.error("Toggle mod failed:", e);
           throw e;
@@ -474,10 +593,58 @@ export const useAppStore = create<AppState>()(
           }
         );
 
-        const unlistenDownload = await listen<DownloadProgress>(
+        const unlistenDownload = await listen<ProgressDetailed>(
           "download-progress",
           event => {
-            set({ downloadProgress: event.payload.overall_progress });
+            const p = event.payload;
+
+            const formatEta = (secs: number) => {
+              if (secs < 60) return `${secs}s`;
+              if (secs < 3600) return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+              const h = Math.floor(secs / 3600);
+              const m = Math.floor((secs % 3600) / 60);
+              return `${h}h ${m}m`;
+            };
+
+            const statusText =
+              p.speed_bps === 0 && p.percentage < 100
+                ? `Verifying (${Math.round(p.percentage)}%)`
+                : `${(p.speed_bps / (1024 * 1024)).toFixed(1)} MB/s • ${formatEta(p.eta_secs)} remaining`;
+
+            set(state => ({
+              downloadProgress: p.percentage,
+              statsMap: {
+                ...state.statsMap,
+                [p.game_id]: {
+                  ...(state.statsMap[p.game_id] || {
+                    modsEnabled: false,
+                    performance: "Good",
+                    runner: "Standard",
+                  }),
+                  downloadProgress: p.percentage,
+                  statusText,
+                },
+              },
+            }));
+          }
+        );
+
+        const unlistenComplete = await listen<string>(
+          "download-complete",
+          event => {
+            const gameId = event.payload;
+            set(state => ({
+              isDownloading: false,
+              downloadProgress: 100,
+              statsMap: {
+                ...state.statsMap,
+                [gameId]: {
+                  ...state.statsMap[gameId],
+                  downloadProgress: 100,
+                  statusText: "Ready to Play",
+                },
+              },
+            }));
           }
         );
 
@@ -488,6 +655,9 @@ export const useAppStore = create<AppState>()(
             const allLoadedGames: Game[] = [];
 
             for (const [gameId, db] of Object.entries(dbs)) {
+              // Ensure we only process unique game IDs to prevent state duplication
+              if (allLoadedGames.some(g => g.id === gameId)) continue;
+
               if (db.games[gameId]) {
                 const bg = db.games[gameId];
                 const backendMods = Object.values(db.mods || {});
@@ -510,8 +680,12 @@ export const useAppStore = create<AppState>()(
                         useGamemode: p.use_gamemode,
                         useMangohud: p.use_mangohud,
                         useReshade: p.use_reshade,
-                        resolution: p.resolution,
+                        resolution:
+                          p.resolution && p.resolution[0] !== 0
+                            ? p.resolution
+                            : [1920, 1080],
                         launchArgs: p.launch_args || [],
+                        gamescopeArgs: p.gamescope_args || [],
                         saveDataPath: p.save_data_path || null,
                       }))
                     : [];
@@ -521,24 +695,29 @@ export const useAppStore = create<AppState>()(
                   name: m.meta.name,
                   author: m.meta.author,
                   version: m.meta.version,
-                  description: "No description available",
+                  description: m.meta.description || "No description available",
                   tags: m.config.tags,
+                  modType: m.config.mod_type,
                   imageUrl: m.meta.preview_image || "",
                   enabled: m.enabled,
                   size: m.size || "Unknown",
                   updated: m.added_at,
+                  compatibility: m.compatibility,
                 }));
-
-                const activeProfile =
-                  profiles.find(p => p.id === bg.active_profile_id) ||
-                  profiles[0];
 
                 allLoadedGames.push(
                   mapBackendGameToFrontend(bg, profiles, gameMods)
                 );
               }
             }
-            set({ games: allLoadedGames });
+
+            const currentSelected = get().selectedGameId;
+            set({
+              games: allLoadedGames,
+              selectedGameId:
+                currentSelected ||
+                (allLoadedGames.length > 0 ? allLoadedGames[0].id : ""),
+            });
           }
         );
 
@@ -546,32 +725,65 @@ export const useAppStore = create<AppState>()(
           unlistenStarted();
           unlistenStopped();
           unlistenDownload();
+          unlistenComplete();
           unlistenLibrary();
         };
       },
 
       initialize: async () => {
         try {
-          await api.syncTemplates();
-          const isSetupDone = await api.checkSetup();
-          const settings = await api.getSettings();
-          const dbs: Record<string, LibraryDatabase> = await api.getLibrary();
-          const appConfig = await api.getAppConfig();
+          // Attempt initialization but don't hang the app if one part fails
+          try {
+            await api.syncTemplates();
+          } catch (e) {
+            console.warn("Sync templates failed", e);
+          }
 
-          // Fetch runners
+          const isSetupDone = await api.checkSetup();
+          let settings: any = null;
+          let dbs: Record<string, LibraryDatabase> = {};
+          let appConfig: any = null;
           let runners: string[] = [];
+
+          try {
+            settings = await api.getSettings();
+          } catch (e) {
+            console.error("Get settings failed", e);
+          }
+          try {
+            dbs = await api.getLibrary();
+          } catch (e) {
+            console.error("Get library failed", e);
+          }
+          try {
+            appConfig = await api.getAppConfig();
+          } catch (e) {
+            console.error("Get app config failed", e);
+          }
           try {
             runners = await api.listRunners();
           } catch (e) {
-            console.error("Failed to fetch runners during init", e);
+            console.error("List runners failed", e);
           }
 
           const allLoadedGames: Game[] = [];
+          let activeDownload = false;
+          const activeProgress = 0;
 
           for (const [gameId, db] of Object.entries(dbs)) {
+            // Ensure we only process unique game IDs to prevent state duplication
+            if (allLoadedGames.some(g => g.id === gameId)) continue;
+
             if (db.games[gameId]) {
               const bg = db.games[gameId];
               const backendMods = Object.values(db.mods || {});
+
+              if (
+                bg.install_status === "Downloading" ||
+                bg.install_status === "Updating"
+              ) {
+                activeDownload = true;
+              }
 
               const profiles =
                 db.profiles && Object.keys(db.profiles).length > 0
@@ -591,7 +803,10 @@ export const useAppStore = create<AppState>()(
                       useGamemode: p.use_gamemode,
                       useMangohud: p.use_mangohud,
                       useReshade: p.use_reshade,
-                      resolution: p.resolution,
+                      resolution:
+                        p.resolution && p.resolution[0] !== 0
+                          ? p.resolution
+                          : [1920, 1080],
                       launchArgs: p.launch_args || [],
                       saveDataPath: p.save_data_path || null,
                     }))
@@ -602,12 +817,14 @@ export const useAppStore = create<AppState>()(
                 name: m.meta.name,
                 author: m.meta.author,
                 version: m.meta.version,
-                description: "No description available",
+                description: m.meta.description || "No description available",
                 tags: m.config.tags,
+                modType: m.config.mod_type,
                 imageUrl: m.meta.preview_image || "",
                 enabled: m.enabled,
                 size: m.size || "Unknown",
                 updated: m.added_at,
+                compatibility: m.compatibility,
               }));
 
               allLoadedGames.push(
@@ -619,11 +836,13 @@ export const useAppStore = create<AppState>()(
           set({
             games: allLoadedGames,
             globalSettings: settings,
-            streamSafe: settings.stream_safe,
-            nsfwBehavior: settings.nsfw_behavior,
-            closeOnLaunch: settings.close_on_launch || false,
+            streamSafe: settings?.stream_safe ?? true,
+            nsfwBehavior: settings?.nsfw_behavior ?? "blur",
+            closeOnLaunch: settings?.close_on_launch || false,
             isInitialized: true,
             isSetupRequired: !isSetupDone,
+            isDownloading: activeDownload,
+            downloadProgress: activeProgress,
             availableRunners: runners,
             appConfig,
             isRunning: false,
@@ -634,8 +853,12 @@ export const useAppStore = create<AppState>()(
                 ? get().selectedGameId || allLoadedGames[0].id
                 : "",
           });
+
+          // Background sync removed - let backend handle specific sync requests
+          // or only trigger if assets are actually missing.
         } catch (e) {
-          console.error("Failed to initialize library", e);
+          console.error("Critical store initialization failure", e);
+          set({ isInitialized: true }); // Fallback to let app try to render something
         }
       },
       updateGame: updatedGame =>

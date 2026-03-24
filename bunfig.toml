@@ -1,0 +1,4 @@
+[test]
+preload = ["./src-ui/src/tests/setup.ts"]
+coverage = true
+coverageThreshold = 0.8

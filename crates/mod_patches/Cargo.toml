@@ -1,0 +1,23 @@
+[package]
+license = "Proprietary"
+name = "mod_patches"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+regex = "1"
+byteorder = "1.4"
+thiserror = "1.0"
+anyhow = "1.0"
+ini = { path = "../ini" }
+vfs = { path = "../vfs" }
+walkdir = "2.5"
+sha2 = "0.10"
+
+[dev-dependencies]
+criterion = "0.8.2"
+insta = { version = "1.46.3", features = ["redactions", "yaml"] }
+proptest = "1.10.0"
+tempfile = "3.10"
+
