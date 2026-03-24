@@ -104,10 +104,7 @@ test-loader:
 # === Setup ===
 
 setup:
-    mkdir -p release/latest release/older release/build/temp release/build/deb release/build/rpm release/build/windows release/build/appimage release/build/flatpak release/build/pkgbuild
-
-setup-full:
-    cargo make setup
+    cargo make --no-workspace setup
 
 clean:
     cargo clean
@@ -145,29 +142,34 @@ tauri-icon:
 # === Release ===
 
 release-init:
-    mkdir -p release/latest release/older release/build/temp release/build/deb release/build/rpm release/build/appimage release/build/flatpak release/build/pkgbuild
+    cargo make --no-workspace init-release
 
 release-deb:
-    cd src-tauri && cargo tauri build --bundles deb
-    cp src-tauri/target/release/bundle/deb/*.deb release/latest/
+    cargo make --no-workspace release-deb
 
 release-rpm:
-    cd src-tauri && cargo tauri build --bundles rpm
-    cp src-tauri/target/release/bundle/rpm/*.rpm release/latest/
+    cargo make --no-workspace release-rpm
 
 release-appimage:
-    cd src-tauri && NO_STRIP=1 APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build --bundles appimage
-    cp src-tauri/target/release/bundle/appimage/*.AppImage release/latest/YAGO-x86_64.AppImage
+    cargo make --no-workspace release-appimage
 
 release-win:
-    cd src-tauri && bun run tauri build --bundles nsis
-    cp src-tauri/target/release/yago.exe release/latest/yago-portable.exe
-    cp src-tauri/target/release/bundle/nsis/*.exe release/latest/yago-setup.exe
+    cargo make --no-workspace release-windows
 
-release-all: release-deb release-rpm release-appimage release-win
+release-flatpak:
+    cargo make --no-workspace release-flatpak
+
+release-pkgbuild:
+    cargo make --no-workspace release-pkgbuild
+
+release-all:
+    cargo make --no-workspace release-all
+
+release-linux:
+    cargo make --no-workspace release-linux-artifacts
 
 release-list:
-    ls -la release/latest/ || echo "No releases found."
+    cargo make --no-workspace release-list
 
 # === Utilities ===
 
